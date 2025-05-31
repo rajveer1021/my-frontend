@@ -1,77 +1,92 @@
 import React from 'react';
 import { CheckCircle, AlertTriangle, XCircle, Package } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { cn } from '../../utils/helpers';
 
 export const StockOverview = ({ stockData }) => {
-  const totalProducts = stockData.inStock + stockData.lowStock + stockData.outOfStock;
-  
+  const totalProducts =
+    stockData.inStock + stockData.lowStock + stockData.outOfStock;
+
   const stockItems = [
     {
       label: 'In Stock',
       value: stockData.inStock,
-      percentage: totalProducts > 0 ? `${Math.round((stockData.inStock / totalProducts) * 100)}%` : '0%',
-      icon: CheckCircle,
-      color: 'text-green-500',
-      bgColor: 'bg-green-50'
+      color: 'from-green-400 to-green-500',
+      bg: 'bg-green-50',
+      text: 'text-green-700',
     },
     {
       label: 'Low Stock',
       value: stockData.lowStock,
-      percentage: totalProducts > 0 ? `${Math.round((stockData.lowStock / totalProducts) * 100)}%` : '0%',
-      icon: AlertTriangle,
-      color: 'text-yellow-500',
-      bgColor: 'bg-yellow-50'
+      color: 'from-yellow-400 to-orange-500',
+      bg: 'bg-yellow-50',
+      text: 'text-yellow-700',
     },
     {
       label: 'Out of Stock',
       value: stockData.outOfStock,
-      percentage: totalProducts > 0 ? `${Math.round((stockData.outOfStock / totalProducts) * 100)}%` : '0%',
-      icon: XCircle,
-      color: 'text-red-500',
-      bgColor: 'bg-red-50'
-    }
+      color: 'from-red-400 to-red-500',
+      bg: 'bg-red-50',
+      text: 'text-red-700',
+    },
   ];
 
+  if (totalProducts === 0) {
+    return (
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 text-center">
+        <Package className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+        <p className="text-gray-600 text-sm">No products in inventory</p>
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <Package className="w-5 h-5 mr-2 text-gray-600" />
+    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 lg:p-6 shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center">
+          <Package className="w-6 h-6 mr-3 text-blue-600" />
           Stock Overview
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {stockItems.map((item, index) => (
-            <div key={index} className={cn(
-              'flex items-center justify-between p-4 rounded-lg transition-colors',
-              item.bgColor
-            )}>
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <item.icon className={cn('w-6 h-6', item.color)} />
+        </h2>
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          <Package className="w-6 h-6 text-white" />
+        </div>
+      </div>
+
+      {/* Stat blocks */}
+      <div className="space-y-4">
+        {stockItems.map((item, index) => {
+          const percentage = (
+            (item.value / Math.max(totalProducts, 1)) *
+            100
+          ).toFixed(1);
+
+          return (
+            <div
+              key={index}
+              className={cn(
+                `${item.bg} rounded-xl p-4 hover:scale-105 transition-all duration-300 cursor-pointer group`
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div
+                    className={`w-3 h-3 rounded-full bg-gradient-to-r ${item.color} shadow-lg`}
+                  />
+                  <span className={`font-medium ${item.text}`}>{item.label}</span>
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900">{item.label}</p>
-                  <p className="text-sm text-gray-600">{item.percentage} of total</p>
-                </div>
+                <span
+                  className={`text-2xl font-bold ${item.text} group-hover:scale-110 transition-transform duration-300`}
+                >
+                  {item.value}
+                </span>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-gray-900">{item.value}</div>
-                <div className="text-sm text-gray-500">products</div>
+              <div className="mt-2 text-xs text-gray-500">
+                {percentage}% of total
               </div>
             </div>
-          ))}
-        </div>
-        
-        {totalProducts === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No products in inventory</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          );
+        })}
+      </div>
+    </div>
   );
 };

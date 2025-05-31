@@ -1,23 +1,19 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Package, Calendar, Tag, MapPin } from 'lucide-react';
 import { Dialog, DialogContent } from '../ui/Dialog';
 import { Badge } from '../ui/Badge';
 import { formatCurrency, getStockStatusColor } from '../../utils/helpers';
 
-const ProductDetailsModal = ({
-  product,
-  isOpen,
-  onClose
-}) => {
+const ProductDetailsModal = ({ product, isOpen, onClose }) => {
   if (!product) return null;
 
   const getStockStatusText = (status) => {
     const statusMap = {
-      'In Stock': 'in stock',
-      'Low Stock': 'low stock', 
-      'Out of Stock': 'out of stock'
+      'In Stock': 'In Stock',
+      'Low Stock': 'Low Stock',
+      'Out of Stock': 'Out of Stock',
     };
-    return statusMap[status] || status.toLowerCase();
+    return statusMap[status] || status;
   };
 
   const getStockStatusBadgeClass = (status) => {
@@ -35,101 +31,140 @@ const ProductDetailsModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-        <div className="bg-white rounded-lg">
+      <DialogContent className="max-w-4xl w-full bg-white/95 backdrop-blur-md border border-white/20 shadow-2xl rounded-2xl p-0">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">Product Details</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
+          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <Package className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Product Details</h2>
+                  <p className="text-blue-100 text-sm">Complete product information</p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="text-white/80 hover:text-white hover:bg-white/20 backdrop-blur-sm p-2 rounded-xl transition-all duration-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
           </div>
 
           {/* Content */}
           <div className="p-6 space-y-6">
-            {/* Product Image */}
-            <div className="flex justify-center">
-              <div className="w-48 h-32 bg-gradient-to-br from-teal-400 via-teal-500 to-teal-600 rounded-lg flex items-center justify-center overflow-hidden">
-                {product.image ? (
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-teal-400 via-teal-500 to-white rounded-lg"></div>
-                )}
-              </div>
-            </div>
+            {/* Product Image and Basic Info */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Product Image */}
 
-            {/* Product Info Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Left Column */}
-              <div className="space-y-4">
+              {/* Product Information */}
+                {/* Title and Price */}
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Product Name</h3>
-                  <p className="text-lg font-semibold text-gray-900">{product.name}</p>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{product.name}</h3>
+                  <p className="text-gray-600 text-base mb-4 line-clamp-2">{product.description}</p>
+                  <div className="flex items-center space-x-4">
+                    <div className="text-3xl font-bold text-blue-600">{formatCurrency(product.price)}</div>
+                    <div className="text-sm text-gray-500">
+                      <span className="bg-gray-100 px-2 py-1 rounded-lg">Per unit</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Subheading</h3>
-                  <p className="text-gray-700">{product.description}</p>
+                {/* Key Information Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Package className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Stock Status</h4>
+                    </div>
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStockStatusBadgeClass(
+                        product.status
+                      )}`}
+                    >
+                      {getStockStatusText(product.status)}
+                    </span>
+                    {product.stock && (
+                      <p className="text-xs text-gray-500 mt-2">{product.stock} units available</p>
+                    )}
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Upload Date</h4>
+                    </div>
+                    <p className="text-base font-medium text-gray-900">{product.uploadDate || '1/10/2024'}</p>
+                    <p className="text-xs text-gray-500 mt-1">Listed on marketplace</p>
+                  </div>
                 </div>
 
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Price</h3>
-                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(product.price)}</p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Stock Status</h3>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStockStatusBadgeClass(product.status)}`}>
-                    {getStockStatusText(product.status)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Categories</h3>
+                {/* Categories */}
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <Tag className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Categories</h4>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {product.categories && product.categories.length > 0 ? (
                       product.categories.map((category, index) => (
-                        <Badge key={index} variant="outline" className="text-sm">
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="text-sm bg-gray-50 hover:bg-gray-100 transition-colors"
+                        >
                           {category}
                         </Badge>
                       ))
                     ) : (
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className="text-sm">Electronics</Badge>
-                        <Badge variant="outline" className="text-sm">IoT</Badge>
-                        <Badge variant="outline" className="text-sm">Sensors</Badge>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge
+                          variant="outline"
+                          className="text-sm bg-blue-50 text-blue-700 border-blue-200"
+                        >
+                          Electronics
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-sm bg-green-50 text-green-700 border-green-200"
+                        >
+                          IoT
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-sm bg-purple-50 text-purple-700 border-purple-200"
+                        >
+                          Sensors
+                        </Badge>
                       </div>
                     )}
                   </div>
                 </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Upload Date</h3>
-                  <p className="text-gray-700">{product.uploadDate || '1/10/2024'}</p>
-                </div>
-              </div>
             </div>
 
-            {/* Description */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
-              <p className="text-gray-700 leading-relaxed">
-                {product.fullDescription || 
-                 "Advanced IoT sensor for temperature, humidity, and air quality monitoring. Wireless connectivity and long battery life."}
-              </p>
+            {/* Full Description */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-indigo-600" />
+                </div>
+                <h4 className="text-lg font-semibold text-gray-900">Product Description</h4>
+              </div>
+              <div className="prose prose-gray max-w-none">
+                <p className="text-gray-700 leading-relaxed text-base">
+                  {product.fullDescription ||
+                    'Advanced IoT sensor for temperature, humidity, and air quality monitoring. Features wireless connectivity and long battery life, perfect for industrial and commercial applications. Built with high-quality materials and designed for durability in harsh environments.'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
