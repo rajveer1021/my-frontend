@@ -29,7 +29,6 @@ const ProtectedRoute = ({ children }) => {
   const { user, loading, isAuthenticated } = useAuth();
   const location = useLocation();
 
-  console.log("ProtectedRoute check:", { user, loading, isAuthenticated });
 
   if (loading) {
     return (
@@ -45,12 +44,12 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (!isAuthenticated) {
-    console.log("ProtectedRoute: Redirecting to auth, not authenticated");
+    ("ProtectedRoute: Redirecting to auth, not authenticated");
     // Redirect to auth page with return URL
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  console.log("ProtectedRoute: User authenticated, rendering children");
+  ("ProtectedRoute: User authenticated, rendering children");
   return children;
 };
 
@@ -59,15 +58,15 @@ const AuthRoute = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  console.log("AuthRoute check:", { user, loading, isAuthenticated });
+  ("AuthRoute check:", { user, loading, isAuthenticated });
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      console.log("AuthRoute: User already authenticated, redirecting");
+      ("AuthRoute: User already authenticated, redirecting");
       // Get the intended destination from state or default to dashboard
       const from = location.state?.from?.pathname || "/";
 
-      console.log("AuthRoute: Redirecting to:", from);
+      ("AuthRoute: Redirecting to:", from);
       navigate(from, { replace: true });
     }
   }, [loading, isAuthenticated, navigate, location.state]);
@@ -97,7 +96,7 @@ const AuthRoute = ({ children }) => {
     );
   }
 
-  console.log("AuthRoute: Rendering auth form");
+  ("AuthRoute: Rendering auth form");
   return children;
 };
 
@@ -108,7 +107,7 @@ const VendorOnboardingRoute = ({ children }) => {
   // Don't redirect automatically - let users access onboarding freely
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      console.log("VendorOnboardingRoute: Not authenticated, redirecting to auth");
+      ("VendorOnboardingRoute: Not authenticated, redirecting to auth");
       navigate("/auth", { replace: true });
     }
   }, [loading, isAuthenticated, navigate]);

@@ -21,7 +21,7 @@ export const inquiryService = {
         queryParams.search = params.search.trim();
       }
 
-      console.log('Fetching inquiries with params:', queryParams);
+      ('Fetching inquiries with params:', queryParams);
       
       const response = await apiService.get('/inquiries/vendor', queryParams);
       
@@ -94,14 +94,14 @@ export const inquiryService = {
         throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
       }
 
-      console.log(`Updating inquiry ${inquiryId} status to ${statusUpper}`);
+      (`Updating inquiry ${inquiryId} status to ${statusUpper}`);
       
       const response = await apiService.put(`/inquiries/${inquiryId}/status`, {
         status: statusUpper
       });
       
       if (response.success) {
-        console.log('Inquiry status updated successfully:', response);
+        ('Inquiry status updated successfully:', response);
         return {
           success: true,
           data: response.data,
@@ -148,7 +148,7 @@ export const inquiryService = {
           };
         }
       } catch (statsError) {
-        console.log('Stats endpoint not available, calculating from inquiries');
+        ('Stats endpoint not available, calculating from inquiries');
       }
       
       // Fallback: Calculate stats from inquiries

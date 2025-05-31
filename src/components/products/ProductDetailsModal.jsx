@@ -5,7 +5,7 @@ import { Badge } from "../ui/Badge";
 import { formatCurrency, getStockStatusColor } from "../../utils/helpers";
 
 const ProductDetailsModal = ({ product, isOpen, onClose }) => {
-  console.log("products:", product);
+  ("products:", product);
   if (!product) return null;
 
   const getStockStatusText = (status) => {

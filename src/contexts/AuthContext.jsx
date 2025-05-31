@@ -28,17 +28,14 @@ export const AuthProvider = ({ children }) => {
         // Check if user is already authenticated
         const token = authService.getToken();
         if (token) {
-          console.log('Token found in localStorage:', token);
           setIsAuthenticated(true);
           
           try {
             const currentUser = await authService.getCurrentUser();
             if (currentUser) {
-              console.log('User fetched successfully:', currentUser);
               setUser(currentUser);
             } else {
               // Token is invalid, clear it
-              console.log('Token invalid, clearing auth state');
               authService.logout();
               setIsAuthenticated(false);
               setUser(null);
@@ -51,7 +48,6 @@ export const AuthProvider = ({ children }) => {
             // Try to get user data from token or keep minimal state
           }
         } else {
-          console.log('No token found in localStorage');
           setIsAuthenticated(false);
         }
       } catch (error) {
@@ -76,13 +72,10 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      console.log('Attempting login for:', email);
+      ('Attempting login for:', email);
       const result = await authService.login({ email, password });
       
-      if (result && result.user) {
-        console.log('Login successful, user:', result.user);
-        console.log('Token stored:', authService.getToken());
-        
+      if (result && result.user) {        
         setUser(result.user);
         setIsAuthenticated(true);
         
@@ -111,13 +104,10 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      console.log('Attempting signup for:', userData.email);
+      ('Attempting signup for:', userData.email);
       const result = await authService.signup(userData);
       
-      if (result && result.user) {
-        console.log('Signup successful, user:', result.user);
-        console.log('Token stored:', authService.getToken());
-        
+      if (result && result.user) {        
         setUser(result.user);
         setIsAuthenticated(true);
         
@@ -233,7 +223,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    console.log('Logging out user');
+    ('Logging out user');
     authService.logout();
     setUser(null);
     setError(null);

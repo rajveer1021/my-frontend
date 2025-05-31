@@ -4,19 +4,15 @@ import { apiService } from './api';
 export const authService = {
   async login(credentials) {
     try {
-      console.log('AuthService: Attempting login...');
       const response = await apiService.post('/auth/login', {
         email: credentials.email,
         password: credentials.password
       });
 
-      console.log('AuthService: Login response:', response);
-
       if (response.success && response.data && response.data.token) {
         // Store token IMMEDIATELY after successful response
         const token = response.data.token;
         localStorage.setItem('authToken', token);
-        console.log('AuthService: Token stored in localStorage:', token);
         
         // Transform API response to match app structure
         const user = {
@@ -28,8 +24,6 @@ export const authService = {
           accountType: response.data.user.accountType,
           userType: response.data.user.accountType.toLowerCase() // for compatibility
         };
-
-        console.log('AuthService: User object created:', user);
 
         return {
           user,
@@ -49,7 +43,6 @@ export const authService = {
 
   async signup(userData) {
     try {
-      console.log('AuthService: Attempting signup...');
       const response = await apiService.post('/auth/signup', {
         firstName: userData.firstName,
         lastName: userData.lastName,
@@ -58,13 +51,10 @@ export const authService = {
         accountType: userData.userType?.toUpperCase() || userData.accountType || 'VENDOR'
       });
 
-      console.log('AuthService: Signup response:', response);
-
       if (response.success && response.data && response.data.token) {
         // Store token IMMEDIATELY after successful response
         const token = response.data.token;
         localStorage.setItem('authToken', token);
-        console.log('AuthService: Token stored in localStorage:', token);
         
         // Transform API response to match app structure
         const user = {
@@ -76,8 +66,6 @@ export const authService = {
           accountType: response.data.user.accountType,
           userType: response.data.user.accountType.toLowerCase()
         };
-
-        console.log('AuthService: User object created:', user);
 
         return {
           user,
@@ -97,19 +85,15 @@ export const authService = {
 
   async googleAuth(token, accountType = 'VENDOR') {
     try {
-      console.log('AuthService: Attempting Google auth...');
       const response = await apiService.post('/auth/google', {
         token,
         accountType: accountType.toUpperCase()
       });
 
-      console.log('AuthService: Google auth response:', response);
-
       if (response.success && response.data && response.data.token) {
         // Store token IMMEDIATELY after successful response
         const authToken = response.data.token;
         localStorage.setItem('authToken', authToken);
-        console.log('AuthService: Token stored in localStorage:', authToken);
         
         // Transform API response to match app structure
         const user = {
@@ -141,16 +125,13 @@ export const authService = {
   async getCurrentUser() {
     try {
       const token = localStorage.getItem('authToken');
-      console.log('AuthService: Getting current user, token:', token);
       
       if (!token) {
-        console.log('AuthService: No token found');
         return null;
       }
 
       // Verify token and get current user
       const response = await apiService.get('/auth/profile');
-      console.log('AuthService: Current user response:', response);
       
       if (response.success && response.data) {
         const user = {
@@ -163,12 +144,9 @@ export const authService = {
           phone: response.data.phone,
           address: response.data.address
         };
-
-        console.log('AuthService: Current user parsed:', user);
         return user;
       }
 
-      console.log('AuthService: Invalid user response');
       return null;
     } catch (error) {
       console.error('AuthService: Get current user error:', error);
@@ -181,9 +159,7 @@ export const authService = {
   },
 
   async updateProfile(userData) {
-    try {
-      console.log('AuthService: Updating profile with data:', userData);
-      
+    try {      
       // Prepare the request payload according to API specification
       const payload = {};
       
@@ -193,8 +169,6 @@ export const authService = {
       if (userData.address !== undefined) payload.address = userData.address; // Allow empty string
 
       const response = await apiService.put('/auth/profile', payload);
-      
-      console.log('AuthService: Update profile response:', response);
 
       if (response.success && response.data && response.data.user) {
         // Transform API response to match app structure
@@ -210,13 +184,11 @@ export const authService = {
           address: response.data.user.address
         };
 
-        console.log('AuthService: Updated user object:', user);
         return user;
       }
 
       throw new Error('Invalid response format');
     } catch (error) {
-      console.error('AuthService: Update profile error:', error);
       throw new Error(error.message || 'Profile update failed');
     }
   },
@@ -226,7 +198,6 @@ export const authService = {
       const response = await apiService.post('/auth/forgot-password', { email });
       return response.message || 'Password reset email sent';
     } catch (error) {
-      console.error('AuthService: Password reset error:', error);
       throw new Error(error.message || 'Password reset request failed');
     }
   },
@@ -239,13 +210,11 @@ export const authService = {
       });
       return response.message || 'Password reset successful';
     } catch (error) {
-      console.error('AuthService: Reset password error:', error);
       throw new Error(error.message || 'Password reset failed');
     }
   },
 
   logout() {
-    console.log('AuthService: Logging out, removing token');
     localStorage.removeItem('authToken');
   },
 
@@ -253,14 +222,12 @@ export const authService = {
   isAuthenticated() {
     const token = localStorage.getItem('authToken');
     const isAuth = !!token;
-    console.log('AuthService: isAuthenticated check, token exists:', isAuth);
     return isAuth;
   },
 
   // Helper method to get stored token
   getToken() {
     const token = localStorage.getItem('authToken');
-    console.log('AuthService: getToken called, token:', token);
     return token;
   }
 };

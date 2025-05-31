@@ -84,7 +84,7 @@ const ProductManagement = () => {
         params.category = searchFilters.category;
       }
 
-      console.log('Fetching products with params:', params);
+      ('Fetching products with params:', params);
       
       const response = await productService.searchProducts(params);
       
@@ -99,7 +99,7 @@ const ProductManagement = () => {
           ...newFilters
         }));
         
-        console.log('Products fetched successfully:', response.data.products.length);
+        ('Products fetched successfully:', response.data.products.length);
       } else {
         throw new Error('Invalid response format');
       }
