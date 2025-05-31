@@ -1,4 +1,4 @@
-// src/contexts/ProductContext.jsx - Updated with search API integration
+// src/contexts/ProductContext.jsx - Updated with smart API selection for vendor products
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { productService } from '../services/productService';
 
@@ -27,7 +27,70 @@ export const ProductProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Search products with filters (preferred method)
+  // Helper function to determine which API to use
+  const shouldUseSearchAPI = (params = {}) => {
+    return !!(
+      params.search?.trim() ||
+      (params.category && params.category !== 'all') ||
+      params.sortBy !== 'createdAt' ||
+      params.sortOrder !== 'desc'
+    );
+  };
+
+  // Smart product fetching - uses appropriate API based on parameters
+  const fetchProducts = useCallback(async (params = {}) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      let response;
+      
+      if (shouldUseSearchAPI(params)) {
+        console.log('Using search API for filtered results');
+        response = await productService.searchProducts(params);
+      } else {
+        console.log('Using vendor products API for basic listing');
+        response = await productService.getProducts(params);
+      }
+      
+      if (response.success && response.data) {
+        setProducts(response.data.products || []);
+        setAvailableCategories(response.data.availableCategories || []);
+        setFilters(response.data.filters || {});
+        setPagination(response.data.pagination || {
+          page: 1,
+          limit: 10,
+          total: 0,
+          pages: 1,
+          hasNext: false,
+          hasPrev: false
+        });
+        return response.data.products || [];
+      }
+      
+      throw new Error('Invalid response format');
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching products:', err);
+      // Don't throw error, just set empty array to prevent infinite loading
+      setProducts([]);
+      setAvailableCategories([]);
+      setFilters({});
+      setPagination({
+        page: 1,
+        limit: 10,
+        total: 0,
+        pages: 1,
+        hasNext: false,
+        hasPrev: false
+      });
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Search products with filters (uses search API)
   const searchProducts = useCallback(async (searchParams = {}) => {
     setLoading(true);
     setError(null);
@@ -53,7 +116,6 @@ export const ProductProvider = ({ children }) => {
     } catch (err) {
       setError(err.message);
       console.error('Error searching products:', err);
-      // Don't throw error, just set empty array to prevent infinite loading
       setProducts([]);
       setAvailableCategories([]);
       setFilters({});
@@ -71,12 +133,12 @@ export const ProductProvider = ({ children }) => {
     }
   }, []);
 
-  // Fetch products (fallback method for compatibility)
-  const fetchProducts = useCallback(async (filterParams = {}) => {
+  // Get vendor products (uses basic listing API)
+  const getVendorProducts = useCallback(async (params = {}) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await productService.getProducts(filterParams);
+      const response = await productService.getProducts(params);
       
       if (response.success && response.data) {
         setProducts(response.data.products || []);
@@ -96,8 +158,7 @@ export const ProductProvider = ({ children }) => {
       throw new Error('Invalid response format');
     } catch (err) {
       setError(err.message);
-      console.error('Error fetching products:', err);
-      // Don't throw error, just set empty array to prevent infinite loading
+      console.error('Error getting vendor products:', err);
       setProducts([]);
       setAvailableCategories([]);
       setFilters({});
@@ -192,8 +253,8 @@ export const ProductProvider = ({ children }) => {
   // Refresh products with current filters
   const refreshProducts = useCallback(async (customFilters = {}) => {
     const currentFilters = { ...filters, ...customFilters };
-    return await searchProducts(currentFilters);
-  }, [filters, searchProducts]);
+    return await fetchProducts(currentFilters);
+  }, [filters, fetchProducts]);
 
   const clearError = () => {
     setError(null);
@@ -224,11 +285,14 @@ export const ProductProvider = ({ children }) => {
     loading,
     error,
 
-    // Main methods (preferred)
-    searchProducts,
-    
-    // Legacy methods (for compatibility)
+    // Smart fetching method (chooses appropriate API)
     fetchProducts,
+    
+    // Specific API methods
+    searchProducts,
+    getVendorProducts,
+    
+    // CRUD operations
     addProduct,
     updateProduct,
     deleteProduct,
@@ -237,7 +301,10 @@ export const ProductProvider = ({ children }) => {
     
     // Utility methods
     clearError,
-    clearProducts
+    clearProducts,
+    
+    // Helper to determine API usage
+    shouldUseSearchAPI
   };
 
   return (

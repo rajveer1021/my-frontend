@@ -1,4 +1,4 @@
-// src/components/products/ProductManagement.jsx - Updated with search API integration
+// src/components/products/ProductManagement.jsx - Updated to use appropriate API endpoints
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -56,7 +56,17 @@ const ProductManagement = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
 
-  // Fetch products with current filters
+  // Determine which API to use based on filters
+  const shouldUseSearch = () => {
+    return !!(
+      filters.search?.trim() || 
+      (filters.category && filters.category !== 'all') ||
+      filters.sortBy !== 'createdAt' ||
+      filters.sortOrder !== 'desc'
+    );
+  };
+
+  // Fetch products using appropriate API
   const fetchProducts = async (newFilters = {}) => {
     try {
       setLoading(true);
@@ -66,27 +76,44 @@ const ProductManagement = () => {
         ...newFilters
       };
 
-      // Build query parameters
-      const params = {
-        page: searchFilters.page,
-        limit: searchFilters.limit,
-        sortBy: searchFilters.sortBy,
-        sortOrder: searchFilters.sortOrder
-      };
+      console.log('Fetching products with filters:', searchFilters);
+      console.log('Should use search API:', shouldUseSearch());
 
-      // Add search if provided
-      if (searchFilters.search?.trim()) {
-        params.search = searchFilters.search.trim();
+      let response;
+
+      if (shouldUseSearch()) {
+        // Use search API when filters are applied
+        console.log('Using search API for filtered results');
+        
+        const params = {
+          page: searchFilters.page,
+          limit: searchFilters.limit,
+          sortBy: searchFilters.sortBy,
+          sortOrder: searchFilters.sortOrder
+        };
+
+        // Add search if provided
+        if (searchFilters.search?.trim()) {
+          params.search = searchFilters.search.trim();
+        }
+
+        // Add category if selected and not 'all'
+        if (searchFilters.category && searchFilters.category !== 'all') {
+          params.category = searchFilters.category;
+        }
+
+        response = await productService.searchProducts(params);
+      } else {
+        // Use basic vendor products API for simple listing
+        console.log('Using vendor products API for basic listing');
+        
+        const params = {
+          page: searchFilters.page,
+          limit: searchFilters.limit
+        };
+
+        response = await productService.getProducts(params);
       }
-
-      // Add category if selected
-      if (searchFilters.category && searchFilters.category !== 'all') {
-        params.category = searchFilters.category;
-      }
-
-      ('Fetching products with params:', params);
-      
-      const response = await productService.searchProducts(params);
       
       if (response.success && response.data) {
         setProducts(response.data.products || []);
@@ -99,7 +126,7 @@ const ProductManagement = () => {
           ...newFilters
         }));
         
-        ('Products fetched successfully:', response.data.products.length);
+        console.log('Products fetched successfully:', response.data.products.length);
       } else {
         throw new Error('Invalid response format');
       }
@@ -377,13 +404,19 @@ const ProductManagement = () => {
             availableCategories={availableCategories}
             loading={loading}
           />
+          
+          {/* API Usage Indicator */}
+          <div className="mt-3 text-xs text-gray-500 flex items-center">
+            <div className={`w-2 h-2 rounded-full mr-2 ${shouldUseSearch() ? 'bg-blue-500' : 'bg-green-500'}`}></div>
+            {shouldUseSearch() ? 'Using filtered search' : 'Using basic product listing'}
+          </div>
         </div>
 
         {/* Products Section */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
           {loading && isInitialized ? (
             <div className="p-8 text-center">
-              <LoadingSpinner size="lg" text="Searching products..." />
+              <LoadingSpinner size="lg" text="Loading products..." />
             </div>
           ) : products.length === 0 ? (
             <div className="p-8 text-center">
