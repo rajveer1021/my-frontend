@@ -266,14 +266,6 @@ const VendorDashboard = () => {
               <div className="p-3 rounded-xl bg-white/20">
                 <MessageSquare className="w-6 h-6 text-white" />
               </div>
-              <div className="flex items-center text-sm font-medium text-green-200">
-                {dashboardStats.totalInquiries > 0 ? (
-                  <TrendingUp className="w-4 h-4 mr-1" />
-                ) : (
-                  <div className="w-4 h-4 mr-1" />
-                )}
-                {calculateTrend(dashboardStats.totalInquiries, "enquiries")}
-              </div>
             </div>
             <div className="text-white">
               <p className="text-sm opacity-90 mb-1">All Enquiries</p>

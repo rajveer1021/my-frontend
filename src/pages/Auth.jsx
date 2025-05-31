@@ -1,4 +1,4 @@
-// src/pages/Auth.jsx - Fixed with ForgotPasswordForm component
+// src/pages/Auth.jsx - Redesigned with minimal gap between sections
 import React, { useState } from "react";
 import LoginForm from "../components/auth/LoginForm";
 import SignupForm from "../components/auth/SignupForm";
@@ -8,172 +8,26 @@ import {
   ShieldCheck,
   Globe,
   Users,
-  Star,
   Sparkles,
-  TrendingUp,
-  CheckCircle,
-  Mail,
-  AlertCircle,
 } from "lucide-react";
 import Button from "../components/ui/Button";
-import { Input } from "../components/ui/Input";
-import { useAuth } from "../contexts/AuthContext";
-import { useToast } from "../components/ui/Toast";
-
-// ForgotPasswordForm Component
-const ForgotPasswordForm = ({ onBackToLogin }) => {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
-  const { requestPasswordReset } = useAuth();
-  const { addToast } = useToast();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!email.trim()) {
-      setError('Email is required');
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      await requestPasswordReset(email);
-      setSuccess(true);
-      addToast('Password reset link sent to your email', 'success');
-    } catch (error) {
-      setError(error.message || 'Failed to send reset email');
-      addToast(error.message || 'Failed to send reset email', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (success) {
-    return (
-      <div className="space-y-4 text-center">
-        <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
-          <CheckCircle className="w-8 h-8 text-green-600" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900">
-          Check your email
-        </h3>
-        <p className="text-gray-600 text-sm">
-          We've sent a password reset link to <strong>{email}</strong>
-        </p>
-        <Button
-          variant="outline"
-          onClick={onBackToLogin}
-          className="w-full"
-        >
-          Back to Sign In
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <div className="flex items-center space-x-3">
-            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-            <p className="text-red-800 text-sm font-medium">{error}</p>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="text-center mb-6">
-          <p className="text-gray-600 text-sm">
-            Enter your email address and we'll send you a link to reset your password.
-          </p>
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor="reset-email" className="block text-xs font-semibold text-gray-700">
-            Email Address
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-4 w-4 text-gray-400" />
-            </div>
-            <Input
-              id="reset-email"
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError('');
-              }}
-              className="h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200"
-              disabled={loading}
-              required
-            />
-          </div>
-        </div>
-
-        <Button
-          type="submit"
-          className="w-full h-10 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
-          disabled={loading}
-        >
-          {loading ? (
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              <span>Sending...</span>
-            </div>
-          ) : (
-            'Send Reset Link'
-          )}
-        </Button>
-      </form>
-
-      <div className="text-center">
-        <Button
-          variant="ghost"
-          onClick={onBackToLogin}
-          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-semibold p-1 rounded transition-all duration-200 text-sm"
-          disabled={loading}
-        >
-          Back to Sign In
-        </Button>
-      </div>
-    </div>
-  );
-};
 
 const Auth = () => {
-  const [currentView, setCurrentView] = useState('login'); // 'login', 'signup', 'forgot-password'
+  const [currentView, setCurrentView] = useState("login"); // 'login', 'signup', 'forgot-password'
 
   const getViewConfig = () => {
     switch (currentView) {
-      case 'signup':
+      case "signup":
         return {
-          title: "Join VendorHub",
+          title: "Join Multi-Vendor",
           subtitle: "Start your journey as a vendor",
-          icon: Users
-        };
-      case 'forgot-password':
-        return {
-          title: "Reset Password",
-          subtitle: "We'll help you get back in",
-          icon: ShieldCheck
+          icon: Users,
         };
       default:
         return {
           title: "Welcome Back!",
           subtitle: "Sign in to your vendor account",
-          icon: ShieldCheck
+          icon: ShieldCheck,
         };
     }
   };
@@ -182,23 +36,13 @@ const Auth = () => {
 
   const renderForm = () => {
     switch (currentView) {
-      case 'signup':
-        return (
-          <SignupForm 
-            onSwitchToLogin={() => setCurrentView('login')} 
-          />
-        );
-      case 'forgot-password':
-        return (
-          <ForgotPasswordForm 
-            onBackToLogin={() => setCurrentView('login')} 
-          />
-        );
+      case "signup":
+        return <SignupForm onSwitchToLogin={() => setCurrentView("login")} />;
       default:
         return (
           <LoginForm
-            onSwitchToSignup={() => setCurrentView('signup')}
-            onForgotPassword={() => setCurrentView('forgot-password')}
+            onSwitchToSignup={() => setCurrentView("signup")}
+            onForgotPassword={() => setCurrentView("forgot-password")}
           />
         );
     }
@@ -206,10 +50,11 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="flex flex-col lg:flex-row min-h-screen lg:gap-2">
+      {/* Container with max width and centered */}
+      <div className="max-w-7xl mx-auto min-h-screen flex flex-col lg:flex-row lg:items-center">
         {/* Left side - Enhanced Branding */}
-        <div className="lg:flex-1 lg:flex lg:items-center lg:justify-center p-4 lg:p-6">
-          <div className="max-w-2xl space-y-6 lg:space-y-8">
+        <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
+          <div className="max-w-xl w-full space-y-6 lg:space-y-8">
             {/* Logo and Title */}
             <div className="text-center lg:text-left space-y-4">
               <div className="flex items-center justify-center lg:justify-start space-x-3">
@@ -279,9 +124,7 @@ const Auth = () => {
                   <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-2">
                     <Building className="w-5 h-5" />
                   </div>
-                  <div className="text-xl lg:text-2xl font-bold mb-1">
-                    50K+
-                  </div>
+                  <div className="text-xl lg:text-2xl font-bold mb-1">50K+</div>
                   <div className="text-xs lg:text-sm text-blue-100">
                     Products Listed
                   </div>
@@ -290,9 +133,7 @@ const Auth = () => {
                   <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-2">
                     <Globe className="w-5 h-5" />
                   </div>
-                  <div className="text-xl lg:text-2xl font-bold mb-1">
-                    100+
-                  </div>
+                  <div className="text-xl lg:text-2xl font-bold mb-1">100+</div>
                   <div className="text-xs lg:text-sm text-blue-100">
                     Countries
                   </div>
@@ -302,19 +143,22 @@ const Auth = () => {
           </div>
         </div>
 
+        {/* Minimal gap divider - only visible on large screens */}
+        <div className="hidden lg:block w-6"></div>
+
         {/* Right side - Enhanced Auth Form */}
-        <div className="lg:flex-1 lg:flex lg:items-center lg:justify-center p-4 lg:p-6">
+        <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
           <div className="w-full max-w-md">
             <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
               {/* Form Header */}
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 lg:p-6 text-white">
                 <div className="text-center">
                   {/* Back button for forgot password */}
-                  {currentView === 'forgot-password' && (
+                  {currentView === "forgot-password" && (
                     <div className="flex items-center justify-start mb-3">
                       <Button
                         variant="ghost"
-                        onClick={() => setCurrentView('login')}
+                        onClick={() => setCurrentView("login")}
                         className="text-white hover:bg-white/20 backdrop-blur-sm rounded-xl p-2"
                         size="sm"
                       >
@@ -322,7 +166,7 @@ const Auth = () => {
                       </Button>
                     </div>
                   )}
-                  
+
                   <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mx-auto mb-3">
                     {React.createElement(config.icon, { className: "w-6 h-6" })}
                   </div>
@@ -336,9 +180,7 @@ const Auth = () => {
               </div>
 
               {/* Form Content */}
-              <div className="p-4 lg:p-6">
-                {renderForm()}
-              </div>
+              <div className="p-4 lg:p-6">{renderForm()}</div>
             </div>
           </div>
         </div>
