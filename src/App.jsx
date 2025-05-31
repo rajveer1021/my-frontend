@@ -23,7 +23,6 @@ import Settings from "./pages/Settings";
 import { NotFound } from "./components/common/NotFound";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
-import UserDebugComponent from "./components/debug/UserDebugComponent"; // Temporary debug component
 import "./index.css";
 
 const ProtectedRoute = ({ children }) => {
