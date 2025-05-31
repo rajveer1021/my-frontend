@@ -1,7 +1,7 @@
-import React from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
-import { Card, CardContent } from '../ui/Card';
-import { cn } from '../../utils/helpers';
+import React from "react";
+import { TrendingUp, TrendingDown } from "lucide-react";
+import { Card, CardContent } from "../ui/Card";
+import { cn } from "../../utils/helpers";
 
 export const StatCard = ({
   title,
@@ -10,17 +10,17 @@ export const StatCard = ({
   icon: Icon,
   trend,
   trendValue,
-  iconBgColor = 'bg-blue-100',
-  iconColor = 'text-blue-600',
-  gradient = 'bg-gradient-to-br from-blue-500 to-indigo-600',
+  iconBgColor = "bg-blue-100",
+  iconColor = "text-blue-600",
+  gradient = "bg-gradient-to-br from-blue-500 to-indigo-600",
   delay = 0,
 }) => {
-  const isPositiveTrend = trend === 'up';
+  const isPositiveTrend = trend === "up";
 
   return (
     <div
       className={cn(
-        'relative rounded-2xl overflow-hidden group transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer animate-fade-in',
+        "relative rounded-2xl overflow-hidden group transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer animate-fade-in",
         gradient
       )}
       style={{ animationDelay: `${delay}ms` }}
@@ -32,24 +32,9 @@ export const StatCard = ({
       <Card className="bg-transparent shadow-none backdrop-blur-sm">
         <CardContent className="p-6 relative z-10">
           <div className="flex items-center justify-between mb-4">
-            <div className={cn('p-3 rounded-xl bg-white/20')}>
+            <div className={cn("p-3 rounded-xl bg-white/20")}>
               <Icon className="w-6 h-6 text-white" />
             </div>
-            {trendValue && (
-              <div
-                className={cn(
-                  'flex items-center text-sm font-medium',
-                  isPositiveTrend ? 'text-green-200' : 'text-red-200'
-                )}
-              >
-                {isPositiveTrend ? (
-                  <TrendingUp className="w-4 h-4 mr-1" />
-                ) : (
-                  <TrendingDown className="w-4 h-4 mr-1" />
-                )}
-                {trendValue}
-              </div>
-            )}
           </div>
 
           <div className="text-white">
