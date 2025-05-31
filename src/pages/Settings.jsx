@@ -27,15 +27,15 @@ import { useToast } from "../components/ui/Toast";
 const Settings = () => {
   const { user, updateUser, loading: authLoading } = useAuth();
   const { addToast } = useToast();
-  
+
   const [profileData, setProfileData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
@@ -45,11 +45,11 @@ const Settings = () => {
   useEffect(() => {
     if (user) {
       const initialData = {
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        address: user.address || '',
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        address: user.address || "",
       };
       setProfileData(initialData);
     }
@@ -58,12 +58,12 @@ const Settings = () => {
   // Track changes in form data
   useEffect(() => {
     if (user) {
-      const hasChanged = 
-        profileData.firstName !== (user.firstName || '') ||
-        profileData.lastName !== (user.lastName || '') ||
-        profileData.phone !== (user.phone || '') ||
-        profileData.address !== (user.address || '');
-      
+      const hasChanged =
+        profileData.firstName !== (user.firstName || "") ||
+        profileData.lastName !== (user.lastName || "") ||
+        profileData.phone !== (user.phone || "") ||
+        profileData.address !== (user.address || "");
+
       setHasChanges(hasChanged);
     }
   }, [profileData, user]);
@@ -72,49 +72,52 @@ const Settings = () => {
     const errors = {};
 
     if (!profile.firstName?.trim()) {
-      errors.firstName = 'First name is required';
+      errors.firstName = "First name is required";
     } else if (profile.firstName.trim().length < 2) {
-      errors.firstName = 'First name must be at least 2 characters';
+      errors.firstName = "First name must be at least 2 characters";
     } else if (profile.firstName.trim().length > 50) {
-      errors.firstName = 'First name must be less than 50 characters';
+      errors.firstName = "First name must be less than 50 characters";
     }
 
     if (!profile.lastName?.trim()) {
-      errors.lastName = 'Last name is required';
+      errors.lastName = "Last name is required";
     } else if (profile.lastName.trim().length < 2) {
-      errors.lastName = 'Last name must be at least 2 characters';
+      errors.lastName = "Last name must be at least 2 characters";
     } else if (profile.lastName.trim().length > 50) {
-      errors.lastName = 'Last name must be less than 50 characters';
+      errors.lastName = "Last name must be less than 50 characters";
     }
 
     if (!profile.email?.trim()) {
-      errors.email = 'Email is required';
+      errors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) {
-      errors.email = 'Please enter a valid email address';
+      errors.email = "Please enter a valid email address";
     }
 
-    if (profile.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(profile.phone.replace(/[\s\-\(\)]/g, ''))) {
-      errors.phone = 'Please enter a valid phone number';
+    if (
+      profile.phone &&
+      !/^[\+]?[1-9][\d]{0,15}$/.test(profile.phone.replace(/[\s\-\(\)]/g, ""))
+    ) {
+      errors.phone = "Please enter a valid phone number";
     }
 
     if (profile.address && profile.address.length > 200) {
-      errors.address = 'Address must be less than 200 characters';
+      errors.address = "Address must be less than 200 characters";
     }
 
     return {
       isValid: Object.keys(errors).length === 0,
-      errors
+      errors,
     };
   };
 
   const handleInputChange = (field, value) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
-    
+
     // Clear field error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
-    
+
     // Clear success message when user makes changes
     if (success) {
       setSuccess(false);
@@ -123,17 +126,17 @@ const Settings = () => {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    
+
     const validation = validateProfile(profileData);
 
     if (!validation.isValid) {
       setErrors(validation.errors);
-      addToast('Please fix the form errors before submitting', 'error');
+      addToast("Please fix the form errors before submitting", "error");
       return;
     }
 
     if (!hasChanges) {
-      addToast('No changes to save', 'info');
+      addToast("No changes to save", "info");
       return;
     }
 
@@ -147,32 +150,35 @@ const Settings = () => {
         firstName: profileData.firstName.trim(),
         lastName: profileData.lastName.trim(),
         phone: profileData.phone.trim(),
-        address: profileData.address.trim()
+        address: profileData.address.trim(),
       };
 
-      ('Updating profile with data:', updateData);
-      
+      "Updating profile with data:", updateData;
+
       const result = await updateUser(updateData);
-      
+
       if (result.success) {
         setSuccess(true);
         setHasChanges(false);
-        addToast('Profile updated successfully!', 'success');
-        
+        addToast("Profile updated successfully!", "success");
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(false), 3000);
       }
     } catch (error) {
-      console.error('Profile update error:', error);
-      
+      console.error("Profile update error:", error);
+
       // Handle validation errors from API
-      if (error.message.includes('validation') || error.message.includes('required')) {
+      if (
+        error.message.includes("validation") ||
+        error.message.includes("required")
+      ) {
         setErrors({ general: error.message });
       } else {
         setErrors({ general: error.message || "Failed to update profile" });
       }
-      
-      addToast(error.message || 'Failed to update profile', 'error');
+
+      addToast(error.message || "Failed to update profile", "error");
     } finally {
       setLoading(false);
     }
@@ -181,11 +187,11 @@ const Settings = () => {
   const handleReset = () => {
     if (user) {
       setProfileData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        address: user.address || '',
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        address: user.address || "",
       });
       setErrors({});
       setSuccess(false);
@@ -311,7 +317,9 @@ const Settings = () => {
                 <Input
                   type="text"
                   value={profileData.firstName}
-                  onChange={(e) => handleInputChange("firstName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("firstName", e.target.value)
+                  }
                   placeholder="Enter your first name"
                   className={`h-11 lg:h-12 ${
                     errors.firstName ? "border-red-500" : ""
@@ -336,7 +344,9 @@ const Settings = () => {
                 <Input
                   type="text"
                   value={profileData.lastName}
-                  onChange={(e) => handleInputChange("lastName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("lastName", e.target.value)
+                  }
                   placeholder="Enter your last name"
                   className={`h-11 lg:h-12 ${
                     errors.lastName ? "border-red-500" : ""
@@ -368,58 +378,6 @@ const Settings = () => {
                   Email cannot be changed
                 </p>
               </div>
-
-              {/* Phone Number */}
-              <div>
-                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                  <Phone className="w-4 h-4 mr-2 text-gray-500" />
-                  Contact Number
-                </label>
-                <Input
-                  type="tel"
-                  value={profileData.phone}
-                  onChange={(e) => handleInputChange("phone", e.target.value)}
-                  placeholder="Enter your phone number"
-                  className={`h-11 lg:h-12 ${
-                    errors.phone ? "border-red-500" : ""
-                  }`}
-                  disabled={loading}
-                />
-                {errors.phone && (
-                  <p className="text-red-500 text-sm mt-1 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    {errors.phone}
-                  </p>
-                )}
-              </div>
-
-              {/* Address */}
-              <div className="lg:col-span-2">
-                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                  <MapPin className="w-4 h-4 mr-2 text-gray-500" />
-                  Address
-                </label>
-                <textarea
-                  value={profileData.address}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
-                  placeholder="Enter your address"
-                  rows={3}
-                  maxLength={200}
-                  disabled={loading}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
-                    errors.address ? "border-red-500" : "border-gray-300"
-                  }`}
-                />
-                {errors.address && (
-                  <p className="text-red-500 text-sm mt-1 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    {errors.address}
-                  </p>
-                )}
-                <p className="text-xs text-gray-500 mt-1">
-                  {profileData.address.length}/200 characters
-                </p>
-              </div>
             </div>
 
             <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
@@ -431,7 +389,7 @@ const Settings = () => {
                   </span>
                 )}
               </div>
-              
+
               <div className="flex space-x-3">
                 {hasChanges && (
                   <Button
@@ -444,14 +402,14 @@ const Settings = () => {
                     Reset
                   </Button>
                 )}
-                
+
                 <Button
                   type="submit"
                   disabled={loading || !hasChanges}
                   className={`flex items-center px-6 py-2 lg:py-3 ${
-                    hasChanges 
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' 
-                      : 'bg-gray-300 cursor-not-allowed'
+                    hasChanges
+                      ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                      : "bg-gray-300 cursor-not-allowed"
                   }`}
                 >
                   {loading ? (
@@ -470,7 +428,6 @@ const Settings = () => {
             </div>
           </form>
         </div>
-
       </div>
     </div>
   );

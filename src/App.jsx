@@ -1,4 +1,4 @@
-// src/App.jsx - Fixed authentication flow without automatic onboarding redirect
+// src/App.jsx - Temporary version with debug component
 import React, { useEffect } from "react";
 import {
   BrowserRouter,
@@ -23,13 +23,14 @@ import Settings from "./pages/Settings";
 import { NotFound } from "./components/common/NotFound";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
+import UserDebugComponent from "./components/debug/UserDebugComponent"; // Temporary debug component
 import "./index.css";
 
 const ProtectedRoute = ({ children }) => {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, error } = useAuth();
   const location = useLocation();
 
-
+  // Show loading spinner while checking authentication
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -38,39 +39,45 @@ const ProtectedRoute = ({ children }) => {
           <p className="mt-4 text-gray-600 font-medium">
             Loading your account...
           </p>
+          {error && (
+            <p className="mt-2 text-sm text-amber-600">
+              {error}
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
+  // Redirect to auth if not authenticated
   if (!isAuthenticated) {
-    ("ProtectedRoute: Redirecting to auth, not authenticated");
-    // Redirect to auth page with return URL
+    ('ProtectedRoute: Redirecting to auth, not authenticated');
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  ("ProtectedRoute: User authenticated, rendering children");
+  ('ProtectedRoute: User authenticated, rendering children');
   return children;
 };
 
 const AuthRoute = ({ children }) => {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, error } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  ("AuthRoute check:", { user, loading, isAuthenticated });
+  ('AuthRoute check:', { user: !!user, loading, isAuthenticated });
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      ("AuthRoute: User already authenticated, redirecting");
+      ('AuthRoute: User already authenticated, redirecting');
       // Get the intended destination from state or default to dashboard
       const from = location.state?.from?.pathname || "/";
 
-      ("AuthRoute: Redirecting to:", from);
+      ('AuthRoute: Redirecting to:', from);
       navigate(from, { replace: true });
     }
   }, [loading, isAuthenticated, navigate, location.state]);
 
+  // Show loading spinner while checking authentication
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -79,6 +86,11 @@ const AuthRoute = ({ children }) => {
           <p className="mt-4 text-gray-600 font-medium">
             Checking authentication...
           </p>
+          {error && (
+            <p className="mt-2 text-sm text-amber-600">
+              {error}
+            </p>
+          )}
         </div>
       </div>
     );
@@ -96,7 +108,7 @@ const AuthRoute = ({ children }) => {
     );
   }
 
-  ("AuthRoute: Rendering auth form");
+  ('AuthRoute: Rendering auth form');
   return children;
 };
 
@@ -107,7 +119,7 @@ const VendorOnboardingRoute = ({ children }) => {
   // Don't redirect automatically - let users access onboarding freely
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      ("VendorOnboardingRoute: Not authenticated, redirecting to auth");
+      ('VendorOnboardingRoute: Not authenticated, redirecting to auth');
       navigate("/auth", { replace: true });
     }
   }, [loading, isAuthenticated, navigate]);
@@ -150,89 +162,93 @@ const AppRoutes = () => {
   };
 
   return (
-    <Routes>
-      {/* Public Auth Route */}
-      <Route
-        path="/auth"
-        element={
-          <AuthRoute>
-            <Auth />
-          </AuthRoute>
-        }
-      />
+    <>
+      <Routes>
+        {/* Public Auth Route */}
+        <Route
+          path="/auth"
+          element={
+            <AuthRoute>
+              <Auth />
+            </AuthRoute>
+          }
+        />
 
-      {/* Protected Routes */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout currentPage="dashboard" onPageChange={handleNavigate}>
-              <VendorDashboard />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+        {/* Protected Routes */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Layout currentPage="dashboard" onPageChange={handleNavigate}>
+                <VendorDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/products"
-        element={
-          <ProtectedRoute>
-            <Layout currentPage="products" onPageChange={handleNavigate}>
-              <ProductManagement onNavigate={handleNavigate} />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute>
+              <Layout currentPage="products" onPageChange={handleNavigate}>
+                <ProductManagement onNavigate={handleNavigate} />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/add-product"
-        element={
-          <ProtectedRoute>
-            <Layout currentPage="add-product" onPageChange={handleNavigate}>
-              <AddProduct onNavigate={handleNavigate} />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/add-product"
+          element={
+            <ProtectedRoute>
+              <Layout currentPage="add-product" onPageChange={handleNavigate}>
+                <AddProduct onNavigate={handleNavigate} />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/edit-product/:productId"
-        element={
-          <ProtectedRoute>
-            <Layout currentPage="edit-product" onPageChange={handleNavigate}>
-              <EditProductWrapper />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/edit-product/:productId"
+          element={
+            <ProtectedRoute>
+              <Layout currentPage="edit-product" onPageChange={handleNavigate}>
+                <EditProductWrapper />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Layout currentPage="settings" onPageChange={handleNavigate}>
-              <Settings />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Layout currentPage="settings" onPageChange={handleNavigate}>
+                <Settings />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Vendor Onboarding - Protected but no auto-redirect */}
-      <Route
-        path="/vendor-onboarding"
-        element={
-          <VendorOnboardingRoute>
-            <VendorOnboardingWrapper />
-          </VendorOnboardingRoute>
-        }
-      />
+        {/* Vendor Onboarding - Protected but no auto-redirect */}
+        <Route
+          path="/vendor-onboarding"
+          element={
+            <VendorOnboardingRoute>
+              <VendorOnboardingWrapper />
+            </VendorOnboardingRoute>
+          }
+        />
+        
 
-      {/* 404 Page */}
-      <Route
-        path="*"
-        element={<NotFound onNavigateHome={() => navigate("/")} />}
-      />
-    </Routes>
+        {/* 404 Page */}
+        <Route
+          path="*"
+          element={<NotFound onNavigateHome={() => navigate("/")} />}
+        />
+      </Routes>
+      
+    </>
   );
 };
 
@@ -255,17 +271,17 @@ const VendorOnboardingWrapper = () => {
 
 const App = () => {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ProductProvider>
-          <ToastProvider>
-            <ErrorBoundary>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <ProductProvider>
+            <ToastProvider>
               <AppRoutes />
-            </ErrorBoundary>
-          </ToastProvider>
-        </ProductProvider>
-      </AuthProvider>
-    </BrowserRouter>
+            </ToastProvider>
+          </ProductProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };
 

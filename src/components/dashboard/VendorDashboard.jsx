@@ -1,4 +1,4 @@
-// src/components/dashboard/VendorDashboard.jsx - Updated with real API integration
+// src/components/dashboard/VendorDashboard.jsx - Fixed with useSafeUser hook  
 import React, { useEffect, useState } from "react";
 import {
   Package,
@@ -12,12 +12,12 @@ import { StatCard } from "../dashboard/StatCard";
 import { StockOverview } from "../dashboard/StockOverview";
 import { RecentEnquiries } from "../dashboard/RecentEnquiries";
 import { dashboardService } from "../../services/dashboardService";
-import { useAuth } from "../../contexts/AuthContext";
+import { useSafeUser } from "../../hooks/useSafeUser"; // Use safe user hook
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { useToast } from "../ui/Toast";
 
 const VendorDashboard = () => {
-  const { user } = useAuth();
+  const { displayName, firstName, isAuthenticated } = useSafeUser(); // Use safe user hook
   const { addToast } = useToast();
 
   // State for dashboard data
@@ -84,8 +84,11 @@ const VendorDashboard = () => {
       }
     };
 
-    loadDashboardData();
-  }, [addToast]);
+    // Only load data if user is authenticated
+    if (isAuthenticated) {
+      loadDashboardData();
+    }
+  }, [addToast, isAuthenticated]);
 
   // Refresh dashboard data
   const refreshDashboard = async () => {
@@ -129,6 +132,11 @@ const VendorDashboard = () => {
     return mockTrends[type] || "+0%";
   };
 
+  // Don't render if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -156,20 +164,20 @@ const VendorDashboard = () => {
     );
   }
 
+  ('VendorDashboard: Rendering with user data:', { displayName, firstName }); // Debug log
+
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">
-          Welcome back,{" "}
-          {user?.firstName || user?.fullName?.split(" ")[0] || "Vendor"}!
+          Welcome back, {firstName || displayName || "Vendor"}!
         </h1>
         <p className="text-blue-100">
           Here's what's happening with your marketplace today.
         </p>
       </div>
 
-      {/* Profile Verification Alert */}
       {/* Profile Verification Alert */}
       {!dashboardStats.isProfileVerified && (
         <div
@@ -221,7 +229,6 @@ const VendorDashboard = () => {
               <p className="text-3xl font-bold">
                 {dashboardStats.totalProducts}
               </p>
-              {/* <p className="text-sm text-white/70 mt-1">Listed products</p> */}
             </div>
             <div className="absolute top-4 right-4 opacity-20">
               <Package className="w-12 h-12 text-white" />
@@ -245,7 +252,6 @@ const VendorDashboard = () => {
               <p className="text-3xl font-bold">
                 {dashboardStats.inventoryValue?.toLocaleString() || "0"}
               </p>
-              {/* <p className="text-sm text-white/70 mt-1">Total In stock</p> */}
             </div>
           </div>
         </div>
@@ -274,7 +280,6 @@ const VendorDashboard = () => {
               <p className="text-3xl font-bold">
                 {dashboardStats.totalInquiries}
               </p>
-              {/* <p className="text-sm text-white/70 mt-1">Pending responses</p> */}
             </div>
             <div className="absolute top-4 right-4 opacity-20">
               <MessageSquare className="w-12 h-12 text-white" />
@@ -305,12 +310,6 @@ const VendorDashboard = () => {
               <p className="text-3xl font-bold">
                 {dashboardStats.isProfileVerified ? "Verified" : "Pending"}
               </p>
-              {/* <p className="text-sm text-white/70 mt-1">
-                {calculateTrend(
-                  dashboardStats.profileCompletionPercentage,
-                  "profile"
-                )}
-              </p> */}
             </div>
             <div className="absolute top-4 right-4 opacity-20">
               <CheckCircle className="w-12 h-12 text-white" />
