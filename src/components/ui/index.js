@@ -1,3 +1,4 @@
+// Updated ui/index.js with proper exports
 export { default as Button } from './Button';
 export * from './Avatar';
 export * from './Card';

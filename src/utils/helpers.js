@@ -47,8 +47,12 @@ export const formatTimeAgo = (dateString) => {
 export const getStockStatusColor = (status) => {
   const statusColors = {
     'In Stock': 'success',
-    'Low Stock': 'warning',
-    'Out of Stock': 'destructive'
+    'in stock': 'success',
+    'Low Stock': 'warning', 
+    'low stock': 'warning',
+    'Out of Stock': 'destructive',
+    'out of stock': 'destructive',
+    'out-of-stock': 'destructive'
   };
   return statusColors[status] || 'secondary';
 };

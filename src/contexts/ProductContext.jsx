@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { productService } from '../services/productService';
 
 const ProductContext = createContext();
@@ -16,7 +16,7 @@ export const ProductProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchProducts = async (filters = {}) => {
+  const fetchProducts = useCallback(async (filters = {}) => {
     setLoading(true);
     setError(null);
     try {
@@ -25,11 +25,13 @@ export const ProductProvider = ({ children }) => {
       return data;
     } catch (err) {
       setError(err.message);
-      throw err;
+      console.error('Error fetching products:', err);
+      // Don't throw error, just set empty array to prevent infinite loading
+      setProducts([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const addProduct = async (productData) => {
     try {
@@ -67,6 +69,15 @@ export const ProductProvider = ({ children }) => {
     }
   };
 
+  const getProduct = async (id) => {
+    try {
+      return await productService.getProduct(id);
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   const value = {
     products,
     loading,
@@ -74,7 +85,8 @@ export const ProductProvider = ({ children }) => {
     fetchProducts,
     addProduct,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    getProduct
   };
 
   return (

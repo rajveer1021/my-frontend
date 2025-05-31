@@ -27,12 +27,12 @@ export const AuthProvider = ({ children }) => {
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // For demo purposes, accept any password for existing emails
+    // For demo purposes, accept any password for vendor email
     const mockUser = { 
       id: Date.now().toString(), 
       email, 
-      fullName: email === 'vendor@example.com' ? 'John Vendor' : 'Jane Buyer',
-      userType: email === 'vendor@example.com' ? 'vendor' : 'buyer',
+      fullName: 'John Vendor',
+      userType: 'vendor',
       isVerified: true 
     };
     
@@ -51,6 +51,7 @@ export const AuthProvider = ({ children }) => {
     const newUser = {
       ...userData,
       id: Date.now().toString(),
+      userType: 'vendor', // Only vendor accounts allowed
       isVerified: true
     };
     

@@ -22,13 +22,13 @@ export const TableBody = ({ children, className }) => (
 );
 
 export const TableRow = ({ children, className }) => (
-  <tr className={cn('hover:bg-gray-50', className)}>
+  <tr className={cn('hover:bg-gray-50 transition-colors', className)}>
     {children}
   </tr>
 );
 
 export const TableHead = ({ children, className }) => (
-  <th className={cn('h-12 px-4 text-left align-middle font-medium text-gray-500', className)}>
+  <th className={cn('h-12 px-4 text-left align-middle font-medium text-gray-500 text-xs uppercase tracking-wider', className)}>
     {children}
   </th>
 );

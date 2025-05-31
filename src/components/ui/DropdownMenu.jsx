@@ -45,7 +45,8 @@ export const DropdownMenuContent = ({ children, isOpen, setIsOpen, align = 'righ
   
   const alignClasses = {
     left: 'left-0',
-    right: 'right-0'
+    right: 'right-0',
+    center: 'left-1/2 transform -translate-x-1/2'
   };
   
   return (
@@ -66,7 +67,7 @@ export const DropdownMenuContent = ({ children, isOpen, setIsOpen, align = 'righ
 export const DropdownMenuItem = ({ children, onClick, className }) => (
   <button
     className={cn(
-      'flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100',
+      'flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors',
       className
     )}
     onClick={onClick}
