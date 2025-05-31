@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/authService';
+import { getCurrentUser, setCurrentUser, logout as logoutUser } from '../services/mockData';
 
 const AuthContext = createContext();
 
@@ -16,33 +16,52 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-          const userData = await authService.getCurrentUser();
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Auth initialization failed:', error);
-        localStorage.removeItem('authToken');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initAuth();
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
+    setLoading(false);
   }, []);
 
-  const login = async (credentials) => {
-    const { user, token } = await authService.login(credentials);
-    localStorage.setItem('authToken', token);
-    setUser(user);
-    return user;
+  const login = async (email, password) => {
+    setLoading(true);
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // For demo purposes, accept any password for existing emails
+    const mockUser = { 
+      id: Date.now().toString(), 
+      email, 
+      fullName: email === 'vendor@example.com' ? 'John Vendor' : 'Jane Buyer',
+      userType: email === 'vendor@example.com' ? 'vendor' : 'buyer',
+      isVerified: true 
+    };
+    
+    setCurrentUser(mockUser);
+    setUser(mockUser);
+    setLoading(false);
+    return true;
+  };
+
+  const signup = async (userData) => {
+    setLoading(true);
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const newUser = {
+      ...userData,
+      id: Date.now().toString(),
+      isVerified: true
+    };
+    
+    setCurrentUser(newUser);
+    setUser(newUser);
+    setLoading(false);
+    return true;
   };
 
   const logout = () => {
-    localStorage.removeItem('authToken');
+    logoutUser();
     setUser(null);
   };
 
@@ -53,6 +72,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     login,
+    signup,
     logout,
     updateUser,
     loading

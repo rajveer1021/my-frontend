@@ -3,65 +3,66 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ProductProvider } from './contexts/ProductContext';
 import { ToastProvider } from './components/ui/Toast';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import { Layout } from './components/layout/Layout';
-import Dashboard from './pages/Dashboard';
-import Products from './pages/Products';
-import AddProduct from './pages/AddProduct';
-import EditProduct from './pages/EditProduct';
-import ProductDetails from './pages/ProductDetails';
+import { useAuth } from './contexts/AuthContext';
+import Auth from './pages/Auth';
+import Layout from './components/layout/Layout';
+import VendorDashboard from './components/dashboard/VendorDashboard';
+import ProductManagement from './components/products/ProductManagement';
+import VendorOnboarding from './components/onboarding/VendorOnboarding';
 import Settings from './pages/Settings';
-import { NotFound } from './components/common/NotFound';
 import './index.css';
 
-const App = () => {
+const AppContent = () => {
+  const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [pageParams, setPageParams] = useState({});
+  const [isOnboarded, setIsOnboarded] = useState(
+    localStorage.getItem('vendorOnboarded') === 'true'
+  );
 
-  const handleNavigation = (page, params = {}) => {
-    setCurrentPage(page);
-    setPageParams(params);
-  };
+  if (!user) {
+    return <Auth />;
+  }
 
-  const renderCurrentPage = () => {
+  if (user.userType === 'buyer') {
+    return <BuyerDashboard />;
+  }
+
+  // Show onboarding if vendor hasn't completed it
+  if (user.userType === 'vendor' && !isOnboarded) {
+    return (
+      <VendorOnboarding 
+        onComplete={() => setIsOnboarded(true)}
+      />
+    );
+  }
+
+  const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard onNavigate={handleNavigation} />;
+        return <VendorDashboard />;
       case 'products':
-        return <Products onNavigate={handleNavigation} />;
-      case 'add-product':
-        return <AddProduct onNavigate={handleNavigation} />;
-      case 'edit-product':
-        return (
-          <EditProduct 
-            onNavigate={handleNavigation} 
-            productId={pageParams.productId} 
-          />
-        );
-      case 'product-details':
-        return (
-          <ProductDetails 
-            onNavigate={handleNavigation} 
-            productId={pageParams.productId} 
-          />
-        );
+        return <ProductManagement />;
       case 'settings':
-        return <Settings onNavigate={handleNavigation} />;
+        return <Settings />;
       default:
-        return <NotFound onNavigateHome={() => handleNavigation('dashboard')} />;
+        return <VendorDashboard />;
     }
   };
 
+  return (
+    <Layout currentPage={currentPage} onPageChange={setCurrentPage}>
+      {renderPage()}
+    </Layout>
+  );
+};
+
+const App = () => {
   return (
     <ErrorBoundary>
       <ToastProvider>
         <AuthProvider>
           <ProductProvider>
-            <Layout 
-              currentPage={currentPage} 
-              onPageChange={(page) => handleNavigation(page)}
-            >
-              {renderCurrentPage()}
-            </Layout>
+            <AppContent />
           </ProductProvider>
         </AuthProvider>
       </ToastProvider>

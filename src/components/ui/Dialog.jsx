@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/helpers';
 
@@ -38,7 +38,7 @@ export const Dialog = ({ open, onOpenChange, children }) => {
 
 export const DialogContent = ({ children, className }) => (
   <div className={cn(
-    'bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4',
+    'bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4 relative',
     className
   )}>
     {children}
@@ -51,8 +51,8 @@ export const DialogHeader = ({ children }) => (
   </div>
 );
 
-export const DialogTitle = ({ children }) => (
-  <h2 className="text-lg font-semibold text-gray-900">
+export const DialogTitle = ({ children, className }) => (
+  <h2 className={cn("text-lg font-semibold text-gray-900", className)}>
     {children}
   </h2>
 );
