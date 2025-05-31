@@ -1,19 +1,20 @@
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ProductProvider } from './contexts/ProductContext';
-import { ToastProvider } from './components/ui/Toast';
-import Layout from './components/layout/Layout';
-import VendorDashboard from './components/dashboard/VendorDashboard';
-import ProductManagement from './components/products/ProductManagement';
-import VendorOnboarding from './components/onboarding/VendorOnboarding';
-import AddProduct from './pages/AddProduct';
-import EditProduct from './pages/EditProduct';
-import Settings from './pages/Settings'
-import {NotFound} from './components/common/NotFound';
-import ErrorBoundary from './components/common/ErrorBoundary';
-import {LoadingSpinner} from './components/common/LoadingSpinner';
-import './index.css';
+import React, { useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ProductProvider } from "./contexts/ProductContext";
+import { ToastProvider } from "./components/ui/Toast";
+import Layout from "./components/layout/Layout";
+import VendorDashboard from "./components/dashboard/VendorDashboard";
+import ProductManagement from "./components/products/ProductManagement";
+import VendorOnboarding from "./components/onboarding/VendorOnboarding";
+import AddProduct from "./pages/AddProduct";
+import EditProduct from "./pages/EditProduct";
+import Auth from "./pages/Auth";
+import Settings from "./pages/Settings";
+import { NotFound } from "./components/common/NotFound";
+import ErrorBoundary from "./components/common/ErrorBoundary";
+import { LoadingSpinner } from "./components/common/LoadingSpinner";
+import "./index.css";
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -42,6 +43,7 @@ const App = () => {
           <ToastProvider>
             <ErrorBoundary>
               <Routes>
+                <Route path="/auth" element={<Auth />} />
                 {/* <Route path="/auth" element={<Auth />} /> */}
                 <Route
                   path="/"
@@ -83,16 +85,6 @@ const App = () => {
                     </ProtectedRoute>
                   }
                 />
-                {/* <Route
-                  path="/product-details/:productId"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <ProductDetails />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                /> */}
                 <Route
                   path="/settings"
                   element={
@@ -106,13 +98,11 @@ const App = () => {
                 <Route
                   path="/vendor-onboarding"
                   element={
-                    <ProtectedRoute>
-                        <VendorOnboarding
-                          onComplete={() => {
-                            localStorage.setItem('vendorOnboarded', 'true');
-                          }}
-                        />
-                    </ProtectedRoute>
+                      <VendorOnboarding
+                        onComplete={() => {
+                          localStorage.setItem("vendorOnboarded", "true");
+                        }}
+                      />
                   }
                 />
                 <Route path="*" element={<NotFound />} />
