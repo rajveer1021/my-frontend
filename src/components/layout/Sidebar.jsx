@@ -3,10 +3,17 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Package, Settings, X, ChevronRight, UserPlus } from 'lucide-react';
 import Button from '../ui/Button';
 import { cn } from '../../utils/helpers';
-import { useAuth } from '../../hooks/useAuth';
+import { useSafeUser } from '../../hooks/useSafeUser'; // Use safe user hook instead
 
 export const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
-  const { user } = useAuth();
+  const { 
+    displayName, 
+    email, 
+    initials, 
+    isAuthenticated, 
+    loading 
+  } = useSafeUser(); // Use safe user hook
+  
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -109,6 +116,13 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     </Link>
   );
 
+  // Don't render if not authenticated or still loading
+  if (!isAuthenticated || loading) {
+    return null;
+  }
+
+  ('Sidebar: Rendering with user data:', { displayName, email, initials }); // Debug log
+
   return (
     <>
       {/* Desktop Sidebar */}
@@ -162,15 +176,15 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               <div className="flex items-center space-x-3 p-3 rounded-2xl bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-100">
                 <div className="relative">
                   <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-600 text-white font-semibold text-sm shadow-lg">
-                    {user?.fullName?.charAt(0) || 'J'}
+                    {initials}
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {user?.fullName || 'John Vendor'}
+                    {displayName}
                   </p>
                   <p className="text-xs text-gray-500 truncate">
-                    {user?.email || 'vendor@example.com'}
+                    {email}
                   </p>
                 </div>
               </div>
@@ -178,7 +192,7 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
               <div className="flex justify-center">
                 <div className="relative">
                   <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-600 text-white font-semibold text-sm shadow-lg">
-                    {user?.fullName?.charAt(0) || 'J'}
+                    {initials}
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></div>
                 </div>
@@ -244,16 +258,16 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
             <div className="flex items-center space-x-3 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-100">
               <div className="relative">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-600 text-white font-semibold shadow-lg">
-                  {user?.fullName?.charAt(0) || 'J'}
+                  {initials}
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></div>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 truncate">
-                  {user?.fullName || 'John Vendor'}
+                  {displayName}
                 </p>
                 <p className="text-sm text-gray-500 truncate">
-                  {user?.email || 'vendor@example.com'}
+                  {email}
                 </p>
                 <div className="flex items-center mt-1">
                   <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>

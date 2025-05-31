@@ -1,4 +1,4 @@
-// src/components/layout/Header.jsx - Fixed with proper logout navigation
+// src/components/layout/Header.jsx - Fixed with useSafeUser hook
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -21,9 +21,9 @@ import {
   DropdownMenuTrigger,
 } from "../ui/DropdownMenu";
 import { useAuth } from "../../contexts/AuthContext";
+import { useSafeUser } from "../../hooks/useSafeUser"; // Import the safe user hook
 
 export const Header = ({
-  user,
   sidebarOpen,
   setSidebarOpen,
   currentPage,
@@ -31,6 +31,15 @@ export const Header = ({
 }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  
+  // Use the safe user hook instead of direct useAuth
+  const { 
+    displayName, 
+    email, 
+    initials, 
+    isAuthenticated, 
+    loading 
+  } = useSafeUser();
 
   const handleLogout = () => {
     logout();
@@ -93,6 +102,13 @@ export const Header = ({
 
   const breadcrumbs = getBreadcrumbs(currentPage);
 
+  // Don't render if not authenticated
+  if (!isAuthenticated || loading) {
+    return null;
+  }
+
+  ('Header: Rendering with user data:', { displayName, email, initials }); // Debug log
+
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-white/20 shadow-lg">
       <div className="h-16 px-4 sm:px-6 lg:px-8">
@@ -134,7 +150,7 @@ export const Header = ({
             </div>
           </div>
 
-          {/* Right Side - Search, Notifications, Profile */}
+          {/* Right Side - User Profile Dropdown */}
           <div className="flex items-center space-x-3 lg:space-x-4 flex-shrink-0">
             {/* User Profile Dropdown */}
             <DropdownMenu>
@@ -143,20 +159,17 @@ export const Header = ({
                   <div className="relative">
                     <Avatar className="h-8 w-8 lg:h-10 lg:w-10 ring-2 ring-white shadow-lg">
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm font-semibold">
-                        {user?.fullName?.charAt(0) ||
-                          user?.firstName?.charAt(0) ||
-                          "J"}
+                        {initials}
                       </AvatarFallback>
                     </Avatar>
+                    {/* Online indicator */}
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></div>
                   </div>
 
                   {/* User Info - Desktop Only */}
                   <div className="text-left hidden lg:block">
                     <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {user?.fullName ||
-                        `${user?.firstName || "John"} ${
-                          user?.lastName || "Vendor"
-                        }`}
+                      {displayName}
                     </p>
                     <p className="text-xs text-gray-500">Vendor Account</p>
                   </div>
@@ -169,6 +182,25 @@ export const Header = ({
                 align="end"
                 className="w-64 mt-2 bg-white/95 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl"
               >
+                {/* User Info Header */}
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        {displayName}
+                      </p>
+                      <p className="text-sm text-gray-500 truncate">
+                        {email}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Menu Items */}
                 <div className="py-2">
                   <DropdownMenuItem

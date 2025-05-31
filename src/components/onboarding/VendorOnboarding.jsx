@@ -1,4 +1,4 @@
-// src/components/onboarding/VendorOnboarding.jsx - Fixed redirect issue
+// src/components/onboarding/VendorOnboarding.jsx - Fixed button visibility
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import Button from '../ui/Button';
@@ -268,7 +268,7 @@ const VendorOnboarding = ({ onComplete }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4 overflow-y-auto">
       <div className="w-full max-w-4xl">
         {/* Compact Header */}
         <div className="text-center mb-6">
@@ -615,15 +615,15 @@ const VendorOnboarding = ({ onComplete }) => {
               </div>
             )}
 
-            {/* Compact Navigation */}
+            {/* Fixed Navigation Buttons */}
             <div className="flex justify-between pt-6 border-t border-gray-100">
               <Button 
                 onClick={handlePrevious}
                 disabled={currentStep === 1 || loading}
-                className={`flex items-center px-6 py-2 rounded-xl font-semibold transition-all ${
+                className={`flex items-center px-6 py-2 rounded-xl font-semibold transition-all shadow-md ${
                   currentStep === 1 || loading
-                    ? 'bg-gray-600 text-gray-500 cursor-not-allowed'
-                    : 'bg-white border border-gray-300 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
+                    : 'bg-gray-600 text-white hover:bg-gray-700 border border-gray-600 hover:shadow-lg'
                 }`}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -633,10 +633,10 @@ const VendorOnboarding = ({ onComplete }) => {
               <Button 
                 onClick={handleNext}
                 disabled={!isStepValid() || loading}
-                className={`flex items-center px-6 py-2 rounded-xl font-semibold transition-all ${
+                className={`flex items-center px-6 py-2 rounded-xl font-semibold transition-all shadow-md ${
                   isStepValid() && !loading
-                    ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white" 
-                    : "bg-gray-500 text-gray-900 cursor-not-allowed"
+                    ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white hover:shadow-lg" 
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed border border-gray-300"
                 }`}
               >
                 {loading ? (

@@ -219,7 +219,7 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
 
       {/* Action Links */}
       <div className="space-y-2">
-        <div className="text-center">
+        {/* <div className="text-center">
           <Button 
             variant="ghost" 
             onClick={onForgotPassword}
@@ -228,7 +228,7 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
           >
             Forgot your password?
           </Button>
-        </div>
+        </div> */}
         
         <div className="text-center">
           <span className="text-gray-600 text-sm">Don't have an account? </span>
