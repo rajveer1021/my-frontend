@@ -1,3 +1,6 @@
+import React from 'react';
+import { cn } from '../../utils/helpers';
+
 export const Avatar = ({ children, className }) => (
   <div className={cn('relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full', className)}>
     {children}

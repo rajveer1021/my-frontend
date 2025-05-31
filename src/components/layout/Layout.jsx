@@ -3,7 +3,7 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '../../contexts/AuthContext';
 
-const Layout = ({ children, currentPage, onPageChange }) => {
+export const Layout = ({ children, currentPage, onPageChange }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { user } = useAuth();
 

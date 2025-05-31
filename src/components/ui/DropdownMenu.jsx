@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { cn } from '../../utils/helpers';
 
 export const DropdownMenu = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);

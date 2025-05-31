@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProductProvider } from './contexts/ProductContext';
+import { ToastProvider } from './components/ui/Toast';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import { Layout } from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
@@ -8,6 +10,7 @@ import AddProduct from './pages/AddProduct';
 import EditProduct from './pages/EditProduct';
 import ProductDetails from './pages/ProductDetails';
 import Settings from './pages/Settings';
+import { NotFound } from './components/common/NotFound';
 import './index.css';
 
 const App = () => {
@@ -44,32 +47,26 @@ const App = () => {
       case 'settings':
         return <Settings onNavigate={handleNavigation} />;
       default:
-        return <Dashboard onNavigate={handleNavigation} />;
+        return <NotFound onNavigateHome={() => handleNavigation('dashboard')} />;
     }
   };
 
   return (
-    <AuthProvider>
-      <ProductProvider>
-        <Layout 
-          currentPage={currentPage} 
-          onPageChange={(page) => handleNavigation(page)}
-        >
-          {renderCurrentPage()}
-        </Layout>
-      </ProductProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AuthProvider>
+          <ProductProvider>
+            <Layout 
+              currentPage={currentPage} 
+              onPageChange={(page) => handleNavigation(page)}
+            >
+              {renderCurrentPage()}
+            </Layout>
+          </ProductProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 };
 
 export default App;
-
-// Export all pages
-export { 
-  Dashboard, 
-  Products, 
-  AddProduct, 
-  EditProduct, 
-  ProductDetails, 
-  Settings 
-};

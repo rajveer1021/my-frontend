@@ -1,3 +1,6 @@
+import React from 'react';
+import { cn } from '../../utils/helpers';
+
 export const Table = ({ children, className }) => (
   <div className="relative w-full overflow-auto">
     <table className={cn('w-full caption-bottom text-sm', className)}>
@@ -6,14 +9,14 @@ export const Table = ({ children, className }) => (
   </div>
 );
 
-export const TableHeader = ({ children }) => (
-  <thead className="border-b border-gray-200">
+export const TableHeader = ({ children, className }) => (
+  <thead className={cn('border-b border-gray-200', className)}>
     {children}
   </thead>
 );
 
-export const TableBody = ({ children }) => (
-  <tbody className="divide-y divide-gray-200">
+export const TableBody = ({ children, className }) => (
+  <tbody className={cn('divide-y divide-gray-200', className)}>
     {children}
   </tbody>
 );
@@ -35,4 +38,3 @@ export const TableCell = ({ children, className }) => (
     {children}
   </td>
 );
-

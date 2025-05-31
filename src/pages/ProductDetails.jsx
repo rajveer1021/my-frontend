@@ -1,23 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Edit, Trash2, Eye } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { ErrorMessage } from '../components/common/ErrorMessage';
 import { productService } from '../services/productService';
 import { formatCurrency, getStockStatusColor } from '../utils/helpers';
 
 const ProductDetails = ({ onNavigate, productId }) => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const productData = await productService.getProduct(productId);
         setProduct(productData);
       } catch (error) {
-        alert('Failed to load product');
-        onNavigate('products');
+        setError('Failed to load product');
+        console.error('Error fetching product:', error);
       } finally {
         setLoading(false);
       }
@@ -25,8 +30,11 @@ const ProductDetails = ({ onNavigate, productId }) => {
 
     if (productId) {
       fetchProduct();
+    } else {
+      setError('No product ID provided');
+      setLoading(false);
     }
-  }, [productId, onNavigate]);
+  }, [productId]);
 
   const handleEdit = () => {
     onNavigate('edit-product', { productId });
@@ -44,11 +52,35 @@ const ProductDetails = ({ onNavigate, productId }) => {
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading product...</div>;
+    return (
+      <div className="flex justify-center items-center py-12">
+        <LoadingSpinner size="lg" text="Loading product..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <ErrorMessage 
+          message={error} 
+          type="error"
+          onClose={() => onNavigate('products')}
+        />
+      </div>
+    );
   }
 
   if (!product) {
-    return <div className="text-center py-8">Product not found</div>;
+    return (
+      <div className="space-y-6">
+        <ErrorMessage 
+          message="Product not found" 
+          type="error"
+          onClose={() => onNavigate('products')}
+        />
+      </div>
+    );
   }
 
   return (
@@ -90,6 +122,9 @@ const ProductDetails = ({ onNavigate, productId }) => {
               src={product.image}
               alt={product.name}
               className="w-full h-64 object-cover rounded-lg"
+              onError={(e) => {
+                e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+              }}
             />
           </CardContent>
         </Card>
@@ -127,11 +162,11 @@ const ProductDetails = ({ onNavigate, productId }) => {
             <div>
               <label className="text-sm font-medium text-gray-500">Categories</label>
               <div className="flex flex-wrap gap-2 mt-1">
-                {product.categories.map((category, index) => (
+                {product.categories?.map((category, index) => (
                   <Badge key={index} variant="secondary">
                     {category}
                   </Badge>
-                ))}
+                )) || <span className="text-gray-500">No categories</span>}
               </div>
             </div>
 
@@ -162,3 +197,5 @@ const ProductDetails = ({ onNavigate, productId }) => {
     </div>
   );
 };
+
+export default ProductDetails;
