@@ -1,4 +1,4 @@
-// src/contexts/ProductContext.jsx - Updated with real API integration
+// src/contexts/ProductContext.jsx - Updated with search API integration
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { productService } from '../services/productService';
 
@@ -14,39 +14,102 @@ export const useProducts = () => {
 
 export const ProductProvider = ({ children }) => {
   const [products, setProducts] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
+  const [filters, setFilters] = useState({});
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
     total: 0,
-    pages: 1
+    pages: 1,
+    hasNext: false,
+    hasPrev: false
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchProducts = useCallback(async (filters = {}) => {
+  // Search products with filters (preferred method)
+  const searchProducts = useCallback(async (searchParams = {}) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await productService.getProducts(filters);
-      setProducts(response.products || []);
-      setPagination(response.pagination || {
+      const response = await productService.searchProducts(searchParams);
+      
+      if (response.success && response.data) {
+        setProducts(response.data.products || []);
+        setAvailableCategories(response.data.availableCategories || []);
+        setFilters(response.data.filters || {});
+        setPagination(response.data.pagination || {
+          page: 1,
+          limit: 10,
+          total: 0,
+          pages: 1,
+          hasNext: false,
+          hasPrev: false
+        });
+        return response.data.products || [];
+      }
+      
+      throw new Error('Invalid response format');
+    } catch (err) {
+      setError(err.message);
+      console.error('Error searching products:', err);
+      // Don't throw error, just set empty array to prevent infinite loading
+      setProducts([]);
+      setAvailableCategories([]);
+      setFilters({});
+      setPagination({
         page: 1,
         limit: 10,
         total: 0,
-        pages: 1
+        pages: 1,
+        hasNext: false,
+        hasPrev: false
       });
-      return response.products || [];
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch products (fallback method for compatibility)
+  const fetchProducts = useCallback(async (filterParams = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await productService.getProducts(filterParams);
+      
+      if (response.success && response.data) {
+        setProducts(response.data.products || []);
+        setAvailableCategories(response.data.availableCategories || []);
+        setFilters(response.data.filters || {});
+        setPagination(response.data.pagination || {
+          page: 1,
+          limit: 10,
+          total: 0,
+          pages: 1,
+          hasNext: false,
+          hasPrev: false
+        });
+        return response.data.products || [];
+      }
+      
+      throw new Error('Invalid response format');
     } catch (err) {
       setError(err.message);
       console.error('Error fetching products:', err);
       // Don't throw error, just set empty array to prevent infinite loading
       setProducts([]);
+      setAvailableCategories([]);
+      setFilters({});
       setPagination({
         page: 1,
         limit: 10,
         total: 0,
-        pages: 1
+        pages: 1,
+        hasNext: false,
+        hasPrev: false
       });
+      return [];
     } finally {
       setLoading(false);
     }
@@ -126,26 +189,55 @@ export const ProductProvider = ({ children }) => {
     }
   };
 
-  const refreshProducts = useCallback(async (filters = {}) => {
-    return await fetchProducts(filters);
-  }, [fetchProducts]);
+  // Refresh products with current filters
+  const refreshProducts = useCallback(async (customFilters = {}) => {
+    const currentFilters = { ...filters, ...customFilters };
+    return await searchProducts(currentFilters);
+  }, [filters, searchProducts]);
 
   const clearError = () => {
     setError(null);
   };
 
+  // Clear all data (useful for logout or reset)
+  const clearProducts = () => {
+    setProducts([]);
+    setAvailableCategories([]);
+    setFilters({});
+    setPagination({
+      page: 1,
+      limit: 10,
+      total: 0,
+      pages: 1,
+      hasNext: false,
+      hasPrev: false
+    });
+    setError(null);
+  };
+
   const value = {
+    // Data
     products,
+    availableCategories,
+    filters,
     pagination,
     loading,
     error,
+
+    // Main methods (preferred)
+    searchProducts,
+    
+    // Legacy methods (for compatibility)
     fetchProducts,
     addProduct,
     updateProduct,
     deleteProduct,
     getProduct,
     refreshProducts,
-    clearError
+    
+    // Utility methods
+    clearError,
+    clearProducts
   };
 
   return (
