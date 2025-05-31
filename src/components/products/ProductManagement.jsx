@@ -3,15 +3,20 @@ import { Plus, Package } from 'lucide-react';
 import Button from '../ui/Button';
 import { ProductFilters } from './ProductFilters';
 import { ProductTable } from './ProductTable';
+import ProductDetailsModal from './ProductDetailsModal';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useProducts } from '../../contexts/ProductContext';
 
 const ProductManagement = ({ onNavigate }) => {
-  const { products, loading, fetchProducts, deleteProduct } = useProducts();
+  const { products, loading, fetchProducts, deleteProduct, getProduct } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Modal state
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   useEffect(() => {
     const initializeProducts = async () => {
@@ -44,8 +49,20 @@ const ProductManagement = ({ onNavigate }) => {
     }
   }, [searchTerm, categoryFilter, sortBy, fetchProducts, isInitialized]);
 
-  const handleView = (productId) => {
-    onNavigate('product-details', { productId });
+  const handleView = async (productId) => {
+    try {
+      const product = await getProduct(productId);
+      setSelectedProduct(product);
+      setIsDetailsModalOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch product details:', error);
+      // Fallback to product from list
+      const product = products.find(p => p.id === productId);
+      if (product) {
+        setSelectedProduct(product);
+        setIsDetailsModalOpen(true);
+      }
+    }
   };
 
   const handleEdit = (productId) => {
@@ -60,6 +77,11 @@ const ProductManagement = ({ onNavigate }) => {
         alert('Failed to delete product');
       }
     }
+  };
+
+  const closeDetailsModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedProduct(null);
   };
 
   // Show loading only during initial load
@@ -123,6 +145,13 @@ const ProductManagement = ({ onNavigate }) => {
           onDelete={handleDelete}
         />
       )}
+
+      {/* Product Details Modal */}
+      <ProductDetailsModal
+        product={selectedProduct}
+        isOpen={isDetailsModalOpen}
+        onClose={closeDetailsModal}
+      />
     </div>
   );
 };

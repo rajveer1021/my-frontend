@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ProductForm } from '../components/products/ProductForm';
 import { useProducts } from '../contexts/ProductContext';
-import { productService } from '../services/productService';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 
 const EditProduct = ({ onNavigate, productId }) => {
-  const { updateProduct } = useProducts();
+  const { updateProduct, getProduct } = useProducts();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,8 +15,17 @@ const EditProduct = ({ onNavigate, productId }) => {
       try {
         setLoading(true);
         setError(null);
-        const productData = await productService.getProduct(productId);
-        setProduct(productData);
+        const productData = await getProduct(productId);
+        
+        // Transform data to match form structure
+        const formData = {
+          ...productData,
+          category: productData.categories?.[0] || '',
+          subCategory: productData.categories?.[1] || '',
+          tags: productData.tags || []
+        };
+        
+        setProduct(formData);
       } catch (error) {
         setError('Failed to load product');
         console.error('Error fetching product:', error);
@@ -32,7 +40,7 @@ const EditProduct = ({ onNavigate, productId }) => {
       setError('No product ID provided');
       setLoading(false);
     }
-  }, [productId]);
+  }, [productId, getProduct]);
 
   const handleSubmit = async (productData) => {
     try {
@@ -81,11 +89,6 @@ const EditProduct = ({ onNavigate, productId }) => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Edit Product</h1>
-        <p className="text-gray-600">Update product information</p>
-      </div>
-
       <ProductForm
         initialData={product}
         onSubmit={handleSubmit}

@@ -1,5 +1,9 @@
+import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
+import { cn } from '../../utils/helpers';
+
 export const Dialog = ({ open, onOpenChange, children }) => {
-  React.useEffect(() => {
+  useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape') {
         onOpenChange(false);
@@ -34,7 +38,7 @@ export const Dialog = ({ open, onOpenChange, children }) => {
 
 export const DialogContent = ({ children, className }) => (
   <div className={cn(
-    'bg-white rounded-lg shadow-xl p-6 w-full max-h-[90vh] overflow-y-auto',
+    'bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto',
     'animate-in fade-in-0 zoom-in-95 duration-200',
     className
   )}>
@@ -42,4 +46,23 @@ export const DialogContent = ({ children, className }) => (
   </div>
 );
 
-export default Button;
+export const DialogHeader = ({ children }) => (
+  <div className="mb-4">
+    {children}
+  </div>
+);
+
+export const DialogTitle = ({ children, className }) => (
+  <h2 className={cn("text-lg font-semibold text-gray-900", className)}>
+    {children}
+  </h2>
+);
+
+export const DialogClose = ({ onClose }) => (
+  <button
+    onClick={onClose}
+    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+  >
+    <X className="w-4 h-4" />
+  </button>
+);

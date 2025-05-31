@@ -1,158 +1,135 @@
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/Dialog';
-import Button from '../ui/Button';
+import React from 'react';
+import { X } from 'lucide-react';
+import { Dialog, DialogContent } from '../ui/Dialog';
 import { Badge } from '../ui/Badge';
-import { Heart, ShoppingCart, Star, Share2, MessageCircle } from 'lucide-react';
+import { formatCurrency, getStockStatusColor } from '../../utils/helpers';
 
 const ProductDetailsModal = ({
   product,
   isOpen,
-  onClose,
-  onAddToCart,
-  isInWishlist,
-  onToggleWishlist
+  onClose
 }) => {
-  const [quantity, setQuantity] = useState(1);
+  if (!product) return null;
 
-  const getStockStatusColor = (status) => {
-    switch (status) {
-      case 'in-stock':
-        return 'bg-green-100 text-green-800';
-      case 'low-stock':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'out-of-stock':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const getStockStatusText = (status) => {
+    const statusMap = {
+      'In Stock': 'in stock',
+      'Low Stock': 'low stock', 
+      'Out of Stock': 'out of stock'
+    };
+    return statusMap[status] || status.toLowerCase();
   };
 
-  const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      onAddToCart(product);
+  const getStockStatusBadgeClass = (status) => {
+    switch (status) {
+      case 'In Stock':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'Low Stock':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Out of Stock':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
-    onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">{product.name}</DialogTitle>
-        </DialogHeader>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Product Image */}
-          <div className="relative">
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-full h-96 object-cover rounded-lg"
-            />
-            <Badge 
-              className={`absolute top-4 left-4 ${getStockStatusColor(product.stockStatus)}`}
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <div className="bg-white rounded-lg">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">Product Details</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
             >
-              {product.stockStatus.replace('-', ' ')}
-            </Badge>
+              <X className="w-6 h-6" />
+            </button>
           </div>
 
-          {/* Product Details */}
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-xl font-semibold mb-2">{product.description}</h2>
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="flex text-yellow-400">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-current" />
-                  ))}
-                </div>
-                <span className="text-sm text-gray-600">(128 reviews)</span>
+          {/* Content */}
+          <div className="p-6 space-y-6">
+            {/* Product Image */}
+            <div className="flex justify-center">
+              <div className="w-48 h-32 bg-gradient-to-br from-teal-400 via-teal-500 to-teal-600 rounded-lg flex items-center justify-center overflow-hidden">
+                {product.image ? (
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-teal-400 via-teal-500 to-white rounded-lg"></div>
+                )}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {product.categories.map((category) => (
-                <Badge key={category} variant="outline">
-                  {category}
-                </Badge>
-              ))}
-            </div>
-
-            <div className="border-t pt-4">
-              <span className="text-3xl font-bold text-green-600">
-                ${product.price.toFixed(2)}
-              </span>
-              <p className="text-sm text-gray-600 mt-1">Free shipping on orders over $100</p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-2">Description</h3>
-              <p className="text-gray-700">{product.description}</p>
-            </div>
-
-            <div className="border-t pt-4">
-              {/* Quantity and Actions */}
+            {/* Product Info Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left Column */}
               <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <label className="font-medium">Quantity:</label>
-                  <div className="flex items-center border rounded">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="h-8 w-8 p-0"
-                    >
-                      -
-                    </Button>
-                    <span className="px-4 py-1 border-x">{quantity}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="h-8 w-8 p-0"
-                    >
-                      +
-                    </Button>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Product Name</h3>
+                  <p className="text-lg font-semibold text-gray-900">{product.name}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Subheading</h3>
+                  <p className="text-gray-700">{product.description}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Price</h3>
+                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(product.price)}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Stock Status</h3>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStockStatusBadgeClass(product.status)}`}>
+                    {getStockStatusText(product.status)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Categories</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {product.categories && product.categories.length > 0 ? (
+                      product.categories.map((category, index) => (
+                        <Badge key={index} variant="outline" className="text-sm">
+                          {category}
+                        </Badge>
+                      ))
+                    ) : (
+                      <div className="flex gap-2">
+                        <Badge variant="outline" className="text-sm">Electronics</Badge>
+                        <Badge variant="outline" className="text-sm">IoT</Badge>
+                        <Badge variant="outline" className="text-sm">Sensors</Badge>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex space-x-3">
-                  <Button
-                    onClick={handleAddToCart}
-                    disabled={product.stockStatus === 'out-of-stock'}
-                    className="flex-1"
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Add to Cart
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={onToggleWishlist}
-                    className="px-4"
-                  >
-                    <Heart className={`h-4 w-4 ${isInWishlist ? 'fill-red-500 text-red-500' : ''}`} />
-                  </Button>
-                </div>
-
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Contact Vendor
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share
-                  </Button>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Upload Date</h3>
+                  <p className="text-gray-700">{product.uploadDate || '1/10/2024'}</p>
                 </div>
               </div>
+            </div>
 
-              {/* Vendor Info */}
-              <div className="bg-gray-50 p-4 rounded-lg mt-4">
-                <h4 className="font-semibold mb-2">Vendor Information</h4>
-                <p className="text-sm text-gray-600">TechParts Manufacturing Co.</p>
-                <p className="text-sm text-gray-600">⭐ 4.8/5 rating (342 reviews)</p>
-                <p className="text-sm text-gray-600">🚚 Ships within 2-3 business days</p>
-              </div>
+            {/* Description */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
+              <p className="text-gray-700 leading-relaxed">
+                {product.fullDescription || 
+                 "Advanced IoT sensor for temperature, humidity, and air quality monitoring. Wireless connectivity and long battery life."}
+              </p>
             </div>
           </div>
         </div>
