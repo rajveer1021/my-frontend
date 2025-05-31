@@ -1,6 +1,6 @@
 import React from 'react';
 import { Menu, Bell, LogOut, Settings } from 'lucide-react';
-import Button  from '../ui/Button';
+import Button from '../ui/Button';
 import { Avatar, AvatarFallback } from '../ui/Avatar';
 import { 
   DropdownMenu, 
@@ -9,27 +9,55 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '../ui/DropdownMenu';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
-export const Header = ({ user, sidebarOpen, setSidebarOpen, currentPage, onPageChange }) => {
+export const Header = ({ user, sidebarOpen, setSidebarOpen, currentPage, onPageChange, userType }) => {
   const { logout } = useAuth();
 
-  const getPageTitle = (page) => {
-    const titles = {
-      dashboard: 'Dashboard',
-      products: 'Products',
+  const getPageTitle = (page, type) => {
+    if (type === 'buyer') {
+      const buyerTitles = {
+        dashboard: 'Buyer Dashboard',
+        products: 'Browse Products',
+        wishlist: 'My Wishlist',
+        orders: 'My Orders',
+        settings: 'Settings'
+      };
+      return buyerTitles[page] || 'Dashboard';
+    }
+    
+    const vendorTitles = {
+      dashboard: 'Vendor Dashboard',
+      products: 'Product Management',
+      'add-product': 'Add Product',
+      'edit-product': 'Edit Product',
+      'product-details': 'Product Details',
       settings: 'Settings'
     };
-    return titles[page] || 'Dashboard';
+    return vendorTitles[page] || 'Dashboard';
   };
 
-  const getPageSubtitle = (page) => {
-    const subtitles = {
+  const getPageSubtitle = (page, type) => {
+    if (type === 'buyer') {
+      const buyerSubtitles = {
+        dashboard: 'Welcome to the buyer portal',
+        products: 'Discover products from verified vendors',
+        wishlist: 'Your saved products',
+        orders: 'Track your purchases',
+        settings: 'Manage your account preferences'
+      };
+      return buyerSubtitles[page] || 'Welcome to the buyer portal';
+    }
+    
+    const vendorSubtitles = {
       dashboard: 'Manage your marketplace presence',
-      products: 'Manage your marketplace presence',
-      settings: 'Manage your marketplace presence'
+      products: 'Manage your product catalog',
+      'add-product': 'Create a new product listing',
+      'edit-product': 'Update product information',
+      'product-details': 'View product details',
+      settings: 'Manage your account preferences'
     };
-    return subtitles[page] || 'Manage your marketplace presence';
+    return vendorSubtitles[page] || 'Manage your marketplace presence';
   };
 
   return (
@@ -46,19 +74,27 @@ export const Header = ({ user, sidebarOpen, setSidebarOpen, currentPage, onPageC
           </Button>
           
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              userType === 'buyer' ? 'bg-green-600' : 'bg-blue-600'
+            }`}>
               <span className="text-white font-bold text-sm">M</span>
             </div>
             <div className="hidden sm:block">
-              <h1 className="font-bold text-lg text-gray-900">{getPageTitle(currentPage)}</h1>
-              <p className="text-xs text-gray-500">{getPageSubtitle(currentPage)}</p>
+              <h1 className="font-bold text-lg text-gray-900">
+                {getPageTitle(currentPage, userType)}
+              </h1>
+              <p className="text-xs text-gray-500">
+                {getPageSubtitle(currentPage, userType)}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="flex items-center space-x-4">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-medium text-gray-900">Welcome back, {user?.fullName?.split(' ')[0] || 'User'}!</p>
+            <p className="text-sm font-medium text-gray-900">
+              Welcome back, {user?.fullName?.split(' ')[0] || 'User'}!
+            </p>
           </div>
           
           <Button variant="ghost" size="icon" className="relative">
@@ -70,7 +106,9 @@ export const Header = ({ user, sidebarOpen, setSidebarOpen, currentPage, onPageC
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar>
-                  <AvatarFallback className="bg-blue-100 text-blue-600">
+                  <AvatarFallback className={
+                    userType === 'buyer' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
+                  }>
                     {user?.fullName?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
@@ -82,6 +120,9 @@ export const Header = ({ user, sidebarOpen, setSidebarOpen, currentPage, onPageC
                   <p className="font-medium">{user?.fullName}</p>
                   <p className="w-[200px] truncate text-sm text-gray-500">
                     {user?.email}
+                  </p>
+                  <p className="text-xs text-gray-400 capitalize">
+                    {user?.userType} Account
                   </p>
                 </div>
               </div>

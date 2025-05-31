@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
-export const Layout = ({ children, currentPage, onPageChange }) => {
+const Layout = ({ children, currentPage, onPageChange, userType }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { user } = useAuth();
 
@@ -15,6 +15,7 @@ export const Layout = ({ children, currentPage, onPageChange }) => {
         setSidebarOpen={setSidebarOpen}
         currentPage={currentPage}
         onPageChange={onPageChange}
+        userType={userType}
       />
       
       <div className="flex">
@@ -22,6 +23,7 @@ export const Layout = ({ children, currentPage, onPageChange }) => {
           sidebarOpen={sidebarOpen}
           currentPage={currentPage}
           onPageChange={onPageChange}
+          userType={userType}
         />
         
         <main className="flex-1 p-6">
@@ -33,3 +35,5 @@ export const Layout = ({ children, currentPage, onPageChange }) => {
     </div>
   );
 };
+
+export default Layout;

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getCurrentUser, setCurrentUser, logout as logoutUser } from '../services/mockData';
 
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

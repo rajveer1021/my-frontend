@@ -1,10 +1,14 @@
 import React from 'react';
-import { LayoutDashboard, Package, Settings } from 'lucide-react';
-import Button  from '../ui/Button';
+import { LayoutDashboard, Package, Settings, ShoppingBag, Heart, User } from 'lucide-react';
+import Button from '../ui/Button';
 import { cn } from '../../utils/helpers';
+import { useAuth } from '../../hooks/useAuth';
 
-export const Sidebar = ({ sidebarOpen, currentPage, onPageChange }) => {
-  const navigationItems = [
+export const Sidebar = ({ sidebarOpen, currentPage, onPageChange, userType }) => {
+  const { user } = useAuth();
+  
+  // Different navigation items for vendors and buyers
+  const vendorNavigationItems = [
     { 
       id: 'dashboard', 
       label: 'Dashboard', 
@@ -22,24 +26,35 @@ export const Sidebar = ({ sidebarOpen, currentPage, onPageChange }) => {
     },
   ];
 
+  const buyerNavigationItems = [
+    { 
+      id: 'dashboard', 
+      label: 'Dashboard', 
+      icon: LayoutDashboard 
+    },
+    { 
+      id: 'products', 
+      label: 'Browse Products', 
+      icon: ShoppingBag 
+    },
+    { 
+      id: 'settings', 
+      label: 'Settings', 
+      icon: Settings 
+    },
+  ];
+
+  const navigationItems = userType === 'buyer' ? buyerNavigationItems : vendorNavigationItems;
+  const portalTitle = userType === 'buyer' ? 'Buyer Portal' : 'Vendor Portal';
+  const bgColor = userType === 'buyer' ? 'bg-green-900' : 'bg-slate-900';
+
   return (
     <aside className={cn(
-      'bg-slate-900 border-r border-gray-200 transition-all duration-300',
+      `${bgColor} border-r border-gray-200 transition-all duration-300`,
       sidebarOpen ? 'w-64' : 'w-16',
-      'hidden lg:block'
+      'hidden lg:block relative'
     )}>
       <div className="p-4">
-        <div className={cn('flex items-center mb-8', !sidebarOpen && 'justify-center')}>
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">M</span>
-          </div>
-          {sidebarOpen && (
-            <div className="ml-3">
-              <h1 className="font-bold text-white">MarketPlace</h1>
-              <p className="text-xs text-gray-400">Vendor Portal</p>
-            </div>
-          )}
-        </div>
 
         <nav className="space-y-2">
           {navigationItems.map((item) => (
@@ -47,9 +62,9 @@ export const Sidebar = ({ sidebarOpen, currentPage, onPageChange }) => {
               key={item.id}
               variant={currentPage === item.id ? 'default' : 'ghost'}
               className={cn(
-                'w-full justify-start text-white hover:bg-slate-800',
+                'w-full justify-start text-white hover:bg-opacity-20 hover:bg-white',
                 !sidebarOpen && 'px-2 justify-center',
-                currentPage === item.id && 'bg-blue-600 hover:bg-blue-700'
+                currentPage === item.id && (userType === 'buyer' ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700')
               )}
               onClick={() => onPageChange(item.id)}
             >
@@ -66,13 +81,18 @@ export const Sidebar = ({ sidebarOpen, currentPage, onPageChange }) => {
           'flex items-center text-white',
           !sidebarOpen && 'justify-center'
         )}>
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-medium text-sm">J</span>
+          <div className={cn(
+            'w-8 h-8 rounded-full flex items-center justify-center',
+            userType === 'buyer' ? 'bg-green-600' : 'bg-blue-600'
+          )}>
+            <span className="text-white font-medium text-sm">
+              {user?.fullName?.charAt(0) || 'U'}
+            </span>
           </div>
           {sidebarOpen && (
             <div className="ml-3">
-              <p className="text-sm font-medium">John Vendor</p>
-              <p className="text-xs text-gray-400">example@gmail.com</p>
+              <p className="text-sm font-medium">{user?.fullName || 'User'}</p>
+              <p className="text-xs text-gray-400">{user?.email}</p>
             </div>
           )}
         </div>
@@ -80,4 +100,3 @@ export const Sidebar = ({ sidebarOpen, currentPage, onPageChange }) => {
     </aside>
   );
 };
-
