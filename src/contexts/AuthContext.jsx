@@ -1,7 +1,7 @@
-// src/contexts/AuthContext.jsx - Corrected Complete Version
+// src/contexts/AuthContext.jsx - Fixed with React Router navigation and onboarding check
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
-import { navigation } from '../utils/navigation';
+import { vendorService } from '../services/vendorService';
 
 export const AuthContext = createContext();
 
@@ -29,6 +29,21 @@ export const AuthProvider = ({ children }) => {
         if (authService.isAuthenticated()) {
           const currentUser = await authService.getCurrentUser();
           setUser(currentUser);
+
+          // Check onboarding status for vendors
+          if (currentUser && (currentUser.userType === 'vendor' || currentUser.accountType === 'VENDOR')) {
+            try {
+              const { completion } = await vendorService.getVendorProfile();
+              if (completion && completion.isComplete) {
+                localStorage.setItem('vendorOnboarded', 'true');
+              } else {
+                localStorage.removeItem('vendorOnboarded');
+              }
+            } catch (error) {
+              console.warn('Could not check vendor onboarding status:', error);
+              // Don't fail the auth process if we can't check onboarding
+            }
+          }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -51,8 +66,20 @@ export const AuthProvider = ({ children }) => {
       const result = await authService.login({ email, password });
       setUser(result.user);
       
-      // Redirect using navigation utility
-      navigation.redirectAfterAuth(result.user);
+      // Check onboarding status for vendors
+      if (result.user && (result.user.userType === 'vendor' || result.user.accountType === 'VENDOR')) {
+        try {
+          const { completion } = await vendorService.getVendorProfile();
+          if (completion && completion.isComplete) {
+            localStorage.setItem('vendorOnboarded', 'true');
+          } else {
+            localStorage.removeItem('vendorOnboarded');
+          }
+        } catch (error) {
+          console.warn('Could not check vendor onboarding status:', error);
+          // Don't fail login if we can't check onboarding
+        }
+      }
       
       return {
         success: true,
@@ -76,8 +103,10 @@ export const AuthProvider = ({ children }) => {
       const result = await authService.signup(userData);
       setUser(result.user);
       
-      // Redirect using navigation utility
-      navigation.redirectAfterAuth(result.user);
+      // For new vendors, onboarding is definitely not complete
+      if (result.user && (result.user.userType === 'vendor' || result.user.accountType === 'VENDOR')) {
+        localStorage.removeItem('vendorOnboarded');
+      }
       
       return {
         success: true,
@@ -101,8 +130,19 @@ export const AuthProvider = ({ children }) => {
       const result = await authService.googleAuth(googleToken, accountType);
       setUser(result.user);
       
-      // Redirect using navigation utility
-      navigation.redirectAfterAuth(result.user);
+      // Check onboarding status for vendors
+      if (result.user && (result.user.userType === 'vendor' || result.user.accountType === 'VENDOR')) {
+        try {
+          const { completion } = await vendorService.getVendorProfile();
+          if (completion && completion.isComplete) {
+            localStorage.setItem('vendorOnboarded', 'true');
+          } else {
+            localStorage.removeItem('vendorOnboarded');
+          }
+        } catch (error) {
+          console.warn('Could not check vendor onboarding status:', error);
+        }
+      }
       
       return {
         success: true,
@@ -183,8 +223,7 @@ export const AuthProvider = ({ children }) => {
     authService.logout();
     setUser(null);
     setError(null);
-    // Redirect using navigation utility
-    navigation.redirectAfterLogout();
+    localStorage.removeItem('vendorOnboarded');
   };
 
   const clearError = () => {

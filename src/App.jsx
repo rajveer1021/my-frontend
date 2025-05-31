@@ -1,6 +1,13 @@
-// src/App.jsx - Updated with better route protection and redirection
-import React, { useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+// src/App.jsx - Fixed authentication flow with proper React Router navigation
+import React, { useEffect } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ProductProvider } from "./contexts/ProductContext";
 import { ToastProvider } from "./components/ui/Toast";
@@ -26,7 +33,9 @@ const ProtectedRoute = ({ children }) => {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <div className="text-center">
           <LoadingSpinner size="lg" />
-          <p className="mt-4 text-gray-600 font-medium">Loading your account...</p>
+          <p className="mt-4 text-gray-600 font-medium">
+            Loading your account...
+          </p>
         </div>
       </div>
     );
@@ -42,60 +51,115 @@ const ProtectedRoute = ({ children }) => {
 
 const AuthRoute = ({ children }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      // Get the intended destination from state or default to dashboard
+      const from = location.state?.from?.pathname || "/";
+
+      // Check if user needs onboarding
+      const needsOnboarding =
+        !localStorage.getItem("vendorOnboarded") &&
+        (user.userType === "vendor" || user.accountType === "VENDOR");
+
+      if (needsOnboarding) {
+        navigate("/vendor-onboarding", { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
+    }
+  }, [user, loading, navigate, location.state]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <div className="text-center">
           <LoadingSpinner size="lg" />
-          <p className="mt-4 text-gray-600 font-medium">Checking authentication...</p>
+          <p className="mt-4 text-gray-600 font-medium">
+            Checking authentication...
+          </p>
         </div>
       </div>
     );
   }
 
-  // If user is already authenticated, redirect to dashboard
+  // If user is already authenticated, the useEffect will handle the redirect
   if (user) {
-    return <Navigate to="/" replace />;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-gray-600 font-medium">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return children;
+};
+
+const OnboardingRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      const isOnboarded = localStorage.getItem("vendorOnboarded") === "true";
+      if (isOnboarded) {
+        navigate("/", { replace: true });
+      }
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-gray-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
   }
 
   return children;
 };
 
 const AppRoutes = () => {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const navigate = useNavigate();
 
   const handleNavigate = (page, params = {}) => {
-    setCurrentPage(page);
-    
-    // Handle navigation with URL parameters
-    if (page === 'edit-product' && params.productId) {
-      window.history.pushState(null, '', `/edit-product/${params.productId}`);
-    } else {
-      const routes = {
-        'dashboard': '/',
-        'products': '/products',
-        'add-product': '/add-product',
-        'settings': '/settings',
-        'vendor-onboarding': '/vendor-onboarding'
-      };
-      
-      if (routes[page]) {
-        window.history.pushState(null, '', routes[page]);
-      }
+    const routes = {
+      dashboard: "/",
+      products: "/products",
+      "add-product": "/add-product",
+      settings: "/settings",
+      "vendor-onboarding": "/vendor-onboarding",
+    };
+
+    if (page === "edit-product" && params.productId) {
+      navigate(`/edit-product/${params.productId}`);
+    } else if (routes[page]) {
+      navigate(routes[page]);
     }
   };
 
   return (
     <Routes>
       {/* Public Auth Route */}
-      <Route 
-        path="/auth" 
+      <Route
+        path="/auth"
         element={
           <AuthRoute>
             <Auth />
           </AuthRoute>
-        } 
+        }
       />
 
       {/* Protected Routes */}
@@ -109,7 +173,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      
+
       <Route
         path="/products"
         element={
@@ -120,7 +184,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      
+
       <Route
         path="/add-product"
         element={
@@ -131,18 +195,18 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      
+
       <Route
         path="/edit-product/:productId"
         element={
           <ProtectedRoute>
             <Layout currentPage="edit-product" onPageChange={handleNavigate}>
-              <EditProduct onNavigate={handleNavigate} />
+              <EditProduct />
             </Layout>
           </ProtectedRoute>
         }
       />
-      
+
       <Route
         path="/settings"
         element={
@@ -153,34 +217,41 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      
-      {/* Vendor Onboarding - Semi-protected (requires auth but not full onboarding) */}
+
+      {/* Vendor Onboarding - Semi-protected */}
       <Route
         path="/vendor-onboarding"
         element={
-          <ProtectedRoute>
-            <VendorOnboarding
-              onComplete={() => {
-                localStorage.setItem("vendorOnboarded", "true");
-                // Redirect to dashboard after onboarding
-                window.location.href = '/';
-              }}
-            />
-          </ProtectedRoute>
+          <OnboardingRoute>
+            <VendorOnboardingWrapper />
+          </OnboardingRoute>
         }
       />
-      
+
       {/* 404 Page */}
-      <Route 
-        path="*" 
-        element={
-          <NotFound 
-            onNavigateHome={() => window.location.href = '/'} 
-          />
-        } 
+      <Route
+        path="*"
+        element={<NotFound onNavigateHome={() => navigate("/")} />}
       />
     </Routes>
   );
+};
+
+// Wrapper components to handle URL parameters
+const EditProductWrapper = ({ onNavigate }) => {
+  const { productId } = useParams();
+  return <EditProduct onNavigate={onNavigate} productId={productId} />;
+};
+
+const VendorOnboardingWrapper = () => {
+  const navigate = useNavigate();
+
+  const handleComplete = () => {
+    localStorage.setItem("vendorOnboarded", "true");
+    navigate("/", { replace: true });
+  };
+
+  return <VendorOnboarding onComplete={handleComplete} />;
 };
 
 const App = () => {

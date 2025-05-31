@@ -1,4 +1,6 @@
+// src/components/products/ProductManagement.jsx - Fixed with proper navigation
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Package,
@@ -16,10 +18,13 @@ import { ProductTable } from "./ProductTable";
 import ProductDetailsModal from "./ProductDetailsModal";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { useProducts } from "../../contexts/ProductContext";
+import { useToast } from "../ui/Toast";
 
-const ProductManagement = ({ onNavigate }) => {
-  const { products, loading, fetchProducts, deleteProduct, getProduct } =
-    useProducts();
+const ProductManagement = () => {
+  const navigate = useNavigate();
+  const { products, loading, fetchProducts, deleteProduct, getProduct } = useProducts();
+  const { addToast } = useToast();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
@@ -39,6 +44,7 @@ const ProductManagement = ({ onNavigate }) => {
         });
       } catch (error) {
         console.error("Failed to fetch products:", error);
+        addToast("Failed to load products", "error");
       } finally {
         setIsInitialized(true);
       }
@@ -47,16 +53,20 @@ const ProductManagement = ({ onNavigate }) => {
     if (!isInitialized) {
       initializeProducts();
     }
-  }, [fetchProducts, isInitialized]);
+  }, [fetchProducts, isInitialized, addToast]);
 
   // Refetch when filters change, but only after initial load
   useEffect(() => {
     if (isInitialized) {
-      fetchProducts({
-        search: searchTerm,
-        category: categoryFilter,
-        sort: sortBy,
-      });
+      const timeoutId = setTimeout(() => {
+        fetchProducts({
+          search: searchTerm,
+          category: categoryFilter,
+          sort: sortBy,
+        });
+      }, 300); // Debounce search
+
+      return () => clearTimeout(timeoutId);
     }
   }, [searchTerm, categoryFilter, sortBy, fetchProducts, isInitialized]);
 
@@ -67,6 +77,7 @@ const ProductManagement = ({ onNavigate }) => {
       setIsDetailsModalOpen(true);
     } catch (error) {
       console.error("Failed to fetch product details:", error);
+      addToast("Failed to load product details", "error");
       // Fallback to product from list
       const product = products.find((p) => p.id === productId);
       if (product) {
@@ -77,15 +88,20 @@ const ProductManagement = ({ onNavigate }) => {
   };
 
   const handleEdit = (productId) => {
-    onNavigate("edit-product", { productId });
+    navigate(`/edit-product/${productId}`);
   };
 
   const handleDelete = async (productId) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
+    const product = products.find(p => p.id === productId);
+    const productName = product ? product.name : "this product";
+    
+    if (window.confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
       try {
         await deleteProduct(productId);
+        addToast("Product deleted successfully", "success");
       } catch (error) {
-        alert("Failed to delete product");
+        console.error("Failed to delete product:", error);
+        addToast(error.message || "Failed to delete product", "error");
       }
     }
   };
@@ -93,6 +109,10 @@ const ProductManagement = ({ onNavigate }) => {
   const closeDetailsModal = () => {
     setIsDetailsModalOpen(false);
     setSelectedProduct(null);
+  };
+
+  const handleAddProduct = () => {
+    navigate("/add-product");
   };
 
   // Show loading only during initial load
@@ -123,8 +143,6 @@ const ProductManagement = ({ onNavigate }) => {
       <div className="space-y-6">
         {/* Enhanced Header */}
         <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 p-4 sm:p-6 lg:p-8 text-white">
-          {/* <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.05\"%3E%3Ccircle cx=\"7\" cy=\"7\" r=\"3\"/%3E%3Ccircle cx=\"27\" cy=\"7\" r=\"3\"/%3E%3Ccircle cx=\"47\" cy=\"7\" r=\"3\"/%3E%3Ccircle cx=\"7\" cy=\"27\" r=\"3\"/%3E%3Ccircle cx=\"27\" cy=\"27\" r=\"3\"/%3E%3Ccircle cx=\"47\" cy=\"27\" r=\"3\"/%3E%3Ccircle cx=\"7\" cy=\"47\" r=\"3\"/%3E%3Ccircle cx=\"27\" cy=\"47\" r=\"3\"/%3E%3Ccircle cx=\"47\" cy=\"47\" r=\"3\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" /> */}
-
           <div className="relative z-10">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
               <div>
@@ -146,7 +164,7 @@ const ProductManagement = ({ onNavigate }) => {
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
-                  onClick={() => onNavigate("add-product")}
+                  onClick={handleAddProduct}
                   className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 lg:px-6 py-2 lg:py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -197,7 +215,7 @@ const ProductManagement = ({ onNavigate }) => {
                   : "Create your first product to get started"}
               </p>
               <Button
-                onClick={() => onNavigate("add-product")}
+                onClick={handleAddProduct}
                 className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
               >
                 <Plus className="w-4 h-4 mr-2" />
