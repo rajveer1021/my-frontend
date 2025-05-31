@@ -1,4 +1,4 @@
-// src/App.jsx - Fixed authentication flow with proper React Router navigation
+// src/App.jsx - Fixed authentication flow without automatic onboarding redirect
 import React, { useEffect } from "react";
 import {
   BrowserRouter,
@@ -44,7 +44,7 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated) {
     console.log("ProtectedRoute: Redirecting to auth, not authenticated");
     // Redirect to auth page with return URL
     return <Navigate to="/auth" state={{ from: location }} replace />;
@@ -62,7 +62,7 @@ const AuthRoute = ({ children }) => {
   console.log("AuthRoute check:", { user, loading, isAuthenticated });
 
   useEffect(() => {
-    if (!loading && isAuthenticated && user) {
+    if (!loading && isAuthenticated) {
       console.log("AuthRoute: User already authenticated, redirecting");
       // Get the intended destination from state or default to dashboard
       const from = location.state?.from?.pathname || "/";
@@ -70,7 +70,7 @@ const AuthRoute = ({ children }) => {
       console.log("AuthRoute: Redirecting to:", from);
       navigate(from, { replace: true });
     }
-  }, [user, loading, isAuthenticated, navigate, location.state]);
+  }, [loading, isAuthenticated, navigate, location.state]);
 
   if (loading) {
     return (
@@ -86,7 +86,7 @@ const AuthRoute = ({ children }) => {
   }
 
   // If user is already authenticated, the useEffect will handle the redirect
-  if (isAuthenticated && user) {
+  if (isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <div className="text-center">
@@ -101,27 +101,17 @@ const AuthRoute = ({ children }) => {
   return children;
 };
 
-const OnboardingRoute = ({ children }) => {
+const VendorOnboardingRoute = ({ children }) => {
   const { user, loading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
+  // Don't redirect automatically - let users access onboarding freely
   useEffect(() => {
-    if (!loading) {
-      if (!isAuthenticated || !user) {
-        console.log("OnboardingRoute: Not authenticated, redirecting to auth");
-        navigate("/auth", { replace: true });
-        return;
-      }
-
-      const isOnboarded = localStorage.getItem("vendorOnboarded") === "true";
-      if (isOnboarded) {
-        console.log(
-          "OnboardingRoute: Already onboarded, redirecting to dashboard"
-        );
-        navigate("/", { replace: true });
-      }
+    if (!loading && !isAuthenticated) {
+      console.log("VendorOnboardingRoute: Not authenticated, redirecting to auth");
+      navigate("/auth", { replace: true });
     }
-  }, [user, loading, isAuthenticated, navigate]);
+  }, [loading, isAuthenticated, navigate]);
 
   if (loading) {
     return (
@@ -134,7 +124,7 @@ const OnboardingRoute = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
   }
 
@@ -228,13 +218,13 @@ const AppRoutes = () => {
         }
       />
 
-      {/* Vendor Onboarding - Semi-protected */}
+      {/* Vendor Onboarding - Protected but no auto-redirect */}
       <Route
         path="/vendor-onboarding"
         element={
-          <OnboardingRoute>
+          <VendorOnboardingRoute>
             <VendorOnboardingWrapper />
-          </OnboardingRoute>
+          </VendorOnboardingRoute>
         }
       />
 

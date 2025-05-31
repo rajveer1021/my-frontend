@@ -1,5 +1,5 @@
-// src/pages/Settings.jsx - Updated to handle firstName/lastName
-import React, { useState } from "react";
+// src/pages/Settings.jsx - Updated with proper API integration
+import React, { useState, useEffect } from "react";
 import {
   UserCheck,
   Lock,
@@ -22,19 +22,51 @@ import { Input } from "../components/ui/Input";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ErrorMessage } from "../components/common/ErrorMessage";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../components/ui/Toast";
 
 const Settings = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, loading: authLoading } = useAuth();
+  const { addToast } = useToast();
+  
   const [profileData, setProfileData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || "",
-    phone: user?.phone || "",
-    address: user?.address || "",
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
   });
+  
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Initialize form data when user data is available
+  useEffect(() => {
+    if (user) {
+      const initialData = {
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        address: user.address || '',
+      };
+      setProfileData(initialData);
+    }
+  }, [user]);
+
+  // Track changes in form data
+  useEffect(() => {
+    if (user) {
+      const hasChanged = 
+        profileData.firstName !== (user.firstName || '') ||
+        profileData.lastName !== (user.lastName || '') ||
+        profileData.phone !== (user.phone || '') ||
+        profileData.address !== (user.address || '');
+      
+      setHasChanges(hasChanged);
+    }
+  }, [profileData, user]);
 
   const validateProfile = (profile) => {
     const errors = {};
@@ -43,12 +75,16 @@ const Settings = () => {
       errors.firstName = 'First name is required';
     } else if (profile.firstName.trim().length < 2) {
       errors.firstName = 'First name must be at least 2 characters';
+    } else if (profile.firstName.trim().length > 50) {
+      errors.firstName = 'First name must be less than 50 characters';
     }
 
     if (!profile.lastName?.trim()) {
       errors.lastName = 'Last name is required';
     } else if (profile.lastName.trim().length < 2) {
       errors.lastName = 'Last name must be at least 2 characters';
+    } else if (profile.lastName.trim().length > 50) {
+      errors.lastName = 'Last name must be less than 50 characters';
     }
 
     if (!profile.email?.trim()) {
@@ -73,16 +109,31 @@ const Settings = () => {
 
   const handleInputChange = (field, value) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
+    
+    // Clear field error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
+    
+    // Clear success message when user makes changes
+    if (success) {
+      setSuccess(false);
+    }
   };
 
-  const handleUpdateProfile = async () => {
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    
     const validation = validateProfile(profileData);
 
     if (!validation.isValid) {
       setErrors(validation.errors);
+      addToast('Please fix the form errors before submitting', 'error');
+      return;
+    }
+
+    if (!hasChanges) {
+      addToast('No changes to save', 'info');
       return;
     }
 
@@ -91,13 +142,53 @@ const Settings = () => {
     setSuccess(false);
 
     try {
-      await updateUser(profileData);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      // Only send the fields that can be updated (not email)
+      const updateData = {
+        firstName: profileData.firstName.trim(),
+        lastName: profileData.lastName.trim(),
+        phone: profileData.phone.trim(),
+        address: profileData.address.trim()
+      };
+
+      console.log('Updating profile with data:', updateData);
+      
+      const result = await updateUser(updateData);
+      
+      if (result.success) {
+        setSuccess(true);
+        setHasChanges(false);
+        addToast('Profile updated successfully!', 'success');
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccess(false), 3000);
+      }
     } catch (error) {
-      setErrors({ general: error.message || "Failed to update profile" });
+      console.error('Profile update error:', error);
+      
+      // Handle validation errors from API
+      if (error.message.includes('validation') || error.message.includes('required')) {
+        setErrors({ general: error.message });
+      } else {
+        setErrors({ general: error.message || "Failed to update profile" });
+      }
+      
+      addToast(error.message || 'Failed to update profile', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    if (user) {
+      setProfileData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        address: user.address || '',
+      });
+      setErrors({});
+      setSuccess(false);
     }
   };
 
@@ -136,6 +227,16 @@ const Settings = () => {
       </div>
     </div>
   );
+
+  if (authLoading) {
+    return (
+      <div className="w-full max-w-none space-y-6">
+        <div className="flex justify-center items-center py-12">
+          <LoadingSpinner size="lg" text="Loading settings..." />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-none space-y-6">
@@ -199,7 +300,7 @@ const Settings = () => {
             </div>
           </div>
 
-          <div className="p-4 lg:p-6">
+          <form onSubmit={handleUpdateProfile} className="p-4 lg:p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
               {/* First Name */}
               <div>
@@ -215,6 +316,8 @@ const Settings = () => {
                   className={`h-11 lg:h-12 ${
                     errors.firstName ? "border-red-500" : ""
                   }`}
+                  disabled={loading}
+                  maxLength={50}
                 />
                 {errors.firstName && (
                   <p className="text-red-500 text-sm mt-1 flex items-center">
@@ -238,6 +341,8 @@ const Settings = () => {
                   className={`h-11 lg:h-12 ${
                     errors.lastName ? "border-red-500" : ""
                   }`}
+                  disabled={loading}
+                  maxLength={50}
                 />
                 {errors.lastName && (
                   <p className="text-red-500 text-sm mt-1 flex items-center">
@@ -278,6 +383,7 @@ const Settings = () => {
                   className={`h-11 lg:h-12 ${
                     errors.phone ? "border-red-500" : ""
                   }`}
+                  disabled={loading}
                 />
                 {errors.phone && (
                   <p className="text-red-500 text-sm mt-1 flex items-center">
@@ -286,24 +392,85 @@ const Settings = () => {
                   </p>
                 )}
               </div>
+
+              {/* Address */}
+              <div className="lg:col-span-2">
+                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                  <MapPin className="w-4 h-4 mr-2 text-gray-500" />
+                  Address
+                </label>
+                <textarea
+                  value={profileData.address}
+                  onChange={(e) => handleInputChange("address", e.target.value)}
+                  placeholder="Enter your address"
+                  rows={3}
+                  maxLength={200}
+                  disabled={loading}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
+                    errors.address ? "border-red-500" : "border-gray-300"
+                  }`}
+                />
+                {errors.address && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.address}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  {profileData.address.length}/200 characters
+                </p>
+              </div>
             </div>
 
-            <div className="flex justify-end mt-6 pt-4 border-t border-gray-100">
-              <Button
-                onClick={handleUpdateProfile}
-                disabled={loading}
-                className="flex items-center bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 px-6 py-2 lg:py-3"
-              >
-                {loading ? (
-                  <LoadingSpinner size="sm" className="mr-2" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
+            <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
+              <div className="flex items-center space-x-2">
+                {hasChanges && (
+                  <span className="text-sm text-amber-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    You have unsaved changes
+                  </span>
                 )}
-                {loading ? "Updating..." : "Update Profile"}
-              </Button>
+              </div>
+              
+              <div className="flex space-x-3">
+                {hasChanges && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleReset}
+                    disabled={loading}
+                    className="px-4 py-2 lg:py-3"
+                  >
+                    Reset
+                  </Button>
+                )}
+                
+                <Button
+                  type="submit"
+                  disabled={loading || !hasChanges}
+                  className={`flex items-center px-6 py-2 lg:py-3 ${
+                    hasChanges 
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' 
+                      : 'bg-gray-300 cursor-not-allowed'
+                  }`}
+                >
+                  {loading ? (
+                    <>
+                      <LoadingSpinner size="sm" className="mr-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Update Profile
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
+          </form>
         </div>
+
       </div>
     </div>
   );

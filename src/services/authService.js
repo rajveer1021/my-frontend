@@ -1,4 +1,4 @@
-// src/services/authService.js - Fixed with proper token storage
+// src/services/authService.js - Updated with correct profile update API
 import { apiService } from './api';
 
 export const authService = {
@@ -160,6 +160,8 @@ export const authService = {
           firstName: response.data.firstName,
           lastName: response.data.lastName,
           accountType: response.data.accountType,
+          phone: response.data.phone,
+          address: response.data.address
         };
 
         console.log('AuthService: Current user parsed:', user);
@@ -171,33 +173,44 @@ export const authService = {
     } catch (error) {
       console.error('AuthService: Get current user error:', error);
       // If token is invalid, remove it
-      localStorage.removeItem('authToken');
+      if (error.status === 401) {
+        localStorage.removeItem('authToken');
+      }
       return null;
     }
   },
 
   async updateProfile(userData) {
     try {
-      const response = await apiService.put('/auth/profile', {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        phone: userData.phone,
-        address: userData.address
-      });
+      console.log('AuthService: Updating profile with data:', userData);
+      
+      // Prepare the request payload according to API specification
+      const payload = {};
+      
+      if (userData.firstName) payload.firstName = userData.firstName;
+      if (userData.lastName) payload.lastName = userData.lastName;
+      if (userData.phone !== undefined) payload.phone = userData.phone; // Allow empty string
+      if (userData.address !== undefined) payload.address = userData.address; // Allow empty string
 
-      if (response.success && response.data) {
+      const response = await apiService.put('/auth/profile', payload);
+      
+      console.log('AuthService: Update profile response:', response);
+
+      if (response.success && response.data && response.data.user) {
+        // Transform API response to match app structure
         const user = {
-          id: response.data.id,
-          email: response.data.email,
-          fullName: `${response.data.firstName} ${response.data.lastName}`,
-          firstName: response.data.firstName,
-          lastName: response.data.lastName,
-          accountType: response.data.accountType,
-          userType: response.data.accountType.toLowerCase(),
-          phone: response.data.phone,
-          address: response.data.address
+          id: response.data.user.id,
+          email: response.data.user.email,
+          fullName: `${response.data.user.firstName} ${response.data.user.lastName}`,
+          firstName: response.data.user.firstName,
+          lastName: response.data.user.lastName,
+          accountType: response.data.user.accountType,
+          userType: response.data.user.accountType?.toLowerCase(),
+          phone: response.data.user.phone,
+          address: response.data.user.address
         };
 
+        console.log('AuthService: Updated user object:', user);
         return user;
       }
 

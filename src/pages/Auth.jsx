@@ -1,4 +1,4 @@
-// src/pages/Auth.jsx - Complete updated version
+// src/pages/Auth.jsx - Reduced gap between left and right panels
 import React, { useState } from "react";
 import LoginForm from "../components/auth/LoginForm";
 import SignupForm from "../components/auth/SignupForm";
@@ -69,9 +69,9 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="flex flex-col lg:flex-row min-h-screen lg:gap-4">
+      <div className="flex flex-col lg:flex-row min-h-screen lg:gap-2">
         {/* Left side - Enhanced Branding */}
-        <div className="lg:flex-1 lg:flex lg:items-center lg:justify-center p-4 lg:p-8">
+        <div className="lg:flex-1 lg:flex lg:items-center lg:justify-center p-4 lg:p-6">
           <div className="max-w-2xl space-y-6 lg:space-y-8">
             {/* Logo and Title */}
             <div className="text-center lg:text-left space-y-4">
@@ -166,7 +166,7 @@ const Auth = () => {
         </div>
 
         {/* Right side - Enhanced Auth Form */}
-        <div className="lg:flex-1 lg:flex lg:items-center lg:justify-center p-4 lg:p-8">
+        <div className="lg:flex-1 lg:flex lg:items-center lg:justify-center p-4 lg:p-6">
           <div className="w-full max-w-md">
             <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
               {/* Form Header */}

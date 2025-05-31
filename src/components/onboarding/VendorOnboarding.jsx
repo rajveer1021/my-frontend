@@ -1,4 +1,4 @@
-// src/components/onboarding/VendorOnboarding.jsx - Compact version optimized for screen fit
+// src/components/onboarding/VendorOnboarding.jsx - Fixed redirect issue
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import Button from '../ui/Button';
@@ -92,12 +92,8 @@ const VendorOnboarding = ({ onComplete }) => {
           setCompletion(completion);
           setCurrentStep(completion.currentStep || 1);
           
-          // If already completed, redirect
-          if (completion.isComplete) {
-            localStorage.setItem('vendorOnboarded', 'true');
-            onComplete();
-            return;
-          }
+          // Only redirect if explicitly completed AND onComplete is called
+          // Don't auto-redirect on page load
         }
       } catch (error) {
         console.error('Failed to load vendor profile:', error);
@@ -108,7 +104,7 @@ const VendorOnboarding = ({ onComplete }) => {
     };
 
     loadVendorProfile();
-  }, [onComplete, addToast]);
+  }, [addToast]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -216,8 +212,11 @@ const VendorOnboarding = ({ onComplete }) => {
           // Mark onboarding as complete
           localStorage.setItem('vendorOnboarded', 'true');
           addToast('Onboarding completed successfully! Welcome to VendorHub!', 'success');
+          // Only redirect when explicitly calling onComplete
           setTimeout(() => {
-            onComplete();
+            if (onComplete) {
+              onComplete();
+            }
           }, 1500); // Give time for toast to show
           return;
         }
@@ -623,7 +622,7 @@ const VendorOnboarding = ({ onComplete }) => {
                 disabled={currentStep === 1 || loading}
                 className={`flex items-center px-6 py-2 rounded-xl font-semibold transition-all ${
                   currentStep === 1 || loading
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    ? 'bg-gray-600 text-gray-500 cursor-not-allowed'
                     : 'bg-white border border-gray-300 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
                 }`}
               >
@@ -637,7 +636,7 @@ const VendorOnboarding = ({ onComplete }) => {
                 className={`flex items-center px-6 py-2 rounded-xl font-semibold transition-all ${
                   isStepValid() && !loading
                     ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white" 
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-gray-500 text-gray-900 cursor-not-allowed"
                 }`}
               >
                 {loading ? (

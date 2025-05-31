@@ -221,7 +221,7 @@ const VendorDashboard = () => {
               <p className="text-3xl font-bold">
                 {dashboardStats.totalProducts}
               </p>
-              <p className="text-sm text-white/70 mt-1">Listed products</p>
+              {/* <p className="text-sm text-white/70 mt-1">Listed products</p> */}
             </div>
             <div className="absolute top-4 right-4 opacity-20">
               <Package className="w-12 h-12 text-white" />
@@ -235,12 +235,17 @@ const VendorDashboard = () => {
         >
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="p-6 relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-white/20">
+                <Package className="w-6 h-6 text-white" />
+              </div>
+            </div>
             <div className="text-white">
-              <p className="text-sm opacity-90 mb-1">Inventory Value</p>
+              <p className="text-sm opacity-90 mb-1">Inventory Check</p>
               <p className="text-3xl font-bold">
-                ₹{dashboardStats.inventoryValue?.toLocaleString() || "0"}
+                {dashboardStats.inventoryValue?.toLocaleString() || "0"}
               </p>
-              <p className="text-sm text-white/70 mt-1">Total stock value</p>
+              {/* <p className="text-sm text-white/70 mt-1">Total In stock</p> */}
             </div>
           </div>
         </div>
@@ -265,11 +270,11 @@ const VendorDashboard = () => {
               </div>
             </div>
             <div className="text-white">
-              <p className="text-sm opacity-90 mb-1">Active Enquiries</p>
+              <p className="text-sm opacity-90 mb-1">All Enquiries</p>
               <p className="text-3xl font-bold">
                 {dashboardStats.totalInquiries}
               </p>
-              <p className="text-sm text-white/70 mt-1">Pending responses</p>
+              {/* <p className="text-sm text-white/70 mt-1">Pending responses</p> */}
             </div>
             <div className="absolute top-4 right-4 opacity-20">
               <MessageSquare className="w-12 h-12 text-white" />
@@ -300,12 +305,12 @@ const VendorDashboard = () => {
               <p className="text-3xl font-bold">
                 {dashboardStats.isProfileVerified ? "Verified" : "Pending"}
               </p>
-              <p className="text-sm text-white/70 mt-1">
+              {/* <p className="text-sm text-white/70 mt-1">
                 {calculateTrend(
                   dashboardStats.profileCompletionPercentage,
                   "profile"
                 )}
-              </p>
+              </p> */}
             </div>
             <div className="absolute top-4 right-4 opacity-20">
               <CheckCircle className="w-12 h-12 text-white" />

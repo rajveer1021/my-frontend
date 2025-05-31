@@ -1,7 +1,6 @@
-// src/contexts/AuthContext.jsx - Fixed with proper token storage and persistence
+// src/contexts/AuthContext.jsx - Fixed authentication flow without auto-redirect to onboarding
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
-import { vendorService } from '../services/vendorService';
 
 export const AuthContext = createContext();
 
@@ -32,16 +31,24 @@ export const AuthProvider = ({ children }) => {
           console.log('Token found in localStorage:', token);
           setIsAuthenticated(true);
           
-          const currentUser = await authService.getCurrentUser();
-          if (currentUser) {
-            console.log('User fetched successfully:', currentUser);
-            setUser(currentUser);
-          } else {
-            // Token is invalid, clear it
-            console.log('Token invalid, clearing auth state');
-            authService.logout();
-            setIsAuthenticated(false);
-            setUser(null);
+          try {
+            const currentUser = await authService.getCurrentUser();
+            if (currentUser) {
+              console.log('User fetched successfully:', currentUser);
+              setUser(currentUser);
+            } else {
+              // Token is invalid, clear it
+              console.log('Token invalid, clearing auth state');
+              authService.logout();
+              setIsAuthenticated(false);
+              setUser(null);
+            }
+          } catch (userError) {
+            // If user fetch fails but token exists, keep user logged in for now
+            // This prevents logout on network issues or temporary server problems
+            console.warn('Failed to fetch user details, but token exists:', userError);
+            setIsAuthenticated(true);
+            // Try to get user data from token or keep minimal state
           }
         } else {
           console.log('No token found in localStorage');
@@ -50,10 +57,12 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         console.error('Auth initialization error:', error);
         setError('Failed to initialize authentication');
-        // Clear invalid token
-        authService.logout();
-        setIsAuthenticated(false);
-        setUser(null);
+        // Only clear token if it's actually invalid, not on network errors
+        if (error.status === 401) {
+          authService.logout();
+          setIsAuthenticated(false);
+          setUser(null);
+        }
       } finally {
         setLoading(false);
       }
