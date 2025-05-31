@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.jsx - Fixed with React Router navigation and onboarding check
+// src/contexts/AuthContext.jsx - Fixed with proper token storage and persistence
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 import { vendorService } from '../services/vendorService';
@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Initialize auth state on app load
   useEffect(() => {
@@ -26,30 +27,33 @@ export const AuthProvider = ({ children }) => {
         setError(null);
         
         // Check if user is already authenticated
-        if (authService.isAuthenticated()) {
+        const token = authService.getToken();
+        if (token) {
+          console.log('Token found in localStorage:', token);
+          setIsAuthenticated(true);
+          
           const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
-
-          // Check onboarding status for vendors
-          if (currentUser && (currentUser.userType === 'vendor' || currentUser.accountType === 'VENDOR')) {
-            try {
-              const { completion } = await vendorService.getVendorProfile();
-              if (completion && completion.isComplete) {
-                localStorage.setItem('vendorOnboarded', 'true');
-              } else {
-                localStorage.removeItem('vendorOnboarded');
-              }
-            } catch (error) {
-              console.warn('Could not check vendor onboarding status:', error);
-              // Don't fail the auth process if we can't check onboarding
-            }
+          if (currentUser) {
+            console.log('User fetched successfully:', currentUser);
+            setUser(currentUser);
+          } else {
+            // Token is invalid, clear it
+            console.log('Token invalid, clearing auth state');
+            authService.logout();
+            setIsAuthenticated(false);
+            setUser(null);
           }
+        } else {
+          console.log('No token found in localStorage');
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         setError('Failed to initialize authentication');
         // Clear invalid token
         authService.logout();
+        setIsAuthenticated(false);
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -63,32 +67,30 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
+      console.log('Attempting login for:', email);
       const result = await authService.login({ email, password });
-      setUser(result.user);
       
-      // Check onboarding status for vendors
-      if (result.user && (result.user.userType === 'vendor' || result.user.accountType === 'VENDOR')) {
-        try {
-          const { completion } = await vendorService.getVendorProfile();
-          if (completion && completion.isComplete) {
-            localStorage.setItem('vendorOnboarded', 'true');
-          } else {
-            localStorage.removeItem('vendorOnboarded');
-          }
-        } catch (error) {
-          console.warn('Could not check vendor onboarding status:', error);
-          // Don't fail login if we can't check onboarding
-        }
+      if (result && result.user) {
+        console.log('Login successful, user:', result.user);
+        console.log('Token stored:', authService.getToken());
+        
+        setUser(result.user);
+        setIsAuthenticated(true);
+        
+        return {
+          success: true,
+          user: result.user,
+          message: result.message
+        };
       }
       
-      return {
-        success: true,
-        user: result.user,
-        message: result.message
-      };
+      throw new Error('Invalid response from login');
     } catch (error) {
+      console.error('Login error:', error);
       const errorMessage = error.message || 'Login failed';
       setError(errorMessage);
+      setIsAuthenticated(false);
+      setUser(null);
       throw new Error(errorMessage);
     } finally {
       setLoading(false);
@@ -100,22 +102,30 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
+      console.log('Attempting signup for:', userData.email);
       const result = await authService.signup(userData);
-      setUser(result.user);
       
-      // For new vendors, onboarding is definitely not complete
-      if (result.user && (result.user.userType === 'vendor' || result.user.accountType === 'VENDOR')) {
-        localStorage.removeItem('vendorOnboarded');
+      if (result && result.user) {
+        console.log('Signup successful, user:', result.user);
+        console.log('Token stored:', authService.getToken());
+        
+        setUser(result.user);
+        setIsAuthenticated(true);
+        
+        return {
+          success: true,
+          user: result.user,
+          message: result.message
+        };
       }
       
-      return {
-        success: true,
-        user: result.user,
-        message: result.message
-      };
+      throw new Error('Invalid response from signup');
     } catch (error) {
+      console.error('Signup error:', error);
       const errorMessage = error.message || 'Signup failed';
       setError(errorMessage);
+      setIsAuthenticated(false);
+      setUser(null);
       throw new Error(errorMessage);
     } finally {
       setLoading(false);
@@ -128,30 +138,24 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       
       const result = await authService.googleAuth(googleToken, accountType);
-      setUser(result.user);
       
-      // Check onboarding status for vendors
-      if (result.user && (result.user.userType === 'vendor' || result.user.accountType === 'VENDOR')) {
-        try {
-          const { completion } = await vendorService.getVendorProfile();
-          if (completion && completion.isComplete) {
-            localStorage.setItem('vendorOnboarded', 'true');
-          } else {
-            localStorage.removeItem('vendorOnboarded');
-          }
-        } catch (error) {
-          console.warn('Could not check vendor onboarding status:', error);
-        }
+      if (result && result.user) {
+        setUser(result.user);
+        setIsAuthenticated(true);
+        
+        return {
+          success: true,
+          user: result.user,
+          message: result.message
+        };
       }
       
-      return {
-        success: true,
-        user: result.user,
-        message: result.message
-      };
+      throw new Error('Invalid response from Google login');
     } catch (error) {
       const errorMessage = error.message || 'Google login failed';
       setError(errorMessage);
+      setIsAuthenticated(false);
+      setUser(null);
       throw new Error(errorMessage);
     } finally {
       setLoading(false);
@@ -220,9 +224,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('Logging out user');
     authService.logout();
     setUser(null);
     setError(null);
+    setIsAuthenticated(false);
     localStorage.removeItem('vendorOnboarded');
   };
 
@@ -234,6 +240,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     error,
+    isAuthenticated,
     login,
     signup,
     googleLogin,
@@ -242,7 +249,6 @@ export const AuthProvider = ({ children }) => {
     requestPasswordReset,
     resetPassword,
     clearError,
-    isAuthenticated: authService.isAuthenticated(),
     getToken: authService.getToken
   };
 

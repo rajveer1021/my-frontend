@@ -7,6 +7,7 @@ import {
   Navigate,
   useLocation,
   useNavigate,
+  useParams,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ProductProvider } from "./contexts/ProductContext";
@@ -25,8 +26,10 @@ import { LoadingSpinner } from "./components/common/LoadingSpinner";
 import "./index.css";
 
 const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAuthenticated } = useAuth();
   const location = useLocation();
+
+  console.log("ProtectedRoute check:", { user, loading, isAuthenticated });
 
   if (loading) {
     return (
@@ -41,36 +44,33 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
+    console.log("ProtectedRoute: Redirecting to auth, not authenticated");
     // Redirect to auth page with return URL
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
+  console.log("ProtectedRoute: User authenticated, rendering children");
   return children;
 };
 
 const AuthRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAuthenticated } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
+  console.log("AuthRoute check:", { user, loading, isAuthenticated });
+
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && isAuthenticated && user) {
+      console.log("AuthRoute: User already authenticated, redirecting");
       // Get the intended destination from state or default to dashboard
       const from = location.state?.from?.pathname || "/";
 
-      // Check if user needs onboarding
-      const needsOnboarding =
-        !localStorage.getItem("vendorOnboarded") &&
-        (user.userType === "vendor" || user.accountType === "VENDOR");
-
-      if (needsOnboarding) {
-        navigate("/vendor-onboarding", { replace: true });
-      } else {
-        navigate(from, { replace: true });
-      }
+      console.log("AuthRoute: Redirecting to:", from);
+      navigate(from, { replace: true });
     }
-  }, [user, loading, navigate, location.state]);
+  }, [user, loading, isAuthenticated, navigate, location.state]);
 
   if (loading) {
     return (
@@ -86,7 +86,7 @@ const AuthRoute = ({ children }) => {
   }
 
   // If user is already authenticated, the useEffect will handle the redirect
-  if (user) {
+  if (isAuthenticated && user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <div className="text-center">
@@ -97,21 +97,31 @@ const AuthRoute = ({ children }) => {
     );
   }
 
+  console.log("AuthRoute: Rendering auth form");
   return children;
 };
 
 const OnboardingRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading) {
+      if (!isAuthenticated || !user) {
+        console.log("OnboardingRoute: Not authenticated, redirecting to auth");
+        navigate("/auth", { replace: true });
+        return;
+      }
+
       const isOnboarded = localStorage.getItem("vendorOnboarded") === "true";
       if (isOnboarded) {
+        console.log(
+          "OnboardingRoute: Already onboarded, redirecting to dashboard"
+        );
         navigate("/", { replace: true });
       }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, isAuthenticated, navigate]);
 
   if (loading) {
     return (
@@ -124,7 +134,7 @@ const OnboardingRoute = ({ children }) => {
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return <Navigate to="/auth" replace />;
   }
 
@@ -201,7 +211,7 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Layout currentPage="edit-product" onPageChange={handleNavigate}>
-              <EditProduct />
+              <EditProductWrapper />
             </Layout>
           </ProtectedRoute>
         }
@@ -238,9 +248,9 @@ const AppRoutes = () => {
 };
 
 // Wrapper components to handle URL parameters
-const EditProductWrapper = ({ onNavigate }) => {
+const EditProductWrapper = () => {
   const { productId } = useParams();
-  return <EditProduct onNavigate={onNavigate} productId={productId} />;
+  return <EditProduct productId={productId} />;
 };
 
 const VendorOnboardingWrapper = () => {
