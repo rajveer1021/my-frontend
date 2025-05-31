@@ -1,3 +1,4 @@
+// src/pages/Settings.jsx - Updated to handle firstName/lastName
 import React, { useState } from "react";
 import {
   UserCheck,
@@ -14,18 +15,19 @@ import {
   Mail,
   Phone,
   MapPin,
+  AlertCircle,
 } from "lucide-react";
 import Button from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ErrorMessage } from "../components/common/ErrorMessage";
 import { useAuth } from "../contexts/AuthContext";
-import { validateProfile } from "../utils/validators";
 
 const Settings = () => {
   const { user, updateUser } = useAuth();
   const [profileData, setProfileData] = useState({
-    fullName: user?.fullName || "",
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
     email: user?.email || "",
     phone: user?.phone || "",
     address: user?.address || "",
@@ -33,6 +35,41 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
+
+  const validateProfile = (profile) => {
+    const errors = {};
+
+    if (!profile.firstName?.trim()) {
+      errors.firstName = 'First name is required';
+    } else if (profile.firstName.trim().length < 2) {
+      errors.firstName = 'First name must be at least 2 characters';
+    }
+
+    if (!profile.lastName?.trim()) {
+      errors.lastName = 'Last name is required';
+    } else if (profile.lastName.trim().length < 2) {
+      errors.lastName = 'Last name must be at least 2 characters';
+    }
+
+    if (!profile.email?.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (profile.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(profile.phone.replace(/[\s\-\(\)]/g, ''))) {
+      errors.phone = 'Please enter a valid phone number';
+    }
+
+    if (profile.address && profile.address.length > 200) {
+      errors.address = 'Address must be less than 200 characters';
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
+    };
+  };
 
   const handleInputChange = (field, value) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
@@ -58,7 +95,7 @@ const Settings = () => {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
-      setErrors({ general: "Failed to update profile" });
+      setErrors({ general: error.message || "Failed to update profile" });
     } finally {
       setLoading(false);
     }
@@ -100,55 +137,11 @@ const Settings = () => {
     </div>
   );
 
-  const SettingCard = ({
-    title,
-    description,
-    icon: Icon,
-    color,
-    onClick,
-    buttonText = "Configure",
-  }) => (
-    <button
-      onClick={onClick}
-      className={`p-4 lg:p-6 rounded-2xl border-2 border-dashed ${color} bg-white hover:bg-gray-50 transition-all duration-300 hover:scale-105 group text-left w-full`}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3 lg:space-x-4">
-          <div
-            className={`p-2 lg:p-3 rounded-xl ${color
-              .replace("border-", "bg-")
-              .replace("-300", "-100")}`}
-          >
-            <Icon
-              className={`w-5 h-5 lg:w-6 lg:h-6 ${color
-                .replace("border-", "text-")
-                .replace("-300", "-600")}`}
-            />
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors text-sm lg:text-base">
-              {title}
-            </h3>
-            <p className="text-xs lg:text-sm text-gray-500">{description}</p>
-          </div>
-        </div>
-        <div className="flex items-center text-gray-400 group-hover:text-blue-600 transition-colors">
-          <span className="text-xs lg:text-sm mr-2 hidden sm:block">
-            {buttonText}
-          </span>
-          <ArrowRight className="w-4 h-4" />
-        </div>
-      </div>
-    </button>
-  );
-
   return (
     <div className="w-full max-w-none space-y-6">
       <div className="space-y-6">
         {/* Enhanced Header */}
         <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 p-4 sm:p-6 lg:p-8 text-white">
-          {/* <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.05\"%3E%3Ccircle cx=\"7\" cy=\"7\" r=\"3\"/%3E%3Ccircle cx=\"27\" cy=\"7\" r=\"3\"/%3E%3Ccircle cx=\"47\" cy=\"7\" r=\"3\"/%3E%3Ccircle cx=\"7\" cy=\"27\" r=\"3\"/%3E%3Ccircle cx=\"27\" cy=\"27\" r=\"3\"/%3E%3Ccircle cx=\"47\" cy=\"27\" r=\"3\"/%3E%3Ccircle cx=\"7\" cy=\"47\" r=\"3\"/%3E%3Ccircle cx=\"27\" cy=\"47\" r=\"3\"/%3E%3Ccircle cx=\"47\" cy=\"47\" r=\"3\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" /> */}
-
           <div className="relative z-10">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
               <div>
@@ -208,6 +201,53 @@ const Settings = () => {
 
           <div className="p-4 lg:p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+              {/* First Name */}
+              <div>
+                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                  <User className="w-4 h-4 mr-2 text-gray-500" />
+                  First Name *
+                </label>
+                <Input
+                  type="text"
+                  value={profileData.firstName}
+                  onChange={(e) => handleInputChange("firstName", e.target.value)}
+                  placeholder="Enter your first name"
+                  className={`h-11 lg:h-12 ${
+                    errors.firstName ? "border-red-500" : ""
+                  }`}
+                />
+                {errors.firstName && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.firstName}
+                  </p>
+                )}
+              </div>
+
+              {/* Last Name */}
+              <div>
+                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                  <User className="w-4 h-4 mr-2 text-gray-500" />
+                  Last Name *
+                </label>
+                <Input
+                  type="text"
+                  value={profileData.lastName}
+                  onChange={(e) => handleInputChange("lastName", e.target.value)}
+                  placeholder="Enter your last name"
+                  className={`h-11 lg:h-12 ${
+                    errors.lastName ? "border-red-500" : ""
+                  }`}
+                />
+                {errors.lastName && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.lastName}
+                  </p>
+                )}
+              </div>
+
+              {/* Email */}
               <div>
                 <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                   <Mail className="w-4 h-4 mr-2 text-gray-500" />
@@ -224,6 +264,7 @@ const Settings = () => {
                 </p>
               </div>
 
+              {/* Phone Number */}
               <div>
                 <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                   <Phone className="w-4 h-4 mr-2 text-gray-500" />
@@ -239,10 +280,14 @@ const Settings = () => {
                   }`}
                 />
                 {errors.phone && (
-                  <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+                  <p className="text-red-500 text-sm mt-1 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.phone}
+                  </p>
                 )}
               </div>
 
+              {/* Address */}
               <div className="lg:col-span-2">
                 <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                   <MapPin className="w-4 h-4 mr-2 text-gray-500" />
@@ -258,7 +303,10 @@ const Settings = () => {
                   }`}
                 />
                 {errors.address && (
-                  <p className="text-red-500 text-sm mt-1">{errors.address}</p>
+                  <p className="text-red-500 text-sm mt-1 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.address}
+                  </p>
                 )}
               </div>
             </div>

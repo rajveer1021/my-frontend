@@ -1,3 +1,4 @@
+// src/pages/Auth.jsx - Complete updated version
 import React, { useState } from "react";
 import LoginForm from "../components/auth/LoginForm";
 import SignupForm from "../components/auth/SignupForm";
@@ -15,61 +16,62 @@ import {
 import Button from "../components/ui/Button";
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [currentView, setCurrentView] = useState('login'); // 'login', 'signup', 'forgot-password'
 
-  if (showForgotPassword) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="w-full max-w-md mx-auto">
-          <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
-              <div className="flex items-center space-x-3 mb-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowForgotPassword(false)}
-                  className="text-white hover:bg-white/20 backdrop-blur-sm rounded-xl p-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-              </div>
-              <h2 className="text-2xl font-bold">Reset Password</h2>
-              <p className="text-blue-100">We'll send you a reset link</p>
-            </div>
+  const getViewConfig = () => {
+    switch (currentView) {
+      case 'signup':
+        return {
+          title: "Join VendorHub",
+          subtitle: "Start your journey as a vendor",
+          icon: Users
+        };
+      case 'forgot-password':
+        return {
+          title: "Reset Password",
+          subtitle: "We'll help you get back in",
+          icon: ShieldCheck
+        };
+      default:
+        return {
+          title: "Welcome Back!",
+          subtitle: "Sign in to your vendor account",
+          icon: ShieldCheck
+        };
+    }
+  };
 
-            {/* Content */}
-            <div className="p-6 space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="w-full h-12 px-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                />
-              </div>
+  const config = getViewConfig();
 
-              <button className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105">
-                Send Reset Link
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const renderForm = () => {
+    switch (currentView) {
+      case 'signup':
+        return (
+          <SignupForm 
+            onSwitchToLogin={() => setCurrentView('login')} 
+          />
+        );
+      case 'forgot-password':
+        return (
+          <ForgotPasswordForm 
+            onBackToLogin={() => setCurrentView('login')} 
+          />
+        );
+      default:
+        return (
+          <LoginForm
+            onSwitchToSignup={() => setCurrentView('signup')}
+            onForgotPassword={() => setCurrentView('forgot-password')}
+          />
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <div className="flex flex-col lg:flex-row min-h-screen lg:gap-4">
         {/* Left side - Enhanced Branding */}
-        <div className="lg:flex-1 lg:flex lg:items-center lg:justify-center">
+        <div className="lg:flex-1 lg:flex lg:items-center lg:justify-center p-4 lg:p-8">
           <div className="max-w-2xl space-y-6 lg:space-y-8">
             {/* Logo and Title */}
             <div className="text-center lg:text-left space-y-4">
@@ -164,40 +166,41 @@ const Auth = () => {
         </div>
 
         {/* Right side - Enhanced Auth Form */}
-        <div className="lg:flex-1 lg:flex lg:items-center lg:justify-center">
+        <div className="lg:flex-1 lg:flex lg:items-center lg:justify-center p-4 lg:p-8">
           <div className="w-full max-w-md">
             <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
               {/* Form Header */}
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 lg:p-6 text-white">
                 <div className="text-center">
+                  {/* Back button for forgot password */}
+                  {currentView === 'forgot-password' && (
+                    <div className="flex items-center justify-start mb-3">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setCurrentView('login')}
+                        className="text-white hover:bg-white/20 backdrop-blur-sm rounded-xl p-2"
+                        size="sm"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                  
                   <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mx-auto mb-3">
-                    {isLogin ? (
-                      <ShieldCheck className="w-6 h-6" />
-                    ) : (
-                      <Users className="w-6 h-6" />
-                    )}
+                    {React.createElement(config.icon, { className: "w-6 h-6" })}
                   </div>
                   <h2 className="text-xl lg:text-2xl font-bold mb-1">
-                    {isLogin ? "Welcome Back!" : "Join VendorHub"}
+                    {config.title}
                   </h2>
                   <p className="text-blue-100 text-sm lg:text-base">
-                    {isLogin
-                      ? "Sign in to your vendor account"
-                      : "Start your journey as a vendor"}
+                    {config.subtitle}
                   </p>
                 </div>
               </div>
 
               {/* Form Content */}
               <div className="p-4 lg:p-6">
-                {isLogin ? (
-                  <LoginForm
-                    onSwitchToSignup={() => setIsLogin(false)}
-                    onForgotPassword={() => setShowForgotPassword(true)}
-                  />
-                ) : (
-                  <SignupForm onSwitchToLogin={() => setIsLogin(true)} />
-                )}
+                {renderForm()}
               </div>
             </div>
           </div>

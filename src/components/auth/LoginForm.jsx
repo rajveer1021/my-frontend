@@ -1,47 +1,118 @@
+// src/components/auth/LoginForm.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
 import { Input } from '../ui/Input';
-import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 
 const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, loading } = useAuth();
+  const [formErrors, setFormErrors] = useState({});
+  
+  const { login, loading, error, clearError, googleLogin } = useAuth();
   const { addToast } = useToast();
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    if (!password.trim()) {
+      errors.password = 'Password is required';
+    } else if (password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      addToast("Please fill in all fields", "error");
+    // Clear previous errors
+    clearError();
+    setFormErrors({});
+    
+    if (!validateForm()) {
       return;
     }
 
     try {
-      const success = await login(email, password);
-      if (success) {
-        addToast("Welcome back!", "success");
+      const result = await login(email, password);
+      if (result.success) {
+        addToast(result.message || "Welcome back!", "success");
       }
     } catch (error) {
-      addToast("Invalid credentials. Please try again.", "error");
+      // Error is already handled in the auth context
+      addToast(error.message, "error");
     }
   };
 
-  const handleGoogleLogin = () => {
-    addToast("Google authentication would be integrated here.", "info");
+  const handleGoogleLogin = async () => {
+    try {
+      // In a real implementation, you would integrate with Google OAuth
+      // For now, show a message about the integration
+      addToast("Google authentication integration coming soon!", "info");
+      
+      // Example of how you would handle Google OAuth token:
+      // const googleToken = await getGoogleAuthToken();
+      // const result = await googleLogin(googleToken, 'vendor');
+      // if (result.success) {
+      //   addToast(result.message || "Welcome!", "success");
+      // }
+    } catch (error) {
+      addToast(error.message, "error");
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    if (field === 'email') {
+      setEmail(value);
+    } else if (field === 'password') {
+      setPassword(value);
+    }
+    
+    // Clear field error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+    
+    // Clear general error
+    if (error) {
+      clearError();
+    }
   };
 
   return (
     <div className="space-y-4">
+      {/* Display general error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 animate-fade-in">
+          <div className="flex items-center space-x-3">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <p className="text-red-800 text-sm font-medium">{error}</p>
+          </div>
+        </div>
+      )}
+
       {/* Google Login Button */}
       <Button 
         onClick={handleGoogleLogin}
         variant="outline" 
         className="w-full h-10 text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md text-sm"
         type="button"
+        disabled={loading}
       >
         <div className="w-4 h-4 mr-2 bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 rounded-full flex items-center justify-center">
           <Mail className="w-2.5 h-2.5 text-white" />
@@ -75,11 +146,20 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
               type="email"
               placeholder="Enter your email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-10 pl-9 text-sm border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200"
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                formErrors.email ? 'border-red-500' : 'border-gray-200'
+              }`}
+              disabled={loading}
               required
             />
           </div>
+          {formErrors.email && (
+            <p className="text-red-500 text-xs mt-1 flex items-center">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              {formErrors.email}
+            </p>
+          )}
         </div>
         
         {/* Password Field */}
@@ -96,14 +176,18 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
               type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-10 pl-9 pr-10 text-sm border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200"
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              className={`h-10 pl-9 pr-10 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                formErrors.password ? 'border-red-500' : 'border-gray-200'
+              }`}
+              disabled={loading}
               required
             />
             <button
               type="button"
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
               onClick={() => setShowPassword(!showPassword)}
+              disabled={loading}
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
@@ -112,6 +196,12 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
               )}
             </button>
           </div>
+          {formErrors.password && (
+            <p className="text-red-500 text-xs mt-1 flex items-center">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              {formErrors.password}
+            </p>
+          )}
         </div>
 
         {/* Submit Button */}
@@ -138,6 +228,7 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
             variant="ghost" 
             onClick={onForgotPassword}
             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg px-4 py-2 transition-all duration-200 text-sm"
+            disabled={loading}
           >
             Forgot your password?
           </Button>
@@ -149,6 +240,7 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
             variant="ghost" 
             onClick={onSwitchToSignup} 
             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-semibold p-1 rounded transition-all duration-200 text-sm"
+            disabled={loading}
           >
             Sign up
           </Button>

@@ -1,13 +1,15 @@
+// src/components/auth/SignupForm.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
 import { Input } from '../ui/Input';
-import { Mail, User, Lock, Eye, EyeOff, Building, ShoppingCart, CheckCircle } from 'lucide-react';
+import { Mail, User, Lock, Eye, EyeOff, Building, ShoppingCart, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 
 const SignupForm = ({ onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     userType: 'vendor',
     password: '',
@@ -15,59 +17,126 @@ const SignupForm = ({ onSwitchToLogin }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
   
-  const { signup, loading } = useAuth();
+  const { signup, loading, error, clearError, googleLogin } = useAuth();
   const { addToast } = useToast();
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.firstName.trim()) {
+      errors.firstName = 'First name is required';
+    } else if (formData.firstName.trim().length < 2) {
+      errors.firstName = 'First name must be at least 2 characters';
+    }
+    
+    if (!formData.lastName.trim()) {
+      errors.lastName = 'Last name is required';
+    } else if (formData.lastName.trim().length < 2) {
+      errors.lastName = 'Last name must be at least 2 characters';
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
-      addToast("Please fill in all fields", "error");
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      addToast("Passwords do not match", "error");
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      addToast("Password must be at least 6 characters", "error");
+    // Clear previous errors
+    clearError();
+    setFormErrors({});
+    
+    if (!validateForm()) {
       return;
     }
 
     try {
-      const success = await signup({
-        fullName: formData.fullName,
+      await signup({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         email: formData.email,
+        password: formData.password,
         userType: formData.userType
       });
-
-      if (success) {
-        addToast("Account created successfully!", "success");
-      }
+      // No need for toast - redirecting to dashboard
     } catch (error) {
-      addToast("Failed to create account. Please try again.", "error");
+      // Error is already handled in the auth context
+      addToast(error.message, "error");
     }
   };
 
-  const handleGoogleSignup = () => {
-    addToast("Google authentication would be integrated here.", "info");
+  const handleGoogleSignup = async () => {
+    try {
+      // In a real implementation, you would integrate with Google OAuth
+      addToast("Google authentication integration coming soon!", "info");
+      
+      // Example of how you would handle Google OAuth token:
+      // const googleToken = await getGoogleAuthToken();
+      // const result = await googleLogin(googleToken, formData.userType);
+      // if (result.success) {
+      //   addToast(result.message || "Account created successfully!", "success");
+      // }
+    } catch (error) {
+      addToast(error.message, "error");
+    }
   };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear field error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+    
+    // Clear general error
+    if (error) {
+      clearError();
+    }
   };
 
   return (
     <div className="space-y-4">
+      {/* Display general error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 animate-fade-in">
+          <div className="flex items-center space-x-3">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <p className="text-red-800 text-sm font-medium">{error}</p>
+          </div>
+        </div>
+      )}
+
       {/* Google Signup Button */}
       <Button 
         onClick={handleGoogleSignup}
         variant="outline" 
         className="w-full h-10 text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md text-sm"
         type="button"
+        disabled={loading}
       >
         <div className="w-4 h-4 mr-2 bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 rounded-full flex items-center justify-center">
           <Mail className="w-2.5 h-2.5 text-white" />
@@ -87,23 +156,62 @@ const SignupForm = ({ onSwitchToLogin }) => {
 
       {/* Signup Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Full Name Field */}
-        <div className="space-y-1">
-          <label htmlFor="fullName" className="block text-xs font-semibold text-gray-700">
-            Full Name
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <User className="h-4 w-4 text-gray-400" />
+        {/* First Name and Last Name Fields */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label htmlFor="firstName" className="block text-xs font-semibold text-gray-700">
+              First Name
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <User className="h-4 w-4 text-gray-400" />
+              </div>
+              <Input
+                id="firstName"
+                placeholder="Enter your first name"
+                value={formData.firstName}
+                onChange={(e) => handleInputChange('firstName', e.target.value)}
+                className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                  formErrors.firstName ? 'border-red-500' : 'border-gray-200'
+                }`}
+                disabled={loading}
+                required
+              />
             </div>
-            <Input
-              id="fullName"
-              placeholder="Enter your full name"
-              value={formData.fullName}
-              onChange={(e) => handleInputChange('fullName', e.target.value)}
-              className="h-10 pl-9 text-sm border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200"
-              required
-            />
+            {formErrors.firstName && (
+              <p className="text-red-500 text-xs mt-1 flex items-center">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                {formErrors.firstName}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="lastName" className="block text-xs font-semibold text-gray-700">
+              Last Name
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <User className="h-4 w-4 text-gray-400" />
+              </div>
+              <Input
+                id="lastName"
+                placeholder="Enter your last name"
+                value={formData.lastName}
+                onChange={(e) => handleInputChange('lastName', e.target.value)}
+                className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                  formErrors.lastName ? 'border-red-500' : 'border-gray-200'
+                }`}
+                disabled={loading}
+                required
+              />
+            </div>
+            {formErrors.lastName && (
+              <p className="text-red-500 text-xs mt-1 flex items-center">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                {formErrors.lastName}
+              </p>
+            )}
           </div>
         </div>
 
@@ -122,10 +230,19 @@ const SignupForm = ({ onSwitchToLogin }) => {
               placeholder="Enter your email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
-              className="h-10 pl-9 text-sm border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200"
+              className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                formErrors.email ? 'border-red-500' : 'border-gray-200'
+              }`}
+              disabled={loading}
               required
             />
           </div>
+          {formErrors.email && (
+            <p className="text-red-500 text-xs mt-1 flex items-center">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              {formErrors.email}
+            </p>
+          )}
         </div>
 
         {/* Account Type Selection - Compact */}
@@ -135,11 +252,12 @@ const SignupForm = ({ onSwitchToLogin }) => {
             <button
               type="button"
               onClick={() => handleInputChange('userType', 'vendor')}
+              disabled={loading}
               className={`relative p-2 rounded-lg border-2 transition-all duration-300 text-left ${
                 formData.userType === 'vendor'
                   ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 shadow-md'
                   : 'border-gray-200 bg-white hover:border-blue-300'
-              }`}
+              } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {formData.userType === 'vendor' && (
                 <div className="absolute -top-1 -right-1">
@@ -164,11 +282,12 @@ const SignupForm = ({ onSwitchToLogin }) => {
             <button
               type="button"
               onClick={() => handleInputChange('userType', 'buyer')}
+              disabled={loading}
               className={`relative p-2 rounded-lg border-2 transition-all duration-300 text-left ${
                 formData.userType === 'buyer'
                   ? 'border-green-500 bg-gradient-to-br from-green-50 to-blue-50 shadow-md'
                   : 'border-gray-200 bg-white hover:border-green-300'
-              }`}
+              } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {formData.userType === 'buyer' && (
                 <div className="absolute -top-1 -right-1">
@@ -207,13 +326,17 @@ const SignupForm = ({ onSwitchToLogin }) => {
               placeholder="Create a password"
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
-              className="h-10 pl-9 pr-10 text-sm border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200"
+              className={`h-10 pl-9 pr-10 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                formErrors.password ? 'border-red-500' : 'border-gray-200'
+              }`}
+              disabled={loading}
               required
             />
             <button
               type="button"
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
               onClick={() => setShowPassword(!showPassword)}
+              disabled={loading}
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
@@ -222,6 +345,12 @@ const SignupForm = ({ onSwitchToLogin }) => {
               )}
             </button>
           </div>
+          {formErrors.password && (
+            <p className="text-red-500 text-xs mt-1 flex items-center">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              {formErrors.password}
+            </p>
+          )}
         </div>
 
         {/* Confirm Password Field */}
@@ -239,13 +368,17 @@ const SignupForm = ({ onSwitchToLogin }) => {
               placeholder="Confirm your password"
               value={formData.confirmPassword}
               onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-              className="h-10 pl-9 pr-10 text-sm border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200"
+              className={`h-10 pl-9 pr-10 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                formErrors.confirmPassword ? 'border-red-500' : 'border-gray-200'
+              }`}
+              disabled={loading}
               required
             />
             <button
               type="button"
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              disabled={loading}
             >
               {showConfirmPassword ? (
                 <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
@@ -254,6 +387,12 @@ const SignupForm = ({ onSwitchToLogin }) => {
               )}
             </button>
           </div>
+          {formErrors.confirmPassword && (
+            <p className="text-red-500 text-xs mt-1 flex items-center">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              {formErrors.confirmPassword}
+            </p>
+          )}
         </div>
 
         {/* Submit Button */}
@@ -280,6 +419,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
           variant="ghost" 
           onClick={onSwitchToLogin} 
           className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-semibold p-1 rounded transition-all duration-200 text-sm"
+          disabled={loading}
         >
           Sign in
         </Button>

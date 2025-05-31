@@ -1,5 +1,7 @@
+// src/contexts/AuthContext.jsx - Corrected Complete Version
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentUser, setCurrentUser, logout as logoutUser } from '../services/mockData';
+import { authService } from '../services/authService';
+import { navigation } from '../utils/navigation';
 
 export const AuthContext = createContext();
 
@@ -14,69 +16,195 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  // Initialize auth state on app load
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-    setLoading(false);
+    const initializeAuth = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Check if user is already authenticated
+        if (authService.isAuthenticated()) {
+          const currentUser = await authService.getCurrentUser();
+          setUser(currentUser);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        setError('Failed to initialize authentication');
+        // Clear invalid token
+        authService.logout();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (email, password) => {
-    setLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For demo purposes, accept any password for vendor email
-    const mockUser = { 
-      id: Date.now().toString(), 
-      email, 
-      fullName: 'John Vendor',
-      userType: 'vendor',
-      isVerified: true 
-    };
-    
-    setCurrentUser(mockUser);
-    setUser(mockUser);
-    setLoading(false);
-    return true;
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const result = await authService.login({ email, password });
+      setUser(result.user);
+      
+      // Redirect using navigation utility
+      navigation.redirectAfterAuth(result.user);
+      
+      return {
+        success: true,
+        user: result.user,
+        message: result.message
+      };
+    } catch (error) {
+      const errorMessage = error.message || 'Login failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signup = async (userData) => {
-    setLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newUser = {
-      ...userData,
-      id: Date.now().toString(),
-      userType: 'vendor', // Only vendor accounts allowed
-      isVerified: true
-    };
-    
-    setCurrentUser(newUser);
-    setUser(newUser);
-    setLoading(false);
-    return true;
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const result = await authService.signup(userData);
+      setUser(result.user);
+      
+      // Redirect using navigation utility
+      navigation.redirectAfterAuth(result.user);
+      
+      return {
+        success: true,
+        user: result.user,
+        message: result.message
+      };
+    } catch (error) {
+      const errorMessage = error.message || 'Signup failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const googleLogin = async (googleToken, accountType = 'vendor') => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const result = await authService.googleAuth(googleToken, accountType);
+      setUser(result.user);
+      
+      // Redirect using navigation utility
+      navigation.redirectAfterAuth(result.user);
+      
+      return {
+        success: true,
+        user: result.user,
+        message: result.message
+      };
+    } catch (error) {
+      const errorMessage = error.message || 'Google login failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateUser = async (userData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const updatedUser = await authService.updateProfile(userData);
+      setUser(updatedUser);
+      
+      return {
+        success: true,
+        user: updatedUser
+      };
+    } catch (error) {
+      const errorMessage = error.message || 'Profile update failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const requestPasswordReset = async (email) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const message = await authService.requestPasswordReset(email);
+      
+      return {
+        success: true,
+        message
+      };
+    } catch (error) {
+      const errorMessage = error.message || 'Password reset request failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (token, newPassword) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const message = await authService.resetPassword(token, newPassword);
+      
+      return {
+        success: true,
+        message
+      };
+    } catch (error) {
+      const errorMessage = error.message || 'Password reset failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = () => {
-    logoutUser();
+    authService.logout();
     setUser(null);
+    setError(null);
+    // Redirect using navigation utility
+    navigation.redirectAfterLogout();
   };
 
-  const updateUser = (userData) => {
-    setUser(prev => ({ ...prev, ...userData }));
+  const clearError = () => {
+    setError(null);
   };
 
   const value = {
     user,
+    loading,
+    error,
     login,
     signup,
+    googleLogin,
     logout,
     updateUser,
-    loading
+    requestPasswordReset,
+    resetPassword,
+    clearError,
+    isAuthenticated: authService.isAuthenticated(),
+    getToken: authService.getToken
   };
 
   return (
