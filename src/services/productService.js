@@ -290,14 +290,11 @@ export const productService = {
     return [
       'Electronics',
       'Computers',
-      'IoT',
       'Infrastructure',
-      'Cable Management', 
       'Tools',
       'Industrial Equipment',
       'Machinery',
       'Automation',
-      'Sensors'
     ];
   }
 };

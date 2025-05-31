@@ -1,3 +1,4 @@
+// src/components/products/ProductDetailsModal.jsx - Fixed 
 import React from "react";
 import { X, Package, Calendar, Tag, MapPin } from "lucide-react";
 import { Dialog, DialogContent } from "../ui/Dialog";
@@ -5,7 +6,6 @@ import { Badge } from "../ui/Badge";
 import { formatCurrency, getStockStatusColor } from "../../utils/helpers";
 
 const ProductDetailsModal = ({ product, isOpen, onClose }) => {
-  ("products:", product);
   if (!product) return null;
 
   const getStockStatusText = (status) => {

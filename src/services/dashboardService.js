@@ -1,4 +1,4 @@
-// src/services/dashboardService.js
+// src/services/dashboardService.js - Fixed  statements
 import { apiService } from './api';
 
 export const dashboardService = {
@@ -15,10 +15,6 @@ export const dashboardService = {
           lowStock: response.data.lowStock || 0,
           outOfStock: response.data.outOfStock || 0,
           isProfileVerified: response.data.isProfileVerified || false,
-          // Calculate additional metrics
-          inventoryValue: response.data.inventoryValue || 0,
-          monthlyVisitors: response.data.monthlyVisitors || 0,
-          profileCompletionPercentage: response.data.isProfileVerified ? 100 : 75
         };
       }
       
@@ -32,12 +28,10 @@ export const dashboardService = {
   // Get recent inquiries for dashboard (delegate to inquiry service)
   async getRecentInquiries(limit = 5) {
     try {
-      // Import inquiry service dynamically to avoid circular dependency
       const { inquiryService } = await import('./inquiryService');
       return await inquiryService.getRecentInquiries(limit);
     } catch (error) {
       console.error('Get recent inquiries error:', error);
-      // Return empty array on error to avoid breaking the dashboard
       return [];
     }
   },
@@ -78,7 +72,6 @@ export const dashboardService = {
       return [];
     } catch (error) {
       console.error('Get recent products error:', error);
-      // Return empty array on error to avoid breaking the dashboard
       return [];
     }
   },
