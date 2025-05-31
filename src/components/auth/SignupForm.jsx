@@ -88,14 +88,14 @@ const SignupForm = ({ onSwitchToLogin }) => {
   const handleGoogleSignup = async () => {
     try {
       // In a real implementation, you would integrate with Google OAuth
-      addToast("Google authentication integration coming soon!", "info");
+      // addToast("Google authentication integration coming soon!", "info");
       
       // Example of how you would handle Google OAuth token:
-      // const googleToken = await getGoogleAuthToken();
-      // const result = await googleLogin(googleToken, formData.userType);
-      // if (result.success) {
-      //   addToast(result.message || "Account created successfully!", "success");
-      // }
+      const googleToken = await getGoogleAuthToken();
+      const result = await googleLogin(googleToken, formData.userType);
+      if (result.success) {
+        addToast(result.message || "Account created successfully!", "success");
+      }
     } catch (error) {
       addToast(error.message, "error");
     }

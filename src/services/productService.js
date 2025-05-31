@@ -19,7 +19,7 @@ export const productService = {
       if (params.sortBy) queryParams.sortBy = params.sortBy;
       if (params.sortOrder) queryParams.sortOrder = params.sortOrder;
       
-      console.log('Product search params:', queryParams);
+      ('Product search params:', queryParams);
       
       const response = await apiService.get('/vendor/products/search', queryParams);
       

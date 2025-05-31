@@ -150,7 +150,7 @@ const Settings = () => {
         address: profileData.address.trim()
       };
 
-      console.log('Updating profile with data:', updateData);
+      ('Updating profile with data:', updateData);
       
       const result = await updateUser(updateData);
       
