@@ -1,10 +1,16 @@
-// src/components/auth/LoginForm.jsx
+// src/components/auth/LoginForm.jsx - Fixed Google Auth and 
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useToast } from '../ui/Toast';
+
+// Mock Google Auth function - replace with real implementation
+const getGoogleAuthToken = async () => {
+  // This should be replaced with actual Google OAuth implementation
+  throw new Error('Google authentication not implemented yet');
+};
 
 const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
   const [email, setEmail] = useState('');
@@ -58,12 +64,13 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
 
   const handleGoogleLogin = async () => {
     try {
-      // addToast("Google authentication integration coming soon!", "info");
-      const googleToken = await getGoogleAuthToken();
-      const result = await googleLogin(googleToken, 'vendor');
-      if (result.success) {
-        addToast(result.message || "Welcome!", "success");
-      }
+      addToast("Google authentication integration coming soon!", "info");
+      // Uncomment when Google OAuth is implemented
+      // const googleToken = await getGoogleAuthToken();
+      // const result = await googleLogin(googleToken, 'vendor');
+      // if (result.success) {
+      //   addToast(result.message || "Welcome!", "success");
+      // }
     } catch (error) {
       addToast(error.message, "error");
     }
@@ -219,16 +226,18 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
 
       {/* Action Links */}
       <div className="space-y-2">
-        {/* <div className="text-center">
-          <Button 
-            variant="ghost" 
-            onClick={onForgotPassword}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg px-4 py-2 transition-all duration-200 text-sm"
-            disabled={loading}
-          >
-            Forgot your password?
-          </Button>
-        </div> */}
+        {onForgotPassword && (
+          <div className="text-center">
+            <Button 
+              variant="ghost" 
+              onClick={onForgotPassword}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg px-4 py-2 transition-all duration-200 text-sm"
+              disabled={loading}
+            >
+              Forgot your password?
+            </Button>
+          </div>
+        )}
         
         <div className="text-center">
           <span className="text-gray-600 text-sm">Don't have an account? </span>

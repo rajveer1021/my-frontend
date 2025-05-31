@@ -1,5 +1,5 @@
-// src/services/inquiryService.js
-import { apiService } from './api';
+// src/services/inquiryService.js - Fixed  statements
+import { apiService } from "./api";
 
 export const inquiryService = {
   // Get vendor's inquiries with filters and pagination
@@ -8,7 +8,7 @@ export const inquiryService = {
       const queryParams = {
         page: params.page || 1,
         limit: params.limit || 10,
-        ...params
+        ...params,
       };
 
       // Add status filter if provided
@@ -21,28 +21,24 @@ export const inquiryService = {
         queryParams.search = params.search.trim();
       }
 
-      ('Fetching inquiries with params:', queryParams);
-      
-      const response = await apiService.get('/inquiries/vendor', queryParams);
-      
+      const response = await apiService.get("/inquiries/vendor", queryParams);
+      (response);
+
       if (response.success && response.data) {
         // Transform API response to match frontend structure
-        const inquiries = (response.data.inquiries || []).map(inquiry => ({
+        const inquiries = (response.data.inquiries || []).map((inquiry) => ({
           id: inquiry.id,
-          name: inquiry.customerName || inquiry.name || 'Unknown Customer',
-          buyerName: inquiry.customerName || inquiry.name || 'Unknown Customer',
-          email: inquiry.customerEmail || inquiry.email,
-          buyerEmail: inquiry.customerEmail || inquiry.email,
-          customerEmail: inquiry.customerEmail || inquiry.email,
-          phone: inquiry.customerPhone || inquiry.phone,
-          message: inquiry.message || inquiry.inquiry || 'No message provided',
-          productName: inquiry.productName,
+          message: inquiry.message,
+          status: inquiry.status.toLowerCase(),
           productId: inquiry.productId,
-          status: inquiry.status ? inquiry.status.toLowerCase() : 'pending',
-          date: new Date(inquiry.createdAt).toLocaleDateString(),
+          productName: inquiry.product?.name,
+          buyerId: inquiry.buyerId,
+          buyerName: `${inquiry.buyer?.firstName || ""} ${
+            inquiry.buyer?.lastName || ""
+          }`.trim(),
+          buyerEmail: inquiry.buyer?.email,
           createdAt: inquiry.createdAt,
           updatedAt: inquiry.updatedAt,
-          isNew: this.isNewInquiry(inquiry.createdAt)
         }));
 
         return {
@@ -54,32 +50,30 @@ export const inquiryService = {
               limit: 10,
               total: inquiries.length,
               pages: 1,
-              hasNext: false,
-              hasPrev: false
-            }
-          }
+            },
+          },
         };
       }
-      
-      throw new Error('Invalid response format');
+
+      throw new Error("Invalid response format");
     } catch (error) {
-      console.error('Get inquiries error:', error);
-      throw new Error(error.message || 'Failed to fetch inquiries');
+      console.error("Get inquiries error:", error);
+      throw new Error(error.message || "Failed to fetch inquiries");
     }
   },
 
   // Get recent inquiries (default to OPEN status)
   async getRecentInquiries(limit = 5) {
     try {
-      const response = await this.getInquiries({ 
-        page: 1, 
+      const response = await this.getInquiries({
+        page: 1,
         limit,
-        status: 'OPEN' // Only get open inquiries for recent list
+        status: "OPEN",
       });
-      
+
       return response.data.inquiries || [];
     } catch (error) {
-      console.error('Get recent inquiries error:', error);
+      console.error("Get recent inquiries error:", error);
       return [];
     }
   },
@@ -87,126 +81,47 @@ export const inquiryService = {
   // Update inquiry status
   async updateInquiryStatus(inquiryId, status) {
     try {
-      const validStatuses = ['OPEN', 'CLOSED', 'RESPONDED'];
+      const validStatuses = ["OPEN", "CLOSED", "RESPONDED"];
       const statusUpper = status.toUpperCase();
-      
+
       if (!validStatuses.includes(statusUpper)) {
-        throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+        throw new Error(
+          `Invalid status. Must be one of: ${validStatuses.join(", ")}`
+        );
       }
 
-      (`Updating inquiry ${inquiryId} status to ${statusUpper}`);
-      
       const response = await apiService.put(`/inquiries/${inquiryId}/status`, {
-        status: statusUpper
+        status: statusUpper,
       });
-      
+
       if (response.success) {
-        ('Inquiry status updated successfully:', response);
         return {
           success: true,
           data: response.data,
-          message: response.message || 'Inquiry status updated successfully'
+          message: response.message || "Inquiry status updated successfully",
         };
       }
-      
-      throw new Error('Failed to update inquiry status');
+
+      throw new Error("Failed to update inquiry status");
     } catch (error) {
-      console.error('Update inquiry status error:', error);
-      throw new Error(error.message || 'Failed to update inquiry status');
+      console.error("Update inquiry status error:", error);
+      throw new Error(error.message || "Failed to update inquiry status");
     }
   },
 
   // Mark inquiry as responded
   async markAsResponded(inquiryId) {
-    return this.updateInquiryStatus(inquiryId, 'RESPONDED');
+    return this.updateInquiryStatus(inquiryId, "RESPONDED");
   },
 
   // Close inquiry
   async closeInquiry(inquiryId) {
-    return this.updateInquiryStatus(inquiryId, 'CLOSED');
+    return this.updateInquiryStatus(inquiryId, "CLOSED");
   },
 
   // Reopen inquiry
   async reopenInquiry(inquiryId) {
-    return this.updateInquiryStatus(inquiryId, 'OPEN');
-  },
-
-  // Get inquiry statistics
-  async getInquiryStats() {
-    try {
-      // Try to get stats from a dedicated endpoint if available
-      try {
-        const response = await apiService.get('/inquiries/vendor/stats');
-        if (response.success && response.data) {
-          return {
-            total: response.data.total || 0,
-            open: response.data.open || 0,
-            closed: response.data.closed || 0,
-            responded: response.data.responded || 0,
-            pending: response.data.pending || response.data.open || 0,
-            new: response.data.new || 0
-          };
-        }
-      } catch (statsError) {
-        ('Stats endpoint not available, calculating from inquiries');
-      }
-      
-      // Fallback: Calculate stats from inquiries
-      const [openInquiries, allInquiries] = await Promise.all([
-        this.getInquiries({ limit: 100, status: 'OPEN' }),
-        this.getInquiries({ limit: 100 })
-      ]);
-      
-      const open = openInquiries.data.inquiries.length;
-      const total = allInquiries.data.inquiries.length;
-      const closed = allInquiries.data.inquiries.filter(i => i.status === 'closed').length;
-      const responded = allInquiries.data.inquiries.filter(i => i.status === 'responded').length;
-      const newCount = allInquiries.data.inquiries.filter(i => i.isNew).length;
-      
-      return {
-        total,
-        open,
-        closed,
-        responded,
-        pending: open,
-        new: newCount
-      };
-    } catch (error) {
-      console.error('Get inquiry stats error:', error);
-      return {
-        total: 0,
-        open: 0,
-        closed: 0,
-        responded: 0,
-        pending: 0,
-        new: 0
-      };
-    }
-  },
-
-  // Send response to inquiry (if API supports it)
-  async respondToInquiry(inquiryId, responseMessage) {
-    try {
-      const response = await apiService.post(`/inquiries/${inquiryId}/respond`, {
-        response: responseMessage
-      });
-      
-      if (response.success) {
-        // Also update status to RESPONDED
-        await this.updateInquiryStatus(inquiryId, 'RESPONDED');
-        
-        return {
-          success: true,
-          data: response.data,
-          message: response.message || 'Response sent successfully'
-        };
-      }
-      
-      throw new Error('Failed to send response');
-    } catch (error) {
-      console.error('Respond to inquiry error:', error);
-      throw new Error(error.message || 'Failed to send response');
-    }
+    return this.updateInquiryStatus(inquiryId, "OPEN");
   },
 
   // Check if inquiry is new (created within last 24 hours)
@@ -224,24 +139,24 @@ export const inquiryService = {
   // Get status badge color for UI
   getStatusBadgeColor(status) {
     const statusColors = {
-      'open': 'bg-green-100 text-green-800 border-green-200',
-      'pending': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'responded': 'bg-blue-100 text-blue-800 border-blue-200',
-      'closed': 'bg-gray-100 text-gray-800 border-gray-200'
+      open: "bg-green-100 text-green-800 border-green-200",
+      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      responded: "bg-blue-100 text-blue-800 border-blue-200",
+      closed: "bg-gray-100 text-gray-800 border-gray-200",
     };
-    
-    return statusColors[status.toLowerCase()] || statusColors['pending'];
+
+    return statusColors[status.toLowerCase()] || statusColors["pending"];
   },
 
   // Get status display text
   getStatusDisplayText(status) {
     const statusTexts = {
-      'open': 'Open',
-      'pending': 'Pending',
-      'responded': 'Responded',
-      'closed': 'Closed'
+      open: "Open",
+      pending: "Pending",
+      responded: "Responded",
+      closed: "Closed",
     };
-    
-    return statusTexts[status.toLowerCase()] || 'Unknown';
-  }
+
+    return statusTexts[status.toLowerCase()] || "Unknown";
+  },
 };

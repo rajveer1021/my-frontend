@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.jsx - Fixed with defensive user data management
+// src/contexts/AuthContext.jsx - Fixed  statements
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 

@@ -1,10 +1,16 @@
-// src/components/auth/SignupForm.jsx
+// src/components/auth/SignupForm.jsx - Fixed Google Auth and 
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Mail, User, Lock, Eye, EyeOff, Building, ShoppingCart, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '../ui/Toast';
+
+// Mock Google Auth function - replace with real implementation
+const getGoogleAuthToken = async () => {
+  // This should be replaced with actual Google OAuth implementation
+  throw new Error('Google authentication not implemented yet');
+};
 
 const SignupForm = ({ onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
@@ -87,15 +93,14 @@ const SignupForm = ({ onSwitchToLogin }) => {
 
   const handleGoogleSignup = async () => {
     try {
-      // In a real implementation, you would integrate with Google OAuth
-      // addToast("Google authentication integration coming soon!", "info");
+      addToast("Google authentication integration coming soon!", "info");
       
-      // Example of how you would handle Google OAuth token:
-      const googleToken = await getGoogleAuthToken();
-      const result = await googleLogin(googleToken, formData.userType);
-      if (result.success) {
-        addToast(result.message || "Account created successfully!", "success");
-      }
+      // Uncomment when Google OAuth is implemented
+      // const googleToken = await getGoogleAuthToken();
+      // const result = await googleLogin(googleToken, formData.userType);
+      // if (result.success) {
+      //   addToast(result.message || "Account created successfully!", "success");
+      // }
     } catch (error) {
       addToast(error.message, "error");
     }
