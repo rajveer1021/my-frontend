@@ -1,5 +1,6 @@
+// src/contexts/AuthContext.jsx - Fixed authentication flow without auto-redirect to onboarding
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentUser, setCurrentUser, logout as logoutUser } from '../services/mockData';
+import { authService } from '../services/authService';
 
 export const AuthContext = createContext();
 
@@ -14,69 +15,250 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Initialize auth state on app load
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-    setLoading(false);
+    const initializeAuth = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Check if user is already authenticated
+        const token = authService.getToken();
+        if (token) {
+          console.log('Token found in localStorage:', token);
+          setIsAuthenticated(true);
+          
+          try {
+            const currentUser = await authService.getCurrentUser();
+            if (currentUser) {
+              console.log('User fetched successfully:', currentUser);
+              setUser(currentUser);
+            } else {
+              // Token is invalid, clear it
+              console.log('Token invalid, clearing auth state');
+              authService.logout();
+              setIsAuthenticated(false);
+              setUser(null);
+            }
+          } catch (userError) {
+            // If user fetch fails but token exists, keep user logged in for now
+            // This prevents logout on network issues or temporary server problems
+            console.warn('Failed to fetch user details, but token exists:', userError);
+            setIsAuthenticated(true);
+            // Try to get user data from token or keep minimal state
+          }
+        } else {
+          console.log('No token found in localStorage');
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        setError('Failed to initialize authentication');
+        // Only clear token if it's actually invalid, not on network errors
+        if (error.status === 401) {
+          authService.logout();
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (email, password) => {
-    setLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For demo purposes, accept any password for vendor email
-    const mockUser = { 
-      id: Date.now().toString(), 
-      email, 
-      fullName: 'John Vendor',
-      userType: 'vendor',
-      isVerified: true 
-    };
-    
-    setCurrentUser(mockUser);
-    setUser(mockUser);
-    setLoading(false);
-    return true;
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Attempting login for:', email);
+      const result = await authService.login({ email, password });
+      
+      if (result && result.user) {
+        console.log('Login successful, user:', result.user);
+        console.log('Token stored:', authService.getToken());
+        
+        setUser(result.user);
+        setIsAuthenticated(true);
+        
+        return {
+          success: true,
+          user: result.user,
+          message: result.message
+        };
+      }
+      
+      throw new Error('Invalid response from login');
+    } catch (error) {
+      console.error('Login error:', error);
+      const errorMessage = error.message || 'Login failed';
+      setError(errorMessage);
+      setIsAuthenticated(false);
+      setUser(null);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signup = async (userData) => {
-    setLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newUser = {
-      ...userData,
-      id: Date.now().toString(),
-      userType: 'vendor', // Only vendor accounts allowed
-      isVerified: true
-    };
-    
-    setCurrentUser(newUser);
-    setUser(newUser);
-    setLoading(false);
-    return true;
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Attempting signup for:', userData.email);
+      const result = await authService.signup(userData);
+      
+      if (result && result.user) {
+        console.log('Signup successful, user:', result.user);
+        console.log('Token stored:', authService.getToken());
+        
+        setUser(result.user);
+        setIsAuthenticated(true);
+        
+        return {
+          success: true,
+          user: result.user,
+          message: result.message
+        };
+      }
+      
+      throw new Error('Invalid response from signup');
+    } catch (error) {
+      console.error('Signup error:', error);
+      const errorMessage = error.message || 'Signup failed';
+      setError(errorMessage);
+      setIsAuthenticated(false);
+      setUser(null);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const googleLogin = async (googleToken, accountType = 'vendor') => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const result = await authService.googleAuth(googleToken, accountType);
+      
+      if (result && result.user) {
+        setUser(result.user);
+        setIsAuthenticated(true);
+        
+        return {
+          success: true,
+          user: result.user,
+          message: result.message
+        };
+      }
+      
+      throw new Error('Invalid response from Google login');
+    } catch (error) {
+      const errorMessage = error.message || 'Google login failed';
+      setError(errorMessage);
+      setIsAuthenticated(false);
+      setUser(null);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateUser = async (userData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const updatedUser = await authService.updateProfile(userData);
+      setUser(updatedUser);
+      
+      return {
+        success: true,
+        user: updatedUser
+      };
+    } catch (error) {
+      const errorMessage = error.message || 'Profile update failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const requestPasswordReset = async (email) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const message = await authService.requestPasswordReset(email);
+      
+      return {
+        success: true,
+        message
+      };
+    } catch (error) {
+      const errorMessage = error.message || 'Password reset request failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (token, newPassword) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const message = await authService.resetPassword(token, newPassword);
+      
+      return {
+        success: true,
+        message
+      };
+    } catch (error) {
+      const errorMessage = error.message || 'Password reset failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = () => {
-    logoutUser();
+    console.log('Logging out user');
+    authService.logout();
     setUser(null);
+    setError(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('vendorOnboarded');
   };
 
-  const updateUser = (userData) => {
-    setUser(prev => ({ ...prev, ...userData }));
+  const clearError = () => {
+    setError(null);
   };
 
   const value = {
     user,
+    loading,
+    error,
+    isAuthenticated,
     login,
     signup,
+    googleLogin,
     logout,
     updateUser,
-    loading
+    requestPasswordReset,
+    resetPassword,
+    clearError,
+    getToken: authService.getToken
   };
 
   return (

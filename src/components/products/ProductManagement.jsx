@@ -1,4 +1,6 @@
+// src/components/products/ProductManagement.jsx - Updated with search API integration
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Package,
@@ -14,85 +16,255 @@ import Button from "../ui/Button";
 import { ProductFilters } from "./ProductFilters";
 import { ProductTable } from "./ProductTable";
 import ProductDetailsModal from "./ProductDetailsModal";
+import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { useProducts } from "../../contexts/ProductContext";
+import { useToast } from "../ui/Toast";
+import { productService } from "../../services/productService";
 
-const ProductManagement = ({ onNavigate }) => {
-  const { products, loading, fetchProducts, deleteProduct, getProduct } =
-    useProducts();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("newest");
+const ProductManagement = () => {
+  const navigate = useNavigate();
+  const { addToast } = useToast();
+  
+  // State for products and filters
+  const [products, setProducts] = useState([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 1,
+    hasNext: false,
+    hasPrev: false
+  });
+  const [availableCategories, setAvailableCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Modal state
+  // Filter states
+  const [filters, setFilters] = useState({
+    search: "",
+    category: "",
+    sortBy: "createdAt",
+    sortOrder: "desc",
+    page: 1,
+    limit: 10
+  });
+
+  // Modal states
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
 
+  // Fetch products with current filters
+  const fetchProducts = async (newFilters = {}) => {
+    try {
+      setLoading(true);
+      
+      const searchFilters = {
+        ...filters,
+        ...newFilters
+      };
+
+      // Build query parameters
+      const params = {
+        page: searchFilters.page,
+        limit: searchFilters.limit,
+        sortBy: searchFilters.sortBy,
+        sortOrder: searchFilters.sortOrder
+      };
+
+      // Add search if provided
+      if (searchFilters.search?.trim()) {
+        params.search = searchFilters.search.trim();
+      }
+
+      // Add category if selected
+      if (searchFilters.category && searchFilters.category !== 'all') {
+        params.category = searchFilters.category;
+      }
+
+      console.log('Fetching products with params:', params);
+      
+      const response = await productService.searchProducts(params);
+      
+      if (response.success && response.data) {
+        setProducts(response.data.products || []);
+        setPagination(response.data.pagination || pagination);
+        setAvailableCategories(response.data.availableCategories || []);
+        
+        // Update filters state
+        setFilters(prev => ({
+          ...prev,
+          ...newFilters
+        }));
+        
+        console.log('Products fetched successfully:', response.data.products.length);
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+      addToast(error.message || "Failed to load products", "error");
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initialize products on component mount
   useEffect(() => {
     const initializeProducts = async () => {
-      try {
-        await fetchProducts({
-          search: searchTerm,
-          category: categoryFilter,
-          sort: sortBy,
-        });
-      } catch (error) {
-        console.error("Failed to fetch products:", error);
-      } finally {
-        setIsInitialized(true);
-      }
+      await fetchProducts();
+      setIsInitialized(true);
     };
 
     if (!isInitialized) {
       initializeProducts();
     }
-  }, [fetchProducts, isInitialized]);
+  }, [isInitialized]);
 
-  // Refetch when filters change, but only after initial load
+  // Handle search input change (with debouncing)
+  const handleSearchChange = (searchTerm) => {
+    setFilters(prev => ({ ...prev, search: searchTerm, page: 1 }));
+  };
+
+  // Handle category filter change
+  const handleCategoryChange = (category) => {
+    const newFilters = { 
+      ...filters, 
+      category: category === 'all' ? '' : category, 
+      page: 1 
+    };
+    setFilters(newFilters);
+    fetchProducts(newFilters);
+  };
+
+  // Handle sort change
+  const handleSortChange = (sortOption) => {
+    const [sortBy, sortOrder] = sortOption.includes('-') 
+      ? sortOption.split('-')
+      : [sortOption, 'asc'];
+    
+    const newFilters = { 
+      ...filters, 
+      sortBy, 
+      sortOrder: sortOrder === 'high' ? 'desc' : sortOrder === 'low' ? 'asc' : sortOrder,
+      page: 1 
+    };
+    setFilters(newFilters);
+    fetchProducts(newFilters);
+  };
+
+  // Handle pagination
+  const handlePageChange = (page) => {
+    const newFilters = { ...filters, page };
+    setFilters(newFilters);
+    fetchProducts(newFilters);
+  };
+
+  // Debounced search effect
   useEffect(() => {
-    if (isInitialized) {
-      fetchProducts({
-        search: searchTerm,
-        category: categoryFilter,
-        sort: sortBy,
-      });
-    }
-  }, [searchTerm, categoryFilter, sortBy, fetchProducts, isInitialized]);
+    if (!isInitialized) return;
 
+    const timeoutId = setTimeout(() => {
+      if (filters.search !== undefined) {
+        fetchProducts();
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [filters.search]);
+
+  // Handle view product
   const handleView = async (productId) => {
     try {
-      const product = await getProduct(productId);
-      setSelectedProduct(product);
-      setIsDetailsModalOpen(true);
-    } catch (error) {
-      console.error("Failed to fetch product details:", error);
-      // Fallback to product from list
-      const product = products.find((p) => p.id === productId);
+      const product = products.find(p => p.id === productId);
       if (product) {
         setSelectedProduct(product);
         setIsDetailsModalOpen(true);
+      } else {
+        // Fetch product details if not in current list
+        const productDetails = await productService.getProduct(productId);
+        setSelectedProduct(productDetails);
+        setIsDetailsModalOpen(true);
       }
+    } catch (error) {
+      console.error("Failed to fetch product details:", error);
+      addToast("Failed to load product details", "error");
     }
   };
 
+  // Handle edit product
   const handleEdit = (productId) => {
-    onNavigate("edit-product", { productId });
+    navigate(`/edit-product/${productId}`);
   };
 
-  const handleDelete = async (productId) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      try {
-        await deleteProduct(productId);
-      } catch (error) {
-        alert("Failed to delete product");
+  // Handle delete product - show confirmation modal
+  const handleDelete = (productId) => {
+    const product = products.find(p => p.id === productId);
+    setProductToDelete(product);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Confirm delete product
+  const confirmDelete = async () => {
+    if (!productToDelete) return;
+
+    try {
+      await productService.deleteProduct(productToDelete.id);
+      
+      // Remove from local state
+      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+      
+      // Update pagination
+      setPagination(prev => ({
+        ...prev,
+        total: Math.max(0, prev.total - 1)
+      }));
+      
+      addToast("Product deleted successfully", "success");
+      setIsDeleteModalOpen(false);
+      setProductToDelete(null);
+      
+      // Refresh products if needed
+      if (products.length === 1 && pagination.page > 1) {
+        // If this was the last product on the page, go to previous page
+        handlePageChange(pagination.page - 1);
       }
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+      addToast(error.message || "Failed to delete product", "error");
     }
   };
 
+  // Close modals
   const closeDetailsModal = () => {
     setIsDetailsModalOpen(false);
     setSelectedProduct(null);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setProductToDelete(null);
+  };
+
+  const handleAddProduct = () => {
+    navigate("/add-product");
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    const newFilters = {
+      search: "",
+      category: "",
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      page: 1,
+      limit: 10
+    };
+    setFilters(newFilters);
+    fetchProducts(newFilters);
   };
 
   // Show loading only during initial load
@@ -123,8 +295,6 @@ const ProductManagement = ({ onNavigate }) => {
       <div className="space-y-6">
         {/* Enhanced Header */}
         <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 p-4 sm:p-6 lg:p-8 text-white">
-          {/* <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.05\"%3E%3Ccircle cx=\"7\" cy=\"7\" r=\"3\"/%3E%3Ccircle cx=\"27\" cy=\"7\" r=\"3\"/%3E%3Ccircle cx=\"47\" cy=\"7\" r=\"3\"/%3E%3Ccircle cx=\"7\" cy=\"27\" r=\"3\"/%3E%3Ccircle cx=\"27\" cy=\"27\" r=\"3\"/%3E%3Ccircle cx=\"47\" cy=\"27\" r=\"3\"/%3E%3Ccircle cx=\"7\" cy=\"47\" r=\"3\"/%3E%3Ccircle cx=\"27\" cy=\"47\" r=\"3\"/%3E%3Ccircle cx=\"47\" cy=\"47\" r=\"3\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" /> */}
-
           <div className="relative z-10">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
               <div>
@@ -146,7 +316,7 @@ const ProductManagement = ({ onNavigate }) => {
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
-                  onClick={() => onNavigate("add-product")}
+                  onClick={handleAddProduct}
                   className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 lg:px-6 py-2 lg:py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -154,34 +324,66 @@ const ProductManagement = ({ onNavigate }) => {
                 </Button>
               </div>
             </div>
+
+            {/* Stats */}
+            {pagination.total > 0 && (
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                  <div className="text-2xl font-bold">{pagination.total}</div>
+                  <div className="text-blue-100 text-sm">Total Products</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                  <div className="text-2xl font-bold">{availableCategories.length}</div>
+                  <div className="text-blue-100 text-sm">Categories</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                  <div className="text-2xl font-bold">Page {pagination.page}</div>
+                  <div className="text-blue-100 text-sm">of {pagination.pages}</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Filters Section */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 lg:p-6 shadow-lg border border-white/50">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600">
-              <Filter className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600">
+                <Filter className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-lg lg:text-xl font-bold text-gray-900">
+                Search & Filter Products
+              </h2>
             </div>
-            <h2 className="text-lg lg:text-xl font-bold text-gray-900">
-              Filter & Search
-            </h2>
+            {(filters.search || filters.category || filters.sortBy !== 'createdAt') && (
+              <Button
+                variant="ghost"
+                onClick={clearAllFilters}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                Clear All Filters
+              </Button>
+            )}
           </div>
+          
           <ProductFilters
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            categoryFilter={categoryFilter}
-            setCategoryFilter={setCategoryFilter}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
+            searchTerm={filters.search}
+            onSearchChange={handleSearchChange}
+            categoryFilter={filters.category || 'all'}
+            onCategoryChange={handleCategoryChange}
+            sortBy={`${filters.sortBy}-${filters.sortOrder}`}
+            onSortChange={handleSortChange}
+            availableCategories={availableCategories}
+            loading={loading}
           />
         </div>
 
-        {/* Products Table/Loading */}
+        {/* Products Section */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
           {loading && isInitialized ? (
             <div className="p-8 text-center">
-              <LoadingSpinner size="lg" text="Loading products..." />
+              <LoadingSpinner size="lg" text="Searching products..." />
             </div>
           ) : products.length === 0 ? (
             <div className="p-8 text-center">
@@ -189,27 +391,37 @@ const ProductManagement = ({ onNavigate }) => {
                 <Package className="h-8 w-8 text-gray-400" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No products found
+                {filters.search || filters.category ? "No products found" : "No products yet"}
               </h3>
               <p className="text-gray-500 mb-6">
-                {searchTerm || categoryFilter !== "all"
+                {filters.search || filters.category
                   ? "Try adjusting your search or filters"
                   : "Create your first product to get started"}
               </p>
-              <Button
-                onClick={() => onNavigate("add-product")}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Your First Product
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  onClick={handleAddProduct}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Your First Product
+                </Button>
+                {(filters.search || filters.category) && (
+                  <Button
+                    variant="outline"
+                    onClick={clearAllFilters}
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="p-4 lg:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg lg:text-xl font-bold text-gray-900 flex items-center">
                   <Package className="w-5 h-5 lg:w-6 lg:h-6 mr-3 text-blue-600" />
-                  Products ({products.length})
+                  Products ({pagination.total})
                 </h2>
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
                   <Eye className="w-4 h-4" />
@@ -220,12 +432,67 @@ const ProductManagement = ({ onNavigate }) => {
                   <span>Delete</span>
                 </div>
               </div>
+              
               <ProductTable
                 products={products}
                 onView={handleView}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                loading={loading}
               />
+
+              {/* Pagination */}
+              {pagination.pages > 1 && (
+                <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+                  <div className="flex items-center text-sm text-gray-500">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                    {pagination.total} results
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={!pagination.hasPrev || loading}
+                      className="text-sm"
+                    >
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                        const page = i + 1;
+                        const isActive = page === pagination.page;
+                        
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            disabled={loading}
+                            className={`w-8 h-8 text-sm rounded-lg transition-colors ${
+                              isActive
+                                ? 'bg-blue-600 text-white'
+                                : 'text-gray-500 hover:bg-gray-100'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={!pagination.hasNext || loading}
+                      className="text-sm"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -235,6 +502,14 @@ const ProductManagement = ({ onNavigate }) => {
           product={selectedProduct}
           isOpen={isDetailsModalOpen}
           onClose={closeDetailsModal}
+        />
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmationModal
+          isOpen={isDeleteModalOpen}
+          onClose={closeDeleteModal}
+          onConfirm={confirmDelete}
+          product={productToDelete}
         />
       </div>
     </div>

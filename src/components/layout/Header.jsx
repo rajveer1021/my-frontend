@@ -1,4 +1,6 @@
+// src/components/layout/Header.jsx - Fixed with proper logout navigation
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Menu,
   Bell,
@@ -18,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/DropdownMenu";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../contexts/AuthContext";
 
 export const Header = ({
   user,
@@ -28,6 +30,12 @@ export const Header = ({
   onPageChange,
 }) => {
   const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/auth", { replace: true });
+  };
 
   const getPageTitle = (page) => {
     const titles = {
@@ -128,14 +136,6 @@ export const Header = ({
 
           {/* Right Side - Search, Notifications, Profile */}
           <div className="flex items-center space-x-3 lg:space-x-4 flex-shrink-0">
-            {/* Welcome Message - Desktop Only */}
-            <div className="text-right hidden xl:block">
-              <p className="text-sm font-medium text-gray-900">Welcome back!</p>
-              <p className="text-xs text-gray-500">
-                {user?.fullName?.split(" ")[0] || "John"}
-              </p>
-            </div>
-
             {/* User Profile Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -143,7 +143,9 @@ export const Header = ({
                   <div className="relative">
                     <Avatar className="h-8 w-8 lg:h-10 lg:w-10 ring-2 ring-white shadow-lg">
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm font-semibold">
-                        {user?.fullName?.charAt(0) || "J"}
+                        {user?.fullName?.charAt(0) ||
+                          user?.firstName?.charAt(0) ||
+                          "J"}
                       </AvatarFallback>
                     </Avatar>
                   </div>
@@ -151,7 +153,10 @@ export const Header = ({
                   {/* User Info - Desktop Only */}
                   <div className="text-left hidden lg:block">
                     <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {user?.fullName || "John Vendor"}
+                      {user?.fullName ||
+                        `${user?.firstName || "John"} ${
+                          user?.lastName || "Vendor"
+                        }`}
                     </p>
                     <p className="text-xs text-gray-500">Vendor Account</p>
                   </div>
@@ -164,7 +169,6 @@ export const Header = ({
                 align="end"
                 className="w-64 mt-2 bg-white/95 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl"
               >
-
                 {/* Menu Items */}
                 <div className="py-2">
                   <DropdownMenuItem
@@ -187,7 +191,7 @@ export const Header = ({
 
                 <div className="py-2">
                   <DropdownMenuItem
-                    onClick={logout}
+                    onClick={handleLogout}
                     className="flex items-center px-4 py-3 hover:bg-red-50 transition-colors rounded-lg mx-2 text-red-600"
                   >
                     <div className="p-2 rounded-lg bg-red-100 mr-3">

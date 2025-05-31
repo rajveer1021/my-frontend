@@ -35,14 +35,6 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       badge: null,
       path: '/settings',
     },
-    {
-      id: 'vendor-onboarding',
-      label: 'Vendor Onboarding',
-      icon: UserPlus,
-      description: 'Setup vendor profile',
-      badge: null,
-      path: '/vendor-onboarding',
-    },
   ];
 
   const handleNavigation = (path) => {

@@ -1,5 +1,6 @@
+// src/components/products/ProductTable.jsx - Updated with better loading states
 import React from 'react';
-import { Eye, Edit, Trash2, MoreVertical, Package } from 'lucide-react';
+import { Eye, Edit, Trash2, MoreVertical, Package, Loader2 } from 'lucide-react';
 import { 
   Table, 
   TableHeader, 
@@ -22,8 +23,35 @@ export const ProductTable = ({
   products, 
   onView, 
   onEdit, 
-  onDelete 
+  onDelete,
+  loading = false
 }) => {
+  // Loading skeleton component
+  const LoadingSkeleton = () => (
+    <div className="space-y-4">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 animate-pulse">
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-16 bg-gray-200 rounded-lg"></div>
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div className="flex items-center space-x-4">
+                <div className="h-3 bg-gray-200 rounded w-16"></div>
+                <div className="h-3 bg-gray-200 rounded w-12"></div>
+              </div>
+            </div>
+            <div className="flex space-x-2">
+              <div className="w-8 h-8 bg-gray-200 rounded"></div>
+              <div className="w-8 h-8 bg-gray-200 rounded"></div>
+              <div className="w-8 h-8 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   // Mobile card view for products
   const MobileProductCard = ({ product }) => (
     <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3 hover:shadow-sm transition-shadow">
@@ -50,8 +78,17 @@ export const ProductTable = ({
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-600">
-              <MoreVertical className="h-4 w-4" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-gray-400 hover:text-gray-600"
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MoreVertical className="h-4 w-4" />
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -89,13 +126,22 @@ export const ProductTable = ({
     </div>
   );
 
+  // Show loading skeleton
+  if (loading && products.length === 0) {
+    return (
+      <div className="space-y-4">
+        <LoadingSkeleton />
+      </div>
+    );
+  }
+
   if (products.length === 0) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
         <div className="text-gray-500">
           <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
           <p className="text-base font-medium mb-1">No products found</p>
-          <p className="text-sm">Create your first product to get started</p>
+          <p className="text-sm">Try adjusting your search or filters</p>
         </div>
       </div>
     );
@@ -105,6 +151,12 @@ export const ProductTable = ({
     <>
       {/* Mobile View */}
       <div className="block lg:hidden space-y-4">
+        {loading && products.length > 0 && (
+          <div className="flex items-center justify-center py-4 text-sm text-gray-500">
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            Updating products...
+          </div>
+        )}
         {products.map((product) => (
           <MobileProductCard key={product.id} product={product} />
         ))}
@@ -112,6 +164,15 @@ export const ProductTable = ({
 
       {/* Desktop View */}
       <div className="hidden lg:block bg-white border border-gray-200 rounded-lg overflow-hidden">
+        {loading && products.length > 0 && (
+          <div className="bg-blue-50 border-b border-blue-200 px-6 py-3">
+            <div className="flex items-center text-sm text-blue-700">
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              Updating products...
+            </div>
+          </div>
+        )}
+        
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50">
@@ -125,7 +186,7 @@ export const ProductTable = ({
           </TableHeader>
           <TableBody>
             {products.map((product) => (
-              <TableRow key={product.id} className="hover:bg-gray-50">
+              <TableRow key={product.id} className={`hover:bg-gray-50 ${loading ? 'opacity-75' : ''}`}>
                 <TableCell>
                   <div className="flex items-center space-x-3">
                     <img
@@ -138,7 +199,7 @@ export const ProductTable = ({
                     />
                     <div className="min-w-0">
                       <div className="font-medium text-gray-900 truncate">{product.name}</div>
-                      <div className="text-sm text-gray-500 truncate">{product.description}</div>
+                      <div className="text-sm text-gray-500 truncate max-w-xs">{product.description}</div>
                     </div>
                   </div>
                 </TableCell>
@@ -155,9 +216,14 @@ export const ProductTable = ({
                   {formatCurrency(product.price)}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getStockStatusColor(product.status)}>
-                    {product.status}
-                  </Badge>
+                  <div className="flex flex-col space-y-1">
+                    <Badge variant={getStockStatusColor(product.status)}>
+                      {product.status}
+                    </Badge>
+                    <span className="text-xs text-gray-500">
+                      {product.stock || 0} units
+                    </span>
+                  </div>
                 </TableCell>
                 <TableCell className="text-sm text-gray-500">
                   {product.uploadDate}
@@ -168,6 +234,7 @@ export const ProductTable = ({
                       variant="ghost" 
                       size="icon"
                       onClick={() => onView(product.id)}
+                      disabled={loading}
                       className="h-8 w-8 text-gray-400 hover:text-gray-600"
                       title="View"
                     >
@@ -177,6 +244,7 @@ export const ProductTable = ({
                       variant="ghost" 
                       size="icon"
                       onClick={() => onEdit(product.id)}
+                      disabled={loading}
                       className="h-8 w-8 text-gray-400 hover:text-gray-600"
                       title="Edit"
                     >
@@ -186,6 +254,7 @@ export const ProductTable = ({
                       variant="ghost" 
                       size="icon"
                       onClick={() => onDelete(product.id)}
+                      disabled={loading}
                       className="h-8 w-8 text-gray-400 hover:text-red-600"
                       title="Delete"
                     >

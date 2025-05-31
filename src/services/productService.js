@@ -1,114 +1,303 @@
+// src/services/productService.js - Updated with search API integration
 import { apiService } from './api';
 
-// Mock products data
-const mockProducts = [
-  {
-    id: 1,
-    name: 'Industrial Laptop Pro',
-    description: 'Rugged laptop for industrial environments',
-    categories: ['Electronics', 'Computers'],
-    price: 1299.99,
-    stock: 25,
-    status: 'In Stock',
-    image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=300&fit=crop',
-    uploadDate: '2024-01-15',
-    views: 145,
-    orders: 8
-  },
-  {
-    id: 2,
-    name: 'Smart Sensor Module',
-    description: 'IoT-enabled environmental monitoring sensor',
-    categories: ['Electronics', 'IoT'],
-    price: 89.99,
-    stock: 5,
-    status: 'Low Stock',
-    image: 'https://images.unsplash.com/photo-1518312647448-0b2b6ba5c8e4?w=400&h=300&fit=crop',
-    uploadDate: '2024-01-10',
-    views: 89,
-    orders: 12
-  },
-  {
-    id: 3,
-    name: 'Cable Management System',
-    description: 'Professional cable organization solution',
-    categories: ['Infrastructure', 'Cable Management'],
-    price: 45.50,
-    stock: 0,
-    status: 'Out of Stock',
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
-    uploadDate: '2024-01-05',
-    views: 67,
-    orders: 5
-  }
-];
-
 export const productService = {
+  // Search products with filters, pagination, and sorting
+  async searchProducts(params = {}) {
+    try {
+      const queryParams = {};
+      
+      // Add pagination params
+      if (params.page) queryParams.page = params.page;
+      if (params.limit) queryParams.limit = params.limit;
+      
+      // Add search params
+      if (params.search?.trim()) queryParams.search = params.search.trim();
+      if (params.category) queryParams.category = params.category;
+      
+      // Add sorting params
+      if (params.sortBy) queryParams.sortBy = params.sortBy;
+      if (params.sortOrder) queryParams.sortOrder = params.sortOrder;
+      
+      console.log('Product search params:', queryParams);
+      
+      const response = await apiService.get('/vendor/products/search', queryParams);
+      
+      if (response.success && response.data) {
+        // Transform API response to match frontend structure
+        const products = response.data.products.map(product => ({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          category: product.category,
+          categories: [product.category], // For compatibility with existing components
+          stock: product.stock,
+          status: this.getStockStatus(product.stock),
+          image: product.images && product.images.length > 0 
+            ? product.images[0] 
+            : 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=300&fit=crop',
+          uploadDate: new Date(product.createdAt).toLocaleDateString(),
+          isActive: product.isActive,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt
+        }));
+
+        return {
+          success: true,
+          data: {
+            products,
+            availableCategories: response.data.availableCategories || [],
+            filters: response.data.filters || {},
+            pagination: response.data.pagination || {
+              page: 1,
+              limit: 10,
+              total: 0,
+              pages: 1,
+              hasNext: false,
+              hasPrev: false
+            }
+          }
+        };
+      }
+      
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error('Search products error:', error);
+      throw new Error(error.message || 'Failed to search products');
+    }
+  },
+
+  // Get vendor's products with optional filters and pagination (fallback method)
   async getProducts(filters = {}) {
-    // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    let filteredProducts = [...mockProducts];
-    
-    if (filters.search) {
-      filteredProducts = filteredProducts.filter(product =>
-        product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-        product.description.toLowerCase().includes(filters.search.toLowerCase())
-      );
+    try {
+      // Use search API if available, otherwise fallback to regular API
+      try {
+        return await this.searchProducts(filters);
+      } catch (searchError) {
+        console.warn('Search API not available, using fallback:', searchError.message);
+        
+        // Fallback to regular products API
+        const params = {};
+        
+        // Add pagination params
+        if (filters.page) params.page = filters.page;
+        if (filters.limit) params.limit = filters.limit;
+        
+        // Add search params
+        if (filters.search) params.search = filters.search;
+        if (filters.category && filters.category !== 'all') params.category = filters.category;
+        
+        // Add sorting params
+        if (filters.sort) params.sort = filters.sort;
+        
+        const response = await apiService.get('/products', params);
+        
+        if (response.success && response.data) {
+          // Transform API response to match frontend structure
+          const products = response.data.products.map(product => ({
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            category: product.category,
+            categories: [product.category],
+            stock: product.stock,
+            status: this.getStockStatus(product.stock),
+            image: product.images && product.images.length > 0 
+              ? product.images[0] 
+              : 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=300&fit=crop',
+            uploadDate: new Date(product.createdAt).toLocaleDateString(),
+            isActive: product.isActive,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt
+          }));
+
+          return {
+            success: true,
+            data: {
+              products,
+              availableCategories: [], // Not available in fallback
+              filters: {},
+              pagination: response.data.pagination
+            }
+          };
+        }
+        
+        throw new Error('Invalid response format');
+      }
+    } catch (error) {
+      console.error('Get products error:', error);
+      throw new Error(error.message || 'Failed to fetch products');
     }
-    
-    if (filters.category && filters.category !== 'all') {
-      filteredProducts = filteredProducts.filter(product =>
-        product.categories.some(cat => 
-          cat.toLowerCase() === filters.category.toLowerCase()
-        )
-      );
-    }
-    
-    return filteredProducts;
   },
 
+  // Get single product by ID
   async getProduct(id) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const product = mockProducts.find(p => p.id === parseInt(id));
-    if (!product) {
+    try {
+      const response = await apiService.get(`/products/${id}`);
+      
+      if (response.success && response.data) {
+        const product = response.data;
+        
+        // Transform API response to match frontend structure
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          category: product.category,
+          categories: [product.category],
+          stock: product.stock,
+          status: this.getStockStatus(product.stock),
+          image: product.images && product.images.length > 0 
+            ? product.images[0] 
+            : 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=300&fit=crop',
+          uploadDate: new Date(product.createdAt).toLocaleDateString(),
+          isActive: product.isActive,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt
+        };
+      }
+      
       throw new Error('Product not found');
+    } catch (error) {
+      console.error('Get product error:', error);
+      throw new Error(error.message || 'Failed to fetch product');
     }
-    return product;
   },
 
+  // Create new product
   async createProduct(productData) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const newProduct = {
-      id: mockProducts.length + 1,
-      ...productData,
-      uploadDate: new Date().toISOString().split('T')[0],
-      views: 0,
-      orders: 0
-    };
-    mockProducts.unshift(newProduct);
-    return newProduct;
+    try {
+      const payload = {
+        name: productData.name,
+        description: productData.description,
+        price: parseFloat(productData.price),
+        category: productData.category,
+        stock: parseInt(productData.stock) || 0
+      };
+
+      const response = await apiService.post('/products', payload);
+      
+      if (response.success && response.data) {
+        const product = response.data;
+        
+        // Transform API response to match frontend structure
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          category: product.category,
+          categories: [product.category],
+          stock: product.stock,
+          status: this.getStockStatus(product.stock),
+          image: product.images && product.images.length > 0 
+            ? product.images[0] 
+            : 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=300&fit=crop',
+          uploadDate: new Date(product.createdAt).toLocaleDateString(),
+          isActive: product.isActive,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt
+        };
+      }
+      
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error('Create product error:', error);
+      throw new Error(error.message || 'Failed to create product');
+    }
   },
 
+  // Update existing product
   async updateProduct(id, productData) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const index = mockProducts.findIndex(p => p.id === parseInt(id));
-    if (index === -1) {
-      throw new Error('Product not found');
+    try {
+      const payload = {
+        name: productData.name,
+        description: productData.description,
+        price: parseFloat(productData.price),
+        stock: parseInt(productData.stock) || 0
+      };
+
+      // Only include category if it's provided and different
+      if (productData.category) {
+        payload.category = productData.category;
+      }
+
+      const response = await apiService.put(`/products/${id}`, payload);
+      
+      if (response.success && response.data) {
+        const product = response.data;
+        
+        // Transform API response to match frontend structure
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          category: product.category,
+          categories: [product.category],
+          stock: product.stock,
+          status: this.getStockStatus(product.stock),
+          image: product.images && product.images.length > 0 
+            ? product.images[0] 
+            : 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=300&fit=crop',
+          uploadDate: new Date(product.createdAt).toLocaleDateString(),
+          isActive: product.isActive,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt
+        };
+      }
+      
+      throw new Error('Invalid response format');
+    } catch (error) {
+      console.error('Update product error:', error);
+      throw new Error(error.message || 'Failed to update product');
     }
-    
-    mockProducts[index] = { ...mockProducts[index], ...productData };
-    return mockProducts[index];
   },
 
+  // Delete product
   async deleteProduct(id) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = mockProducts.findIndex(p => p.id === parseInt(id));
-    if (index === -1) {
-      throw new Error('Product not found');
+    try {
+      const response = await apiService.delete(`/products/${id}`);
+      
+      if (response.success) {
+        return true;
+      }
+      
+      throw new Error('Failed to delete product');
+    } catch (error) {
+      console.error('Delete product error:', error);
+      throw new Error(error.message || 'Failed to delete product');
     }
-    
-    mockProducts.splice(index, 1);
-    return true;
+  },
+
+  // Helper method to determine stock status
+  getStockStatus(stock) {
+    if (stock === 0) {
+      return 'Out of Stock';
+    } else if (stock <= 10) {
+      return 'Low Stock';
+    } else {
+      return 'In Stock';
+    }
+  },
+
+  // Get product categories (can be enhanced to fetch from API if needed)
+  async getCategories() {
+    // For now, return static categories. You can make this dynamic by adding an API endpoint
+    return [
+      'Electronics',
+      'Computers',
+      'IoT',
+      'Infrastructure',
+      'Cable Management', 
+      'Tools',
+      'Industrial Equipment',
+      'Machinery',
+      'Automation',
+      'Sensors'
+    ];
   }
 };
