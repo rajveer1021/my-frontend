@@ -1,4 +1,4 @@
-// src/pages/Settings.jsx - Updated with proper API integration
+// src/pages/Settings.jsx - Complete updated version with password change API integration
 import React, { useState, useEffect } from "react";
 import {
   UserCheck,
@@ -23,9 +23,11 @@ import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ErrorMessage } from "../components/common/ErrorMessage";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../components/ui/Toast";
+import { apiService } from "../services/api";
 
 const Settings = () => {
   const { user, updateUser, loading: authLoading } = useAuth();
+  
   const { addToast } = useToast();
 
   const [profileData, setProfileData] = useState({
@@ -36,9 +38,18 @@ const Settings = () => {
     address: "",
   });
 
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
   const [loading, setLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [passwordErrors, setPasswordErrors] = useState({});
   const [success, setSuccess] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   // Initialize form data when user data is available
@@ -67,6 +78,42 @@ const Settings = () => {
       setHasChanges(hasChanged);
     }
   }, [profileData, user]);
+
+  const validatePassword = (passwordData) => {
+    const errors = {};
+
+    if (!passwordData.currentPassword?.trim()) {
+      errors.currentPassword = "Current password is required";
+    }
+
+    if (!passwordData.newPassword?.trim()) {
+      errors.newPassword = "New password is required";
+    } else if (passwordData.newPassword.length < 6) {
+      errors.newPassword = "New password must be at least 6 characters";
+    } else if (passwordData.newPassword.length > 128) {
+      errors.newPassword = "New password must be less than 128 characters";
+    }
+
+    if (!passwordData.confirmPassword?.trim()) {
+      errors.confirmPassword = "Please confirm your new password";
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
+    }
+
+    if (
+      passwordData.currentPassword &&
+      passwordData.newPassword &&
+      passwordData.currentPassword === passwordData.newPassword
+    ) {
+      errors.newPassword =
+        "New password must be different from current password";
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors,
+    };
+  };
 
   const validateProfile = (profile) => {
     const errors = {};
@@ -108,6 +155,84 @@ const Settings = () => {
       isValid: Object.keys(errors).length === 0,
       errors,
     };
+  };
+
+  const handlePasswordChange = (field, value) => {
+    setPasswordData((prev) => ({ ...prev, [field]: value }));
+
+    // Clear field error when user starts typing
+    if (passwordErrors[field]) {
+      setPasswordErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+
+    // Clear success message when user makes changes
+    if (passwordSuccess) {
+      setPasswordSuccess(false);
+    }
+  };
+
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+
+    const validation = validatePassword(passwordData);
+
+    if (!validation.isValid) {
+      setPasswordErrors(validation.errors);
+      addToast("Please fix the form errors before submitting", "error");
+      return;
+    }
+
+    setPasswordLoading(true);
+    setPasswordErrors({});
+    setPasswordSuccess(false);
+
+    try {
+      const response = await apiService.post("/auth/change-password", {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+
+      if (response.success) {
+        setPasswordSuccess(true);
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        addToast("Password updated successfully!", "success");
+
+        // Clear success message after 3 seconds
+        setTimeout(() => setPasswordSuccess(false), 3000);
+      }
+    } catch (error) {
+      console.error("Password update error:", error);
+
+      // Handle specific error cases
+      if (error.status === 400) {
+        setPasswordErrors({ currentPassword: "Current password is incorrect" });
+        addToast("Current password is incorrect", "error");
+      } else if (error.status === 422) {
+        setPasswordErrors({ general: error.message });
+        addToast(error.message || "Invalid password data", "error");
+      } else {
+        setPasswordErrors({
+          general: error.message || "Failed to update password",
+        });
+        addToast(error.message || "Failed to update password", "error");
+      }
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handlePasswordReset = () => {
+    setPasswordData({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+    setPasswordErrors({});
+    setPasswordSuccess(false);
   };
 
   const handleInputChange = (field, value) => {
@@ -152,8 +277,6 @@ const Settings = () => {
         phone: profileData.phone.trim(),
         address: profileData.address.trim(),
       };
-
-      "Updating profile with data:", updateData;
 
       const result = await updateUser(updateData);
 
@@ -285,10 +408,31 @@ const Settings = () => {
           </div>
         )}
 
+        {/* Password Success Message */}
+        {passwordSuccess && (
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-4 lg:p-6 animate-fade-in">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+              <p className="text-green-800 font-medium">
+                Password updated successfully!
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Error Message */}
         {errors.general && (
           <div className="animate-fade-in">
             <ErrorMessage message={errors.general} type="error" />
+          </div>
+        )}
+
+        {/* Password Error Message */}
+        {passwordErrors.general && (
+          <div className="animate-fade-in">
+            <ErrorMessage message={passwordErrors.general} type="error" />
           </div>
         )}
 
@@ -300,9 +444,6 @@ const Settings = () => {
                 <UserCheck className="w-5 h-5 lg:w-6 lg:h-6 mr-3 text-blue-600" />
                 Profile Information
               </h2>
-              {/* <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <User className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
-              </div> */}
             </div>
           </div>
 
@@ -428,6 +569,173 @@ const Settings = () => {
             </div>
           </form>
         </div>
+
+        {/* Password Change Section */}
+        {!user.googleId && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
+            <div className="p-4 lg:p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg lg:text-xl font-bold text-gray-900 flex items-center">
+                  <Lock className="w-5 h-5 lg:w-6 lg:h-6 mr-3 text-red-600" />
+                  Change Password
+                </h2>
+                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center">
+                  <Shield className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handlePasswordUpdate} className="p-4 lg:p-6">
+              <div className="space-y-4 lg:space-y-6">
+                {/* Current Password */}
+                <div>
+                  <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                    <Lock className="w-4 h-4 mr-2 text-gray-500" />
+                    Current Password *
+                  </label>
+                  <Input
+                    type="password"
+                    value={passwordData.currentPassword}
+                    onChange={(e) =>
+                      handlePasswordChange("currentPassword", e.target.value)
+                    }
+                    placeholder="Enter your current password"
+                    className={`h-11 lg:h-12 ${
+                      passwordErrors.currentPassword ? "border-red-500" : ""
+                    }`}
+                    disabled={passwordLoading}
+                    autoComplete="current-password"
+                  />
+                  {passwordErrors.currentPassword && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {passwordErrors.currentPassword}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                  {/* New Password */}
+                  <div>
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                      <Lock className="w-4 h-4 mr-2 text-gray-500" />
+                      New Password *
+                    </label>
+                    <Input
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={(e) =>
+                        handlePasswordChange("newPassword", e.target.value)
+                      }
+                      placeholder="Enter your new password"
+                      className={`h-11 lg:h-12 ${
+                        passwordErrors.newPassword ? "border-red-500" : ""
+                      }`}
+                      disabled={passwordLoading}
+                      autoComplete="new-password"
+                      maxLength={128}
+                    />
+                    {passwordErrors.newPassword && (
+                      <p className="text-red-500 text-sm mt-1 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {passwordErrors.newPassword}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Password must be at least 6 characters
+                    </p>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div>
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                      <Lock className="w-4 h-4 mr-2 text-gray-500" />
+                      Confirm New Password *
+                    </label>
+                    <Input
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) =>
+                        handlePasswordChange("confirmPassword", e.target.value)
+                      }
+                      placeholder="Confirm your new password"
+                      className={`h-11 lg:h-12 ${
+                        passwordErrors.confirmPassword ? "border-red-500" : ""
+                      }`}
+                      disabled={passwordLoading}
+                      autoComplete="new-password"
+                      maxLength={128}
+                    />
+                    {passwordErrors.confirmPassword && (
+                      <p className="text-red-500 text-sm mt-1 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {passwordErrors.confirmPassword}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
+                <div className="flex items-center space-x-2">
+                  {(passwordData.currentPassword ||
+                    passwordData.newPassword ||
+                    passwordData.confirmPassword) && (
+                    <span className="text-sm text-amber-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      Password fields have content
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex space-x-3">
+                  {(passwordData.currentPassword ||
+                    passwordData.newPassword ||
+                    passwordData.confirmPassword) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handlePasswordReset}
+                      disabled={passwordLoading}
+                      className="px-4 py-2 lg:py-3"
+                    >
+                      Clear
+                    </Button>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={
+                      passwordLoading ||
+                      !passwordData.currentPassword ||
+                      !passwordData.newPassword ||
+                      !passwordData.confirmPassword
+                    }
+                    className={`flex items-center px-6 py-2 lg:py-3 ${
+                      passwordData.currentPassword &&
+                      passwordData.newPassword &&
+                      passwordData.confirmPassword
+                        ? "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                        : "bg-gray-300 cursor-not-allowed"
+                    }`}
+                  >
+                    {passwordLoading ? (
+                      <>
+                        <LoadingSpinner size="sm" className="mr-2" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="w-4 h-4 mr-2" />
+                        Change Password
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );
