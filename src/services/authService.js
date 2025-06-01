@@ -1,4 +1,4 @@
-// src/services/authService.js - Simplified for @react-oauth/google
+// src/services/authService.js - Fixed frontend auth service
 import { apiService } from './api';
 
 export const authService = {
@@ -61,36 +61,25 @@ export const authService = {
     }
   },
 
+  // FIXED: Google Auth method to match backend expectations
   async googleAuth(googleCredential, accountType = 'VENDOR') {
-    try {
-      console.log('🔍 GoogleAuth: Starting authentication process');
-      
+    try {      
       if (!googleCredential) {
         throw new Error('Google credential is required');
       }
 
       const payload = {
-        credential: googleCredential, // The JWT token from Google
+        credential: googleCredential, // Send the credential as received from Google
         accountType: accountType.toUpperCase()
       };
 
-      console.log('📤 GoogleAuth: Sending request to backend');
-
       const response = await apiService.post('/auth/google', payload);
-
-      console.log('📥 GoogleAuth: Response received:', { 
-        success: response.success,
-        hasToken: !!response.data?.token,
-        hasUser: !!response.data?.user 
-      });
 
       if (response.success && response.data && response.data.token) {
         const authToken = response.data.token;
         localStorage.setItem('authToken', authToken);
         
         const user = this.transformUserData(response.data.user);
-
-        console.log('✅ GoogleAuth: Authentication successful for user:', user.email);
 
         return {
           user,
@@ -105,12 +94,12 @@ export const authService = {
       
       localStorage.removeItem('authToken');
       
-      // Provide specific error messages
+      // Provide specific error messages based on response
       let errorMessage = 'Google authentication failed';
       
-      if (error.response) {
-        const status = error.response.status;
-        const serverMessage = error.response.data?.message || error.message;
+      if (error.status) {
+        const status = error.status;
+        const serverMessage = error.message;
         
         switch (status) {
           case 400:
@@ -120,7 +109,7 @@ export const authService = {
             errorMessage = 'Google authentication failed. Please try again.';
             break;
           case 409:
-            errorMessage = serverMessage || 'An account with this email already exists';
+            errorMessage = serverMessage || 'An account with this email already exists with a different account type';
             break;
           case 422:
             errorMessage = serverMessage || 'Invalid account type or missing data';
@@ -131,7 +120,7 @@ export const authService = {
           default:
             errorMessage = serverMessage || `Authentication failed (Error ${status})`;
         }
-      } else if (error.request) {
+      } else if (error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
         errorMessage = 'Network error. Please check your connection and try again.';
       } else {
         errorMessage = error.message || 'Google authentication failed';
@@ -152,7 +141,7 @@ export const authService = {
       const response = await apiService.get('/auth/profile');
       
       if (response.success && response.data) {
-        const user = this.transformUserData(response.data);
+        const user = this.transformUserData(response.data.user);
         return user;
       }
 

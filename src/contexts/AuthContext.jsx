@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.jsx - Fixed  statements
+// src/contexts/AuthContext.jsx - Fixed method names
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 
@@ -33,7 +33,6 @@ export const AuthProvider = ({ children }) => {
     try {
       localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
       localStorage.setItem(STORAGE_KEYS.USER_CACHE_TIMESTAMP, Date.now().toString());
-      ('✅ User data saved to localStorage:', userData);
     } catch (error) {
       console.error('❌ Failed to save user data to localStorage:', error);
     }
@@ -50,13 +49,7 @@ export const AuthProvider = ({ children }) => {
 
       // Check if cache is still valid
       const cacheAge = Date.now() - parseInt(timestamp);
-      if (cacheAge > CACHE_DURATION) {
-        ('📅 User cache expired, will refresh from API but keep using cached data');
-        // Don't return null - return cached data but mark it as expired
-      }
-
       const parsedUser = JSON.parse(userData);
-      ('✅ User data loaded from localStorage:', parsedUser);
       return parsedUser;
     } catch (error) {
       console.error('❌ Failed to load user data from localStorage:', error);
@@ -68,7 +61,6 @@ export const AuthProvider = ({ children }) => {
     try {
       localStorage.removeItem(STORAGE_KEYS.USER_DATA);
       localStorage.removeItem(STORAGE_KEYS.USER_CACHE_TIMESTAMP);
-      ('🗑️ User data cleared from localStorage');
     } catch (error) {
       console.error('❌ Failed to clear user data from localStorage:', error);
     }
@@ -78,53 +70,37 @@ export const AuthProvider = ({ children }) => {
   const isValidUserData = (userData) => {
     if (!userData) return false;
     
-    // Check for required fields
     const hasRequiredFields = !!(
       userData.id && 
       userData.email && 
       (userData.firstName || userData.fullName)
     );
     
-    // Check for "undefined" strings which indicate bad data
     const hasUndefinedValues = (
       userData.firstName === "undefined" ||
       userData.lastName === "undefined" ||
       userData.fullName === "undefined undefined" ||
       userData.email === "undefined"
     );
-    
-    ('🔍 User data validation:', {
-      userData,
-      hasRequiredFields,
-      hasUndefinedValues,
-      isValid: hasRequiredFields && !hasUndefinedValues
-    });
-    
+      
     return hasRequiredFields && !hasUndefinedValues;
   };
 
-  // Helper function to merge user data intelligently
   const mergeUserData = (currentUser, newUser) => {
     if (!currentUser) return newUser;
     if (!newUser) return currentUser;
     
-    // If new user data is invalid, keep current user
     if (!isValidUserData(newUser)) {
-      ('⚠️ New user data is invalid, keeping current user data');
       return currentUser;
     }
     
-    // If current user data is invalid, use new user
     if (!isValidUserData(currentUser)) {
-      ('⚠️ Current user data is invalid, using new user data');
       return newUser;
     }
     
-    // Both are valid, merge them (prefer new data but keep any missing fields from current)
     const merged = {
       ...currentUser,
       ...newUser,
-      // Preserve good values if new ones are empty/undefined
       firstName: newUser.firstName || currentUser.firstName,
       lastName: newUser.lastName || currentUser.lastName,
       email: newUser.email || currentUser.email,
@@ -132,7 +108,6 @@ export const AuthProvider = ({ children }) => {
       fullName: newUser.fullName !== "undefined undefined" ? newUser.fullName : currentUser.fullName
     };
     
-    ('🔄 Merged user data:', { currentUser, newUser, merged });
     return merged;
   };
 
@@ -144,7 +119,6 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    // Validate and potentially merge with existing data
     const currentUserData = user || getUserFromStorage();
     const finalUserData = mergeUserData(currentUserData, userData);
     
@@ -160,49 +134,33 @@ export const AuthProvider = ({ children }) => {
         setLoading(true);
         setError(null);
         
-        // Check if user is already authenticated
         const token = authService.getToken();
-        ('🔑 Token found:', !!token);
         
         if (!token) {
-          ('❌ No token found, user not authenticated');
           setIsAuthenticated(false);
           setUser(null);
           return;
         }
 
-        // Set authenticated state immediately if token exists
         setIsAuthenticated(true);
 
-        // Try to get user from localStorage first (immediate UI update)
         const cachedUser = getUserFromStorage();
         if (cachedUser && isValidUserData(cachedUser)) {
-          ('⚡ Using cached user data for immediate UI update');
           setUser(cachedUser);
         }
 
-        // Always try to fetch fresh user data from API (background update)
         try {
-          ('🔄 Fetching fresh user data from API...');
           const currentUser = await authService.getCurrentUser();
           
           if (currentUser && isValidUserData(currentUser)) {
-            ('✅ Fresh user data received from API:', currentUser);
             updateUserState(currentUser);
           } else if (currentUser) {
-            ('⚠️ API returned incomplete user data, keeping cached data:', currentUser);
-            // API returned incomplete data - keep using cached data if it's better
             if (cachedUser && isValidUserData(cachedUser)) {
-              ('💾 Keeping cached user data due to incomplete API response');
               setUser(cachedUser);
-              // Don't save the incomplete data to storage
             } else {
-              ('❌ Both API and cached data are incomplete');
               setError('User data is incomplete. Please try logging in again.');
             }
           } else {
-            ('❌ API returned no user data, token might be invalid');
-            // Token is invalid, clear everything
             authService.logout();
             clearUserFromStorage();
             setIsAuthenticated(false);
@@ -211,21 +169,15 @@ export const AuthProvider = ({ children }) => {
         } catch (apiError) {
           console.warn('⚠️ API fetch failed, using cached data if available:', apiError.message);
           
-          // If we have cached user data, continue using it
           if (cachedUser && isValidUserData(cachedUser)) {
-            ('💾 Continuing with cached user data due to API error');
             setUser(cachedUser);
           } else {
-            ('❌ No valid cached data available');
-            // Only clear auth if it's a 401 error (invalid token)
             if (apiError.status === 401) {
               authService.logout();
               clearUserFromStorage();
               setIsAuthenticated(false);
               setUser(null);
             } else {
-              // For other errors (network, 500, etc.), keep auth state but show warning
-              ('⚠️ Non-auth error, keeping user logged in');
               setError('Unable to sync user data. Some features may be limited.');
             }
           }
@@ -233,10 +185,8 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         console.error('💥 Auth initialization error:', error);
         setError('Failed to initialize authentication');
-        // Keep any valid cached user data in case of initialization error
         const cachedUser = getUserFromStorage();
         if (cachedUser && isValidUserData(cachedUser) && authService.getToken()) {
-          ('💾 Using cached user data despite initialization error');
           setUser(cachedUser);
           setIsAuthenticated(true);
         } else {
@@ -256,11 +206,9 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      ('🔐 Attempting login for:', email);
       const result = await authService.login({ email, password });
       
       if (result && result.user) {
-        ('✅ Login successful:', result.user);
         updateUserState(result.user);
         
         return {
@@ -289,11 +237,9 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      ('📝 Attempting signup for:', userData.email);
       const result = await authService.signup(userData);
       
       if (result && result.user) {
-        ('✅ Signup successful:', result.user);
         updateUserState(result.user);
         
         return {
@@ -317,16 +263,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // FIXED: Method name should match the authService method
   const googleLogin = async (googleToken, accountType = 'vendor') => {
     try {
       setLoading(true);
       setError(null);
       
-      ('🔍 Attempting Google login');
       const result = await authService.googleAuth(googleToken, accountType);
       
       if (result && result.user) {
-        ('✅ Google login successful:', result.user);
         updateUserState(result.user);
         
         return {
@@ -355,12 +300,9 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      ('📝 Updating user profile...');
       const updatedUser = await authService.updateProfile(userData);
       
-      // Update both state and localStorage
       updateUserState(updatedUser);
-      ('✅ User profile updated successfully');
       
       return {
         success: true,
@@ -417,7 +359,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    ('👋 Logging out user');
     authService.logout();
     clearUserFromStorage();
     setUser(null);
@@ -430,7 +371,6 @@ export const AuthProvider = ({ children }) => {
     setError(null);
   };
 
-  // Method to refresh user data manually
   const refreshUser = async () => {
     if (!authService.getToken()) {
       return;
@@ -442,11 +382,9 @@ export const AuthProvider = ({ children }) => {
       if (currentUser && isValidUserData(currentUser)) {
         updateUserState(currentUser);
       } else {
-        ('⚠️ Refresh returned invalid user data, keeping current user');
       }
     } catch (error) {
       console.error('Failed to refresh user data:', error);
-      // Don't throw error, just log it
     } finally {
       setLoading(false);
     }
@@ -459,7 +397,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     login,
     signup,
-    googleLogin,
+    googleLogin, // This method calls authService.googleAuth
     logout,
     updateUser,
     requestPasswordReset,

@@ -7,10 +7,6 @@ const GoogleAuthProvider = ({ children }) => {
   const clientId = import.meta.env?.VITE_GOOGLE_CLIENT_ID || 
                    (typeof process !== 'undefined' ? process.env?.REACT_APP_GOOGLE_CLIENT_ID : null);
 
-  console.log('🔍 GoogleAuthProvider: Checking for client ID');
-  console.log('📋 Available env vars:', import.meta.env);
-  console.log('🔑 Client ID found:', !!clientId);
-
   if (!clientId) {
     console.warn('⚠️ Google Client ID not found. Google OAuth will not work.');
     console.warn('💡 For Vite: Add VITE_GOOGLE_CLIENT_ID to your .env file');

@@ -1,4 +1,4 @@
-// src/components/auth/LoginForm.jsx - Using @react-oauth/google
+// src/components/auth/LoginForm.jsx - Fixed version
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../ui/Button";
@@ -31,7 +31,6 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
     onError: () => {
       console.log('Google One Tap Login Failed');
     },
-    // Optional: disable auto-select and cancel on tap outside
     auto_select: false,
     cancel_on_tap_outside: true,
   });
@@ -58,7 +57,6 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Clear previous errors
     clearError();
     setFormErrors({});
 
@@ -72,25 +70,25 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
         addToast(result.message || "Welcome back!", "success");
       }
     } catch (error) {
-      // Error is already handled in the auth context
       addToast(error.message, "error");
     }
   };
 
+  // FIXED: Google Success Handler
   const handleGoogleSuccess = async (credentialResponse) => {
-    if (googleLoading) return; // Prevent multiple requests
+    if (googleLoading) return;
 
     setGoogleLoading(true);
     clearError();
 
     try {
-      console.log('🔐 Google login credential received');
+      ('🔐 Google login credential received');
       
       if (!credentialResponse.credential) {
         throw new Error('No credential received from Google');
       }
 
-      // Send the credential to your backend
+      // Send the credential directly to your backend
       const result = await googleLogin(credentialResponse.credential, 'vendor');
       
       if (result.success) {

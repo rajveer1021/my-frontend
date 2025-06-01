@@ -76,14 +76,10 @@ const ProductManagement = () => {
         ...newFilters,
       };
 
-      console.log("Fetching products with filters:", searchFilters);
-      console.log("Should use search API:", shouldUseSearch());
-
       let response;
 
       if (shouldUseSearch()) {
         // Use search API when filters are applied
-        console.log("Using search API for filtered results");
 
         const params = {
           page: searchFilters.page,
@@ -105,8 +101,6 @@ const ProductManagement = () => {
         response = await productService.searchProducts(params);
       } else {
         // Use basic vendor products API for simple listing
-        console.log("Using vendor products API for basic listing");
-
         const params = {
           page: searchFilters.page,
           limit: searchFilters.limit,
@@ -126,10 +120,6 @@ const ProductManagement = () => {
           ...newFilters,
         }));
 
-        console.log(
-          "Products fetched successfully:",
-          response.data.products.length
-        );
       } else {
         throw new Error("Invalid response format");
       }

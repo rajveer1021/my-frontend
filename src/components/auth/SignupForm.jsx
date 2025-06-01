@@ -1,4 +1,4 @@
-// src/components/auth/SignupForm.jsx - Using @react-oauth/google
+// src/components/auth/SignupForm.jsx - Fixed version with proper Google Auth
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../ui/Button";
@@ -15,7 +15,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useToast } from "../ui/Toast";
-import { GoogleLogin } from '@react-oauth/google';
+import { GoogleLogin } from "@react-oauth/google";
 
 const SignupForm = ({ onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
@@ -74,7 +74,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Clear previous errors
     clearError();
     setFormErrors({});
 
@@ -90,47 +89,55 @@ const SignupForm = ({ onSwitchToLogin }) => {
         password: formData.password,
         userType: formData.userType,
       });
-      // No need for toast - redirecting to dashboard
+      // Success handled by auth context and navigation
     } catch (error) {
-      // Error is already handled in the auth context
       addToast(error.message, "error");
     }
   };
 
+  // FIXED: Google signup handler
   const handleGoogleSuccess = async (credentialResponse) => {
-    if (googleLoading) return; // Prevent multiple requests
+    if (googleLoading) return;
 
     setGoogleLoading(true);
     clearError();
 
     try {
-      console.log('🔐 Google signup credential received');
-      
       if (!credentialResponse.credential) {
-        throw new Error('No credential received from Google');
+        throw new Error("No credential received from Google");
       }
 
       // Send the credential to your backend with the selected account type
-      const result = await googleLogin(credentialResponse.credential, formData.userType);
-      
+      const result = await googleLogin(
+        credentialResponse.credential,
+        formData.userType
+      );
+
       if (result.success) {
-        addToast(result.message || "Account created successfully! Welcome to Multi-Vendor!", "success");
+        addToast(
+          result.message ||
+            "Account created successfully! Welcome to Multi-Vendor!",
+          "success"
+        );
       }
     } catch (error) {
-      console.error('Google signup error:', error);
-      
+      console.error("Google signup error:", error);
+
       let errorMessage = error.message;
-      
-      if (error.message.includes('popup_closed_by_user')) {
+
+      if (error.message.includes("popup_closed_by_user")) {
         errorMessage = "Google sign-up was cancelled. Please try again.";
-      } else if (error.message.includes('popup_blocked')) {
-        errorMessage = "Popup was blocked. Please allow popups for this site and try again.";
-      } else if (error.message.includes('network')) {
-        errorMessage = "Network error. Please check your connection and try again.";
-      } else if (error.message.includes('already exists')) {
-        errorMessage = "An account with this email already exists. Please try signing in instead.";
+      } else if (error.message.includes("popup_blocked")) {
+        errorMessage =
+          "Popup was blocked. Please allow popups for this site and try again.";
+      } else if (error.message.includes("network")) {
+        errorMessage =
+          "Network error. Please check your connection and try again.";
+      } else if (error.message.includes("already exists")) {
+        errorMessage =
+          "An account with this email already exists. Please try signing in instead.";
       }
-      
+
       addToast(errorMessage, "error");
     } finally {
       setGoogleLoading(false);
@@ -138,7 +145,10 @@ const SignupForm = ({ onSwitchToLogin }) => {
   };
 
   const handleGoogleError = () => {
-    addToast("Google sign-up failed. Please try again or use the form below.", "error");
+    addToast(
+      "Google sign-up failed. Please try again or use the form below.",
+      "error"
+    );
     setGoogleLoading(false);
   };
 
@@ -213,9 +223,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
                 />
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 text-xs">
-                  Vendor
-                </h4>
+                <h4 className="font-semibold text-gray-900 text-xs">Vendor</h4>
                 <p className="text-xs text-gray-600">Sell products</p>
               </div>
             </div>

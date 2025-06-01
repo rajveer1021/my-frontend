@@ -10,9 +10,7 @@ export const productService = {
       // Add pagination params
       if (params.page) queryParams.page = params.page;
       if (params.limit) queryParams.limit = params.limit;
-      
-      console.log('Getting vendor products with params:', queryParams);
-      
+            
       // Use the vendor-specific products endpoint
       const response = await apiService.get('/products', queryParams);
       
@@ -80,9 +78,7 @@ export const productService = {
       // Add sorting params
       if (params.sortBy) queryParams.sortBy = params.sortBy;
       if (params.sortOrder) queryParams.sortOrder = params.sortOrder;
-      
-      console.log('Searching products with params:', queryParams);
-      
+            
       // Use the search endpoint when filters are applied
       const response = await apiService.get('/products/search', queryParams);
       

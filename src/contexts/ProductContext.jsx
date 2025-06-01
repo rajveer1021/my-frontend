@@ -46,10 +46,8 @@ export const ProductProvider = ({ children }) => {
       let response;
       
       if (shouldUseSearchAPI(params)) {
-        console.log('Using search API for filtered results');
         response = await productService.searchProducts(params);
       } else {
-        console.log('Using vendor products API for basic listing');
         response = await productService.getProducts(params);
       }
       
