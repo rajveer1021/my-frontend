@@ -300,9 +300,9 @@ const Settings = () => {
                 <UserCheck className="w-5 h-5 lg:w-6 lg:h-6 mr-3 text-blue-600" />
                 Profile Information
               </h2>
-              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              {/* <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                 <User className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
-              </div>
+              </div> */}
             </div>
           </div>
 

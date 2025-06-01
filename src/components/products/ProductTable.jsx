@@ -216,11 +216,11 @@ export const ProductTable = ({
                   {formatCurrency(product.price)}
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col space-y-1">
-                    <Badge variant={getStockStatusColor(product.status)}>
+                  <div className="flex flex-wrap gap-1 flex-col">
+                    {/* <Badge variant={getStockStatusColor(product.status)}>
                       {product.status}
-                    </Badge>
-                    <span className="text-xs text-gray-500">
+                    </Badge> */}
+                    <span className="text-sm text-gray-500">
                       {product.stock || 0} units
                     </span>
                   </div>
