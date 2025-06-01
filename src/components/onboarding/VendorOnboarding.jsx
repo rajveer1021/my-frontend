@@ -1,4 +1,4 @@
-// src/components/onboarding/VendorOnboarding.jsx - Complete updated component with GST default and manual verification validation
+// src/components/onboarding/VendorOnboarding.jsx - Complete fixed version with manual verification
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import Button from "../ui/Button";
@@ -127,9 +127,6 @@ const VendorOnboarding = ({ onComplete }) => {
         if (completion) {
           setCompletion(completion);
           setCurrentStep(completion.currentStep || 1);
-
-          // Only redirect if explicitly completed AND onComplete is called
-          // Don't auto-redirect on page load
         }
       } catch (error) {
         console.error("Failed to load vendor profile:", error);
@@ -242,10 +239,7 @@ const VendorOnboarding = ({ onComplete }) => {
               }
             }
           }
-          if (!formData.documentFile) {
-            newErrors.documentFile =
-              "Please upload a document for verification";
-          }
+          // Document upload requirement removed for now
         }
         break;
 
@@ -294,11 +288,10 @@ const VendorOnboarding = ({ onComplete }) => {
           } else {
             step3Data.idType = formData.idType;
             step3Data.idNumber = formData.idNumber;
-            step3Data.documentFile = formData.documentFile;
           }
 
           result = await vendorService.updateStep3(step3Data);
-          addToast("Documents updated successfully!", "success");
+          addToast("Verification details updated successfully!", "success");
           break;
 
         default:
@@ -366,8 +359,7 @@ const VendorOnboarding = ({ onComplete }) => {
             )
           );
         } else if (formData.verificationType === "manual") {
-          const isIdValid =
-            formData.idType && formData.idNumber && formData.documentFile;
+          const isIdValid = formData.idType && formData.idNumber;
           if (!isIdValid) return false;
 
           // Additional validation based on ID type
@@ -460,7 +452,7 @@ const VendorOnboarding = ({ onComplete }) => {
           </div>
         </div>
 
-        {/* Compact Main Content Card */}
+        {/* Main Content Card */}
         <div className="bg-white/90 backdrop-blur-sm shadow-xl border border-white/20 rounded-2xl overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 text-white">
             <div className="flex items-center space-x-3">
@@ -825,8 +817,7 @@ const VendorOnboarding = ({ onComplete }) => {
                             Manual Verification Required
                           </h4>
                           <p className="text-gray-700 text-sm">
-                            Please provide your valid document to verify your
-                            business registration.
+                            Please provide your valid ID details to verify your business registration.
                           </p>
                         </div>
                       </div>
@@ -911,36 +902,19 @@ const VendorOnboarding = ({ onComplete }) => {
                       )}
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Upload Document *
-                      </label>
-                      <input
-                        disabled
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={(e) => handleFileUpload(e.target.files[0])}
-                        className={`w-full block border-2 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:bg-blue-100 file:text-blue-800 hover:file:bg-blue-200 ${
-                          errors.documentFile
-                            ? "border-red-500"
-                            : "border-gray-200"
-                        }`}
-                      />
-                      {errors.documentFile && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          {errors.documentFile}
-                        </p>
-                      )}
-                      <p className="text-gray-600 text-xs mt-1">
-                        Accepted formats: JPG, PNG, PDF (Max 5MB)
-                      </p>
-                      {formData.documentFile && (
-                        <p className="text-green-600 text-xs mt-1 flex items-center">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          File selected: {formData.documentFile.name}
-                        </p>
-                      )}
+                    {/* Note about document upload - coming soon */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                      <div className="flex items-start space-x-3">
+                        <InfoIcon className="h-5 w-5 text-blue-600 mt-0.5" />
+                        <div>
+                          <h5 className="font-semibold text-blue-800 text-sm mb-1">
+                            Document Upload
+                          </h5>
+                          <p className="text-blue-700 text-xs">
+                            Document upload feature will be available soon. For now, verification will be done based on the ID details provided.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

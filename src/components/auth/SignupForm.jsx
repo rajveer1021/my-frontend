@@ -183,134 +183,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
         </div>
       )}
 
-      {/* Account Type Selection - At the top for Google signup */}
-      <div className="space-y-2">
-        <label className="block text-xs font-semibold text-gray-700">
-          Select Account Type
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => handleInputChange("userType", "vendor")}
-            disabled={isFormDisabled}
-            className={`relative p-3 rounded-lg border-2 transition-all duration-300 text-left ${
-              formData.userType === "vendor"
-                ? "border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 shadow-md"
-                : "border-gray-200 bg-white hover:border-blue-300"
-            } ${isFormDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {formData.userType === "vendor" && (
-              <div className="absolute -top-1 -right-1">
-                <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-full p-0.5">
-                  <CheckCircle className="h-3 w-3 text-white" />
-                </div>
-              </div>
-            )}
-            <div className="flex items-center space-x-2">
-              <div
-                className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                  formData.userType === "vendor"
-                    ? "bg-gradient-to-br from-blue-500 to-blue-600"
-                    : "bg-gray-100"
-                }`}
-              >
-                <Building
-                  className={`w-3 h-3 ${
-                    formData.userType === "vendor"
-                      ? "text-white"
-                      : "text-gray-600"
-                  }`}
-                />
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 text-xs">Vendor</h4>
-                <p className="text-xs text-gray-600">Sell products</p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleInputChange("userType", "buyer")}
-            disabled={isFormDisabled}
-            className={`relative p-3 rounded-lg border-2 transition-all duration-300 text-left ${
-              formData.userType === "buyer"
-                ? "border-green-500 bg-gradient-to-br from-green-50 to-blue-50 shadow-md"
-                : "border-gray-200 bg-white hover:border-green-300"
-            } ${isFormDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {formData.userType === "buyer" && (
-              <div className="absolute -top-1 -right-1">
-                <div className="bg-gradient-to-r from-green-500 to-blue-600 rounded-full p-0.5">
-                  <CheckCircle className="h-3 w-3 text-white" />
-                </div>
-              </div>
-            )}
-            <div className="flex items-center space-x-2">
-              <div
-                className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                  formData.userType === "buyer"
-                    ? "bg-gradient-to-br from-green-500 to-green-600"
-                    : "bg-gray-100"
-                }`}
-              >
-                <ShoppingCart
-                  className={`w-3 h-3 ${
-                    formData.userType === "buyer"
-                      ? "text-white"
-                      : "text-gray-600"
-                  }`}
-                />
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 text-xs">Buyer</h4>
-                <p className="text-xs text-gray-600">Purchase products</p>
-              </div>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Google Signup Button - Prominent placement */}
-      <div className="w-full">
-        {googleLoading ? (
-          <Button
-            variant="outline"
-            className="w-full h-12 text-gray-700 border-2 border-gray-200 rounded-xl text-sm cursor-not-allowed opacity-50"
-            disabled
-          >
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-              <span>Creating account with Google...</span>
-            </div>
-          </Button>
-        ) : (
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={handleGoogleError}
-            theme="outline"
-            size="large"
-            width="100%"
-            text="signup_with"
-            shape="rectangular"
-            logo_alignment="left"
-            disabled={isFormDisabled}
-          />
-        )}
-      </div>
-
-      {/* Divider */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-gray-200" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-3 text-gray-500 font-medium">
-            Or sign up with email
-          </span>
-        </div>
-      </div>
-
       {/* Signup Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* First Name and Last Name Fields */}
@@ -409,6 +281,96 @@ const SignupForm = ({ onSwitchToLogin }) => {
               {formErrors.email}
             </p>
           )}
+        </div>
+
+        {/* Account Type Selection - At the top for Google signup */}
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold text-gray-700">
+            Select Account Type
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleInputChange("userType", "vendor")}
+              disabled={isFormDisabled}
+              className={`relative p-3 rounded-lg border-2 transition-all duration-300 text-left ${
+                formData.userType === "vendor"
+                  ? "border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 shadow-md"
+                  : "border-gray-200 bg-white hover:border-blue-300"
+              } ${isFormDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              {formData.userType === "vendor" && (
+                <div className="absolute -top-1 -right-1">
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-full p-0.5">
+                    <CheckCircle className="h-3 w-3 text-white" />
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center space-x-2">
+                <div
+                  className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                    formData.userType === "vendor"
+                      ? "bg-gradient-to-br from-blue-500 to-blue-600"
+                      : "bg-gray-100"
+                  }`}
+                >
+                  <Building
+                    className={`w-3 h-3 ${
+                      formData.userType === "vendor"
+                        ? "text-white"
+                        : "text-gray-600"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 text-xs">
+                    Vendor
+                  </h4>
+                  <p className="text-xs text-gray-600">Sell products</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleInputChange("userType", "buyer")}
+              disabled={isFormDisabled}
+              className={`relative p-3 rounded-lg border-2 transition-all duration-300 text-left ${
+                formData.userType === "buyer"
+                  ? "border-green-500 bg-gradient-to-br from-green-50 to-blue-50 shadow-md"
+                  : "border-gray-200 bg-white hover:border-green-300"
+              } ${isFormDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              {formData.userType === "buyer" && (
+                <div className="absolute -top-1 -right-1">
+                  <div className="bg-gradient-to-r from-green-500 to-blue-600 rounded-full p-0.5">
+                    <CheckCircle className="h-3 w-3 text-white" />
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center space-x-2">
+                <div
+                  className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                    formData.userType === "buyer"
+                      ? "bg-gradient-to-br from-green-500 to-green-600"
+                      : "bg-gray-100"
+                  }`}
+                >
+                  <ShoppingCart
+                    className={`w-3 h-3 ${
+                      formData.userType === "buyer"
+                        ? "text-white"
+                        : "text-gray-600"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 text-xs">Buyer</h4>
+                  <p className="text-xs text-gray-600">Purchase products</p>
+                </div>
+              </div>
+            </button>
+          </div>
         </div>
 
         {/* Password Field */}
@@ -521,6 +483,44 @@ const SignupForm = ({ onSwitchToLogin }) => {
           )}
         </Button>
       </form>
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-gray-200" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white px-3 text-gray-500 font-medium">Or</span>
+        </div>
+      </div>
+
+      {/* Google Signup Button - Prominent placement */}
+      <div className="w-full">
+        {googleLoading ? (
+          <Button
+            variant="outline"
+            className="w-full h-12 text-gray-700 border-2 border-gray-200 rounded-xl text-sm cursor-not-allowed opacity-50"
+            disabled
+          >
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              <span>Creating account with Google...</span>
+            </div>
+          </Button>
+        ) : (
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            theme="outline"
+            size="large"
+            width="100%"
+            text="signup_with"
+            shape="rectangular"
+            logo_alignment="left"
+            disabled={isFormDisabled}
+          />
+        )}
+      </div>
 
       {/* Switch to Login */}
       <div className="text-center">
