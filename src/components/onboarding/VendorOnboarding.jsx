@@ -1,5 +1,7 @@
-// src/components/onboarding/VendorOnboarding.jsx - Complete fixed version with manual verification
+// src/components/onboarding/VendorOnboarding.jsx - Fixed version with proper redirection
+
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Add this import
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import Button from "../ui/Button";
 import { Input } from "../ui/Input";
@@ -25,6 +27,7 @@ import { LoadingSpinner } from "../common/LoadingSpinner";
 import { useToast } from "../ui/Toast";
 
 const VendorOnboarding = ({ onComplete }) => {
+  const navigate = useNavigate(); // Add navigation hook
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -105,7 +108,6 @@ const VendorOnboarding = ({ onComplete }) => {
         setInitialLoading(true);
         const { vendor, completion } = await vendorService.getVendorProfile();
 
-        // Set form data from existing vendor profile
         if (vendor) {
           setFormData({
             vendorType: vendor.vendorType || "",
@@ -115,7 +117,7 @@ const VendorOnboarding = ({ onComplete }) => {
             city: vendor.city || "",
             state: vendor.state || "",
             postalCode: vendor.postalCode || "",
-            verificationType: vendor.verificationType || "gst", // Default to GST
+            verificationType: vendor.verificationType || "gst",
             gstNumber: vendor.gstNumber || "",
             idType: vendor.idType || "",
             idNumber: vendor.idNumber || "",
@@ -123,7 +125,6 @@ const VendorOnboarding = ({ onComplete }) => {
           });
         }
 
-        // Set completion status
         if (completion) {
           setCompletion(completion);
           setCurrentStep(completion.currentStep || 1);
@@ -140,7 +141,13 @@ const VendorOnboarding = ({ onComplete }) => {
   }, [addToast]);
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Ensure all values are stored as strings
+    const stringValue = typeof value === 'string' ? value : String(value || '');
+    
+    setFormData((prev) => ({ 
+      ...prev, 
+      [field]: stringValue 
+    }));
 
     // Clear field error when user starts typing
     if (errors[field]) {
@@ -169,7 +176,6 @@ const VendorOnboarding = ({ onComplete }) => {
   const handleFileUpload = (file) => {
     setFormData((prev) => ({ ...prev, documentFile: file }));
 
-    // Clear file error when user selects a file
     if (errors.documentFile) {
       setErrors((prev) => ({
         ...prev,
@@ -226,7 +232,6 @@ const VendorOnboarding = ({ onComplete }) => {
           if (!formData.idNumber.trim()) {
             newErrors.idNumber = "ID number is required";
           } else {
-            // Validate based on selected ID type
             if (formData.idType === "aadhaar") {
               if (!/^\d{12}$/.test(formData.idNumber.replace(/\s/g, ""))) {
                 newErrors.idNumber =
@@ -239,7 +244,6 @@ const VendorOnboarding = ({ onComplete }) => {
               }
             }
           }
-          // Document upload requirement removed for now
         }
         break;
 
@@ -249,6 +253,32 @@ const VendorOnboarding = ({ onComplete }) => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Function to handle successful completion and redirection
+  const handleOnboardingComplete = () => {
+    localStorage.setItem("vendorOnboarded", "true");
+    addToast(
+      "Onboarding completed successfully! Welcome to VendorHub!",
+      "success"
+    );
+    
+    // Multiple redirection strategies to ensure it works
+    setTimeout(() => {
+      // Try the onComplete callback first
+      if (onComplete && typeof onComplete === 'function') {
+        try {
+          onComplete();
+        } catch (error) {
+          console.error("onComplete callback failed:", error);
+          // Fallback to navigate
+          navigate("/", { replace: true });
+        }
+      } else {
+        // Direct navigation if no callback
+        navigate("/", { replace: true });
+      }
+    }, 1500);
   };
 
   const handleNext = async () => {
@@ -279,13 +309,14 @@ const VendorOnboarding = ({ onComplete }) => {
           break;
 
         case 3:
+          // FIXED: Create clean data object
           const step3Data = {
-            verificationType: formData.verificationType,
+            verificationType: formData.verificationType, // Already a string
           };
 
           if (formData.verificationType === "gst") {
             step3Data.gstNumber = formData.gstNumber;
-          } else {
+          } else if (formData.verificationType === "manual") {
             step3Data.idType = formData.idType;
             step3Data.idNumber = formData.idNumber;
           }
@@ -303,18 +334,8 @@ const VendorOnboarding = ({ onComplete }) => {
         setCompletion(result.completion);
 
         if (result.completion.isComplete) {
-          // Mark onboarding as complete
-          localStorage.setItem("vendorOnboarded", "true");
-          addToast(
-            "Onboarding completed successfully! Welcome to VendorHub!",
-            "success"
-          );
-          // Only redirect when explicitly calling onComplete
-          setTimeout(() => {
-            if (onComplete) {
-              onComplete();
-            }
-          }, 1500); // Give time for toast to show
+          // Handle completion and redirection
+          handleOnboardingComplete();
           return;
         }
       }
@@ -362,7 +383,6 @@ const VendorOnboarding = ({ onComplete }) => {
           const isIdValid = formData.idType && formData.idNumber;
           if (!isIdValid) return false;
 
-          // Additional validation based on ID type
           if (formData.idType === "aadhaar") {
             return /^\d{12}$/.test(formData.idNumber.replace(/\s/g, ""));
           } else if (formData.idType === "pan") {
@@ -392,7 +412,7 @@ const VendorOnboarding = ({ onComplete }) => {
   return (
     <div className="fixed inset-0 z-50 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4 overflow-y-auto">
       <div className="w-full max-w-4xl">
-        {/* Compact Header */}
+        {/* Header */}
         <div className="text-center mb-6">
           <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-6 text-white mb-4">
             <h1 className="text-2xl lg:text-3xl font-bold mb-2">
@@ -404,7 +424,7 @@ const VendorOnboarding = ({ onComplete }) => {
           </div>
         </div>
 
-        {/* Compact Progress Indicator */}
+        {/* Progress Indicator */}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
             {steps.map((step, index) => (
@@ -902,7 +922,6 @@ const VendorOnboarding = ({ onComplete }) => {
                       )}
                     </div>
 
-                    {/* Note about document upload - coming soon */}
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                       <div className="flex items-start space-x-3">
                         <InfoIcon className="h-5 w-5 text-blue-600 mt-0.5" />
@@ -919,7 +938,6 @@ const VendorOnboarding = ({ onComplete }) => {
                   </div>
                 )}
 
-                {/* Info Note */}
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-3">
                   <div className="flex items-start space-x-3">
                     <InfoIcon className="h-5 w-5 text-blue-600 mt-0.5" />
@@ -937,7 +955,7 @@ const VendorOnboarding = ({ onComplete }) => {
               </div>
             )}
 
-            {/* Fixed Navigation Buttons */}
+            {/* Navigation Buttons */}
             <div className="flex justify-between pt-6 border-t border-gray-100">
               <Button
                 onClick={handlePrevious}

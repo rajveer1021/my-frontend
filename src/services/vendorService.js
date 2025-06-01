@@ -1,4 +1,5 @@
-// src/services/vendorService.js
+// src/services/vendorService.js - Complete fixed frontend service
+
 import { apiService } from './api';
 
 export const vendorService = {
@@ -24,8 +25,9 @@ export const vendorService = {
   // Step 1: Vendor Type
   async updateStep1(vendorType) {
     try {
+      
       const response = await apiService.post('/vendor/onboarding/step1', {
-        vendorType: vendorType.toUpperCase()
+        vendorType: String(vendorType).toUpperCase()
       });
       
       if (response.success && response.data) {
@@ -37,7 +39,7 @@ export const vendorService = {
       
       throw new Error('Invalid response format');
     } catch (error) {
-      console.error('Update step 1 error:', error);
+      console.error('Step 1 update error:', error);
       throw new Error(error.message || 'Failed to update vendor type');
     }
   },
@@ -45,14 +47,17 @@ export const vendorService = {
   // Step 2: Business Information
   async updateStep2(businessData) {
     try {
-      const response = await apiService.post('/vendor/onboarding/step2', {
-        businessName: businessData.businessName,
-        businessAddress1: businessData.businessAddress1,
-        businessAddress2: businessData.businessAddress2 || '',
-        city: businessData.city,
-        state: businessData.state,
-        postalCode: businessData.postalCode
-      });
+      
+      const payload = {
+        businessName: String(businessData.businessName || ''),
+        businessAddress1: String(businessData.businessAddress1 || ''),
+        businessAddress2: String(businessData.businessAddress2 || ''),
+        city: String(businessData.city || ''),
+        state: String(businessData.state || ''),
+        postalCode: String(businessData.postalCode || '')
+      };
+      
+      const response = await apiService.post('/vendor/onboarding/step2', payload);
       
       if (response.success && response.data) {
         return {
@@ -63,17 +68,35 @@ export const vendorService = {
       
       throw new Error('Invalid response format');
     } catch (error) {
-      console.error('Update step 2 error:', error);
+      console.error('Step 2 update error:', error);
       throw new Error(error.message || 'Failed to update business information');
     }
   },
 
-  // Step 3: Documents (GST for now)
-  async updateStep3(gstNumber) {
+  // Step 3: Documents - FIXED VERSION
+  async updateStep3(step3Data) {
     try {
-      const response = await apiService.post('/vendor/onboarding/step3', {
-        gstNumber: gstNumber
-      });
+      
+      // Create completely clean payload with explicit string conversion
+      const cleanPayload = {
+        verificationType: String(step3Data.verificationType || '').toLowerCase()
+      };
+      
+      // Handle GST data
+      if (step3Data.gstNumber !== undefined && step3Data.gstNumber !== null) {
+        cleanPayload.gstNumber = String(step3Data.gstNumber || '');
+      }
+      
+      // Handle manual verification data
+      if (step3Data.idType !== undefined && step3Data.idType !== null) {
+        cleanPayload.idType = String(step3Data.idType || '').toLowerCase();
+      }
+      
+      if (step3Data.idNumber !== undefined && step3Data.idNumber !== null) {
+        cleanPayload.idNumber = String(step3Data.idNumber || '');
+      }
+
+      const response = await apiService.post('/vendor/onboarding/step3', cleanPayload);
       
       if (response.success && response.data) {
         return {
@@ -84,7 +107,7 @@ export const vendorService = {
       
       throw new Error('Invalid response format');
     } catch (error) {
-      console.error('Update step 3 error:', error);
+      console.error('❌ Step 3 update error:', error);
       throw new Error(error.message || 'Failed to update documents');
     }
   }
