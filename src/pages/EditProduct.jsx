@@ -237,46 +237,6 @@ const EditProduct = () => {
           </div>
         </div>
 
-        {/* Quick Tips Section */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 rounded-2xl p-4 lg:p-6">
-          <div className="flex items-start space-x-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Tips for Updating Your Product
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-600">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>Keep descriptions current and accurate</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>Update stock levels regularly</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                  <span>Adjust pricing based on market</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                  <span>Review product categories</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-pink-400 rounded-full"></div>
-                  <span>Enhance product features</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-indigo-400 rounded-full"></div>
-                  <span>Monitor performance metrics</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Product Form */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
           <div className="p-4 lg:p-6 border-b border-gray-100">
@@ -285,9 +245,9 @@ const EditProduct = () => {
                 <Edit className="w-5 h-5 lg:w-6 lg:h-6 mr-3 text-blue-600" />
                 Update Product Information
               </h2>
-              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              {/* <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                 <Edit className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
-              </div>
+              </div> */}
             </div>
             <p className="text-gray-600 text-sm mt-2">
               Modify the details below to update your product listing

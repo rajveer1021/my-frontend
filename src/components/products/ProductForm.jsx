@@ -318,7 +318,7 @@ export const ProductForm = ({
           <Button
             type="submit"
             disabled={loading}
-            className="w-32 h-12 bg-blue-600 hover:bg-blue-700"
+            className="w-40 h-12 bg-blue-600 hover:bg-blue-700"
           >
             {loading ? (
               <div className="flex items-center">

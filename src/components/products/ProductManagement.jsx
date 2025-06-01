@@ -25,7 +25,7 @@ import { productService } from "../../services/productService";
 const ProductManagement = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
-  
+
   // State for products and filters
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState({
@@ -34,7 +34,7 @@ const ProductManagement = () => {
     total: 0,
     pages: 1,
     hasNext: false,
-    hasPrev: false
+    hasPrev: false,
   });
   const [availableCategories, setAvailableCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -47,7 +47,7 @@ const ProductManagement = () => {
     sortBy: "createdAt",
     sortOrder: "desc",
     page: 1,
-    limit: 10
+    limit: 10,
   });
 
   // Modal states
@@ -59,10 +59,10 @@ const ProductManagement = () => {
   // Determine which API to use based on filters
   const shouldUseSearch = () => {
     return !!(
-      filters.search?.trim() || 
-      (filters.category && filters.category !== 'all') ||
-      filters.sortBy !== 'createdAt' ||
-      filters.sortOrder !== 'desc'
+      filters.search?.trim() ||
+      (filters.category && filters.category !== "all") ||
+      filters.sortBy !== "createdAt" ||
+      filters.sortOrder !== "desc"
     );
   };
 
@@ -70,26 +70,26 @@ const ProductManagement = () => {
   const fetchProducts = async (newFilters = {}) => {
     try {
       setLoading(true);
-      
+
       const searchFilters = {
         ...filters,
-        ...newFilters
+        ...newFilters,
       };
 
-      console.log('Fetching products with filters:', searchFilters);
-      console.log('Should use search API:', shouldUseSearch());
+      console.log("Fetching products with filters:", searchFilters);
+      console.log("Should use search API:", shouldUseSearch());
 
       let response;
 
       if (shouldUseSearch()) {
         // Use search API when filters are applied
-        console.log('Using search API for filtered results');
-        
+        console.log("Using search API for filtered results");
+
         const params = {
           page: searchFilters.page,
           limit: searchFilters.limit,
           sortBy: searchFilters.sortBy,
-          sortOrder: searchFilters.sortOrder
+          sortOrder: searchFilters.sortOrder,
         };
 
         // Add search if provided
@@ -98,37 +98,40 @@ const ProductManagement = () => {
         }
 
         // Add category if selected and not 'all'
-        if (searchFilters.category && searchFilters.category !== 'all') {
+        if (searchFilters.category && searchFilters.category !== "all") {
           params.category = searchFilters.category;
         }
 
         response = await productService.searchProducts(params);
       } else {
         // Use basic vendor products API for simple listing
-        console.log('Using vendor products API for basic listing');
-        
+        console.log("Using vendor products API for basic listing");
+
         const params = {
           page: searchFilters.page,
-          limit: searchFilters.limit
+          limit: searchFilters.limit,
         };
 
         response = await productService.getProducts(params);
       }
-      
+
       if (response.success && response.data) {
         setProducts(response.data.products || []);
         setPagination(response.data.pagination || pagination);
         setAvailableCategories(response.data.availableCategories || []);
-        
+
         // Update filters state
-        setFilters(prev => ({
+        setFilters((prev) => ({
           ...prev,
-          ...newFilters
+          ...newFilters,
         }));
-        
-        console.log('Products fetched successfully:', response.data.products.length);
+
+        console.log(
+          "Products fetched successfully:",
+          response.data.products.length
+        );
       } else {
-        throw new Error('Invalid response format');
+        throw new Error("Invalid response format");
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
@@ -153,15 +156,15 @@ const ProductManagement = () => {
 
   // Handle search input change (with debouncing)
   const handleSearchChange = (searchTerm) => {
-    setFilters(prev => ({ ...prev, search: searchTerm, page: 1 }));
+    setFilters((prev) => ({ ...prev, search: searchTerm, page: 1 }));
   };
 
   // Handle category filter change
   const handleCategoryChange = (category) => {
-    const newFilters = { 
-      ...filters, 
-      category: category === 'all' ? '' : category, 
-      page: 1 
+    const newFilters = {
+      ...filters,
+      category: category === "all" ? "" : category,
+      page: 1,
     };
     setFilters(newFilters);
     fetchProducts(newFilters);
@@ -169,15 +172,16 @@ const ProductManagement = () => {
 
   // Handle sort change
   const handleSortChange = (sortOption) => {
-    const [sortBy, sortOrder] = sortOption.includes('-') 
-      ? sortOption.split('-')
-      : [sortOption, 'asc'];
-    
-    const newFilters = { 
-      ...filters, 
-      sortBy, 
-      sortOrder: sortOrder === 'high' ? 'desc' : sortOrder === 'low' ? 'asc' : sortOrder,
-      page: 1 
+    const [sortBy, sortOrder] = sortOption.includes("-")
+      ? sortOption.split("-")
+      : [sortOption, "asc"];
+
+    const newFilters = {
+      ...filters,
+      sortBy,
+      sortOrder:
+        sortOrder === "high" ? "desc" : sortOrder === "low" ? "asc" : sortOrder,
+      page: 1,
     };
     setFilters(newFilters);
     fetchProducts(newFilters);
@@ -206,7 +210,7 @@ const ProductManagement = () => {
   // Handle view product
   const handleView = async (productId) => {
     try {
-      const product = products.find(p => p.id === productId);
+      const product = products.find((p) => p.id === productId);
       if (product) {
         setSelectedProduct(product);
         setIsDetailsModalOpen(true);
@@ -229,7 +233,7 @@ const ProductManagement = () => {
 
   // Handle delete product - show confirmation modal
   const handleDelete = (productId) => {
-    const product = products.find(p => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     setProductToDelete(product);
     setIsDeleteModalOpen(true);
   };
@@ -240,20 +244,20 @@ const ProductManagement = () => {
 
     try {
       await productService.deleteProduct(productToDelete.id);
-      
+
       // Remove from local state
-      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
-      
+      setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
+
       // Update pagination
-      setPagination(prev => ({
+      setPagination((prev) => ({
         ...prev,
-        total: Math.max(0, prev.total - 1)
+        total: Math.max(0, prev.total - 1),
       }));
-      
+
       addToast("Product deleted successfully", "success");
       setIsDeleteModalOpen(false);
       setProductToDelete(null);
-      
+
       // Refresh products if needed
       if (products.length === 1 && pagination.page > 1) {
         // If this was the last product on the page, go to previous page
@@ -288,7 +292,7 @@ const ProductManagement = () => {
       sortBy: "createdAt",
       sortOrder: "desc",
       page: 1,
-      limit: 10
+      limit: 10,
     };
     setFilters(newFilters);
     fetchProducts(newFilters);
@@ -360,13 +364,19 @@ const ProductManagement = () => {
                   <div className="text-blue-100 text-sm">Total Products</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                  <div className="text-2xl font-bold">{availableCategories.length}</div>
+                  <div className="text-2xl font-bold">
+                    {availableCategories.length}
+                  </div>
                   <div className="text-blue-100 text-sm">Categories</div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                  <div className="text-2xl font-bold">Page {pagination.page}</div>
-                  <div className="text-blue-100 text-sm">of {pagination.pages}</div>
-                </div>
+                {/* <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                  <div className="text-2xl font-bold">
+                    Page {pagination.page}
+                  </div>
+                  <div className="text-blue-100 text-sm">
+                    of {pagination.pages}
+                  </div>
+                </div> */}
               </div>
             )}
           </div>
@@ -383,7 +393,9 @@ const ProductManagement = () => {
                 Search & Filter Products
               </h2>
             </div>
-            {(filters.search || filters.category || filters.sortBy !== 'createdAt') && (
+            {(filters.search ||
+              filters.category ||
+              filters.sortBy !== "createdAt") && (
               <Button
                 variant="ghost"
                 onClick={clearAllFilters}
@@ -393,23 +405,17 @@ const ProductManagement = () => {
               </Button>
             )}
           </div>
-          
+
           <ProductFilters
             searchTerm={filters.search}
             onSearchChange={handleSearchChange}
-            categoryFilter={filters.category || 'all'}
+            categoryFilter={filters.category || "all"}
             onCategoryChange={handleCategoryChange}
             sortBy={`${filters.sortBy}-${filters.sortOrder}`}
             onSortChange={handleSortChange}
             availableCategories={availableCategories}
             loading={loading}
           />
-          
-          {/* API Usage Indicator */}
-          <div className="mt-3 text-xs text-gray-500 flex items-center">
-            <div className={`w-2 h-2 rounded-full mr-2 ${shouldUseSearch() ? 'bg-blue-500' : 'bg-green-500'}`}></div>
-            {shouldUseSearch() ? 'Using filtered search' : 'Using basic product listing'}
-          </div>
         </div>
 
         {/* Products Section */}
@@ -424,7 +430,9 @@ const ProductManagement = () => {
                 <Package className="h-8 w-8 text-gray-400" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {filters.search || filters.category ? "No products found" : "No products yet"}
+                {filters.search || filters.category
+                  ? "No products found"
+                  : "No products yet"}
               </h3>
               <p className="text-gray-500 mb-6">
                 {filters.search || filters.category
@@ -440,10 +448,7 @@ const ProductManagement = () => {
                   Add Your First Product
                 </Button>
                 {(filters.search || filters.category) && (
-                  <Button
-                    variant="outline"
-                    onClick={clearAllFilters}
-                  >
+                  <Button variant="outline" onClick={clearAllFilters}>
                     Clear Filters
                   </Button>
                 )}
@@ -456,16 +461,8 @@ const ProductManagement = () => {
                   <Package className="w-5 h-5 lg:w-6 lg:h-6 mr-3 text-blue-600" />
                   Products ({pagination.total})
                 </h2>
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <Eye className="w-4 h-4" />
-                  <span>View</span>
-                  <Edit className="w-4 h-4 ml-3" />
-                  <span>Edit</span>
-                  <Trash2 className="w-4 h-4 ml-3" />
-                  <span>Delete</span>
-                </div>
               </div>
-              
+
               <ProductTable
                 products={products}
                 onView={handleView}
@@ -478,11 +475,14 @@ const ProductManagement = () => {
               {pagination.pages > 1 && (
                 <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
                   <div className="flex items-center text-sm text-gray-500">
-                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                    {pagination.total} results
+                    Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                    {Math.min(
+                      pagination.page * pagination.limit,
+                      pagination.total
+                    )}{" "}
+                    of {pagination.total} results
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <Button
                       variant="outline"
@@ -492,29 +492,32 @@ const ProductManagement = () => {
                     >
                       Previous
                     </Button>
-                    
+
                     <div className="flex items-center space-x-1">
-                      {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                        const page = i + 1;
-                        const isActive = page === pagination.page;
-                        
-                        return (
-                          <button
-                            key={page}
-                            onClick={() => handlePageChange(page)}
-                            disabled={loading}
-                            className={`w-8 h-8 text-sm rounded-lg transition-colors ${
-                              isActive
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-500 hover:bg-gray-100'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        );
-                      })}
+                      {Array.from(
+                        { length: Math.min(5, pagination.pages) },
+                        (_, i) => {
+                          const page = i + 1;
+                          const isActive = page === pagination.page;
+
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              disabled={loading}
+                              className={`w-8 h-8 text-sm rounded-lg transition-colors ${
+                                isActive
+                                  ? "bg-blue-600 text-white"
+                                  : "text-gray-500 hover:bg-gray-100"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        }
+                      )}
                     </div>
-                    
+
                     <Button
                       variant="outline"
                       onClick={() => handlePageChange(pagination.page + 1)}

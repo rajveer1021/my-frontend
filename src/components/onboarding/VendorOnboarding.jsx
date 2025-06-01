@@ -1,15 +1,28 @@
-// src/components/onboarding/VendorOnboarding.jsx - Fixed button visibility
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import Button from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Badge } from '../ui/Badge';
-import { Progress } from '../ui/Progress';
-import { Building, Upload, CheckCircle, Clock, ArrowRight, ArrowLeft, Sparkles, FileText, Shield, Star, AlertCircle } from 'lucide-react';
-import { cn } from '../../utils/helpers';
-import { vendorService } from '../../services/vendorService';
-import { LoadingSpinner } from '../common/LoadingSpinner';
-import { useToast } from '../ui/Toast';
+// src/components/onboarding/VendorOnboarding.jsx - Complete updated component with GST default and manual verification validation
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import Button from "../ui/Button";
+import { Input } from "../ui/Input";
+import { Badge } from "../ui/Badge";
+import { Progress } from "../ui/Progress";
+import {
+  Building,
+  Upload,
+  CheckCircle,
+  Clock,
+  ArrowRight,
+  ArrowLeft,
+  Sparkles,
+  FileText,
+  Shield,
+  Star,
+  AlertCircle,
+  InfoIcon,
+} from "lucide-react";
+import { cn } from "../../utils/helpers";
+import { vendorService } from "../../services/vendorService";
+import { LoadingSpinner } from "../common/LoadingSpinner";
+import { useToast } from "../ui/Toast";
 
 const VendorOnboarding = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -20,50 +33,69 @@ const VendorOnboarding = ({ onComplete }) => {
 
   const [formData, setFormData] = useState({
     // Step 1
-    vendorType: '',
-    
+    vendorType: "",
+
     // Step 2
-    businessName: '',
-    businessAddress1: '',
-    businessAddress2: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    
+    businessName: "",
+    businessAddress1: "",
+    businessAddress2: "",
+    city: "",
+    state: "",
+    postalCode: "",
+
     // Step 3
-    gstNumber: ''
+    verificationType: "gst", // Default to GST
+    gstNumber: "",
+    idType: "",
+    idNumber: "",
+    documentFile: null,
   });
 
   const [errors, setErrors] = useState({});
 
   const steps = [
-    { id: 1, title: 'Vendor Type', description: 'Select your business type', icon: Building },
-    { id: 2, title: 'Business Info', description: 'Enter your business details', icon: FileText },
-    { id: 3, title: 'Documents', description: 'Upload verification documents', icon: Shield }
+    {
+      id: 1,
+      title: "Vendor Type",
+      description: "Select your business type",
+      icon: Building,
+    },
+    {
+      id: 2,
+      title: "Business Info",
+      description: "Enter your business details",
+      icon: FileText,
+    },
+    {
+      id: 3,
+      title: "Documents",
+      description: "Upload verification documents",
+      icon: Shield,
+    },
   ];
 
   const vendorTypes = [
-    { 
-      value: 'MANUFACTURER', 
-      label: 'Manufacturer', 
-      description: 'I manufacture products',
-      icon: '🏭',
-      gradient: 'from-blue-500 to-blue-600'
+    {
+      value: "MANUFACTURER",
+      label: "Manufacturer",
+      description: "I manufacture products",
+      icon: "🏭",
+      gradient: "from-blue-500 to-blue-600",
     },
-    { 
-      value: 'WHOLESALER', 
-      label: 'Wholesaler', 
-      description: 'I sell products from manufacturers',
-      icon: '🏪',
-      gradient: 'from-green-500 to-green-600'
+    {
+      value: "WHOLESALER",
+      label: "Wholesaler",
+      description: "I sell products from manufacturers",
+      icon: "🏪",
+      gradient: "from-green-500 to-green-600",
     },
-    { 
-      value: 'RETAILER', 
-      label: 'Retailer', 
-      description: 'I connect buyers and sellers',
-      icon: '🤝',
-      gradient: 'from-purple-500 to-purple-600'
-    }
+    {
+      value: "RETAILER",
+      label: "Retailer",
+      description: "I connect buyers and sellers",
+      icon: "🤝",
+      gradient: "from-purple-500 to-purple-600",
+    },
   ];
 
   // Load existing vendor profile on component mount
@@ -72,18 +104,22 @@ const VendorOnboarding = ({ onComplete }) => {
       try {
         setInitialLoading(true);
         const { vendor, completion } = await vendorService.getVendorProfile();
-        
+
         // Set form data from existing vendor profile
         if (vendor) {
           setFormData({
-            vendorType: vendor.vendorType || '',
-            businessName: vendor.businessName || '',
-            businessAddress1: vendor.businessAddress1 || '',
-            businessAddress2: vendor.businessAddress2 || '',
-            city: vendor.city || '',
-            state: vendor.state || '',
-            postalCode: vendor.postalCode || '',
-            gstNumber: vendor.gstNumber || ''
+            vendorType: vendor.vendorType || "",
+            businessName: vendor.businessName || "",
+            businessAddress1: vendor.businessAddress1 || "",
+            businessAddress2: vendor.businessAddress2 || "",
+            city: vendor.city || "",
+            state: vendor.state || "",
+            postalCode: vendor.postalCode || "",
+            verificationType: vendor.verificationType || "gst", // Default to GST
+            gstNumber: vendor.gstNumber || "",
+            idType: vendor.idType || "",
+            idNumber: vendor.idNumber || "",
+            documentFile: vendor.documentFile || null,
           });
         }
 
@@ -91,13 +127,13 @@ const VendorOnboarding = ({ onComplete }) => {
         if (completion) {
           setCompletion(completion);
           setCurrentStep(completion.currentStep || 1);
-          
+
           // Only redirect if explicitly completed AND onComplete is called
           // Don't auto-redirect on page load
         }
       } catch (error) {
-        console.error('Failed to load vendor profile:', error);
-        addToast('Failed to load your profile. Starting fresh.', 'warning');
+        console.error("Failed to load vendor profile:", error);
+        addToast("Failed to load your profile. Starting fresh.", "warning");
       } finally {
         setInitialLoading(false);
       }
@@ -107,63 +143,116 @@ const VendorOnboarding = ({ onComplete }) => {
   }, [addToast]);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
     // Clear field error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [field]: ''
+        [field]: "",
+      }));
+    }
+
+    // Clear related errors when verification type changes
+    if (field === "verificationType") {
+      setErrors((prev) => ({
+        ...prev,
+        gstNumber: "",
+        idType: "",
+        idNumber: "",
+        documentFile: "",
       }));
     }
   };
 
   const handleVendorTypeSelect = (vendorType) => {
-    handleInputChange('vendorType', vendorType);
+    handleInputChange("vendorType", vendorType);
+  };
+
+  const handleFileUpload = (file) => {
+    setFormData((prev) => ({ ...prev, documentFile: file }));
+
+    // Clear file error when user selects a file
+    if (errors.documentFile) {
+      setErrors((prev) => ({
+        ...prev,
+        documentFile: "",
+      }));
+    }
   };
 
   const validateStep = (step) => {
     const newErrors = {};
-    
+
     switch (step) {
       case 1:
         if (!formData.vendorType) {
-          newErrors.vendorType = 'Please select a vendor type';
+          newErrors.vendorType = "Please select a vendor type";
         }
         break;
-        
+
       case 2:
         if (!formData.businessName.trim()) {
-          newErrors.businessName = 'Business name is required';
+          newErrors.businessName = "Business name is required";
         }
         if (!formData.businessAddress1.trim()) {
-          newErrors.businessAddress1 = 'Business address is required';
+          newErrors.businessAddress1 = "Business address is required";
         }
         if (!formData.city.trim()) {
-          newErrors.city = 'City is required';
+          newErrors.city = "City is required";
         }
         if (!formData.state.trim()) {
-          newErrors.state = 'State is required';
+          newErrors.state = "State is required";
         }
         if (!formData.postalCode.trim()) {
-          newErrors.postalCode = 'Postal code is required';
+          newErrors.postalCode = "Postal code is required";
         } else if (!/^\d{6}$/.test(formData.postalCode)) {
-          newErrors.postalCode = 'Please enter a valid 6-digit postal code';
+          newErrors.postalCode = "Please enter a valid 6-digit postal code";
         }
         break;
-        
+
       case 3:
-        if (!formData.gstNumber.trim()) {
-          newErrors.gstNumber = 'GST number is required';
-        } else if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(formData.gstNumber)) {
-          newErrors.gstNumber = 'Please enter a valid GST number';
+        if (formData.verificationType === "gst") {
+          if (!formData.gstNumber.trim()) {
+            newErrors.gstNumber = "GST number is required";
+          } else if (
+            !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+              formData.gstNumber
+            )
+          ) {
+            newErrors.gstNumber = "Please enter a valid GST number";
+          }
+        } else if (formData.verificationType === "manual") {
+          if (!formData.idType) {
+            newErrors.idType = "Please select an ID type";
+          }
+          if (!formData.idNumber.trim()) {
+            newErrors.idNumber = "ID number is required";
+          } else {
+            // Validate based on selected ID type
+            if (formData.idType === "aadhaar") {
+              if (!/^\d{12}$/.test(formData.idNumber.replace(/\s/g, ""))) {
+                newErrors.idNumber =
+                  "Please enter a valid 12-digit Aadhaar number";
+              }
+            } else if (formData.idType === "pan") {
+              if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.idNumber)) {
+                newErrors.idNumber =
+                  "Please enter a valid PAN number (e.g., ABCDE1234F)";
+              }
+            }
+          }
+          if (!formData.documentFile) {
+            newErrors.documentFile =
+              "Please upload a document for verification";
+          }
         }
         break;
-        
+
       default:
         break;
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -176,13 +265,13 @@ const VendorOnboarding = ({ onComplete }) => {
     setLoading(true);
     try {
       let result;
-      
+
       switch (currentStep) {
         case 1:
           result = await vendorService.updateStep1(formData.vendorType);
-          addToast('Vendor type updated successfully!', 'success');
+          addToast("Vendor type updated successfully!", "success");
           break;
-          
+
         case 2:
           result = await vendorService.updateStep2({
             businessName: formData.businessName,
@@ -190,16 +279,28 @@ const VendorOnboarding = ({ onComplete }) => {
             businessAddress2: formData.businessAddress2,
             city: formData.city,
             state: formData.state,
-            postalCode: formData.postalCode
+            postalCode: formData.postalCode,
           });
-          addToast('Business information updated successfully!', 'success');
+          addToast("Business information updated successfully!", "success");
           break;
-          
+
         case 3:
-          result = await vendorService.updateStep3(formData.gstNumber);
-          addToast('Documents updated successfully!', 'success');
+          const step3Data = {
+            verificationType: formData.verificationType,
+          };
+
+          if (formData.verificationType === "gst") {
+            step3Data.gstNumber = formData.gstNumber;
+          } else {
+            step3Data.idType = formData.idType;
+            step3Data.idNumber = formData.idNumber;
+            step3Data.documentFile = formData.documentFile;
+          }
+
+          result = await vendorService.updateStep3(step3Data);
+          addToast("Documents updated successfully!", "success");
           break;
-          
+
         default:
           break;
       }
@@ -207,11 +308,14 @@ const VendorOnboarding = ({ onComplete }) => {
       // Update completion status
       if (result && result.completion) {
         setCompletion(result.completion);
-        
+
         if (result.completion.isComplete) {
           // Mark onboarding as complete
-          localStorage.setItem('vendorOnboarded', 'true');
-          addToast('Onboarding completed successfully! Welcome to VendorHub!', 'success');
+          localStorage.setItem("vendorOnboarded", "true");
+          addToast(
+            "Onboarding completed successfully! Welcome to VendorHub!",
+            "success"
+          );
           // Only redirect when explicitly calling onComplete
           setTimeout(() => {
             if (onComplete) {
@@ -227,8 +331,8 @@ const VendorOnboarding = ({ onComplete }) => {
         setCurrentStep(currentStep + 1);
       }
     } catch (error) {
-      console.error('Failed to update step:', error);
-      addToast(error.message || 'Failed to update. Please try again.', 'error');
+      console.error("Failed to update step:", error);
+      addToast(error.message || "Failed to update. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -243,18 +347,44 @@ const VendorOnboarding = ({ onComplete }) => {
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return formData.vendorType !== '';
+        return formData.vendorType !== "";
       case 2:
-        return formData.businessName && formData.businessAddress1 && formData.city && formData.state && formData.postalCode && /^\d{6}$/.test(formData.postalCode);
+        return (
+          formData.businessName &&
+          formData.businessAddress1 &&
+          formData.city &&
+          formData.state &&
+          formData.postalCode &&
+          /^\d{6}$/.test(formData.postalCode)
+        );
       case 3:
-        return formData.gstNumber && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(formData.gstNumber);
+        if (formData.verificationType === "gst") {
+          return (
+            formData.gstNumber &&
+            /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+              formData.gstNumber
+            )
+          );
+        } else if (formData.verificationType === "manual") {
+          const isIdValid =
+            formData.idType && formData.idNumber && formData.documentFile;
+          if (!isIdValid) return false;
+
+          // Additional validation based on ID type
+          if (formData.idType === "aadhaar") {
+            return /^\d{12}$/.test(formData.idNumber.replace(/\s/g, ""));
+          } else if (formData.idType === "pan") {
+            return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.idNumber);
+          }
+        }
+        return false;
       default:
         return false;
     }
   };
 
-  const progressPercentage = completion 
-    ? completion.completionPercentage 
+  const progressPercentage = completion
+    ? completion.completionPercentage
     : (currentStep / 3) * 100;
 
   if (initialLoading) {
@@ -272,7 +402,7 @@ const VendorOnboarding = ({ onComplete }) => {
       <div className="w-full max-w-4xl">
         {/* Compact Header */}
         <div className="text-center mb-6">
-          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-6 text-white mb-4">            
+          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-6 text-white mb-4">
             <h1 className="text-2xl lg:text-3xl font-bold mb-2">
               Join Our <span className="text-blue-200">Marketplace</span>
             </h1>
@@ -288,12 +418,14 @@ const VendorOnboarding = ({ onComplete }) => {
             {steps.map((step, index) => (
               <React.Fragment key={step.id}>
                 <div className="flex flex-col items-center flex-1">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-all duration-300",
-                    currentStep >= step.id 
-                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' 
-                      : 'bg-white border-2 border-gray-200 text-gray-400'
-                  )}>
+                  <div
+                    className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-all duration-300",
+                      currentStep >= step.id
+                        ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
+                        : "bg-white border-2 border-gray-200 text-gray-400"
+                    )}
+                  >
                     {completion?.steps[`step${step.id}`] ? (
                       <CheckCircle className="h-5 w-5" />
                     ) : (
@@ -301,29 +433,30 @@ const VendorOnboarding = ({ onComplete }) => {
                     )}
                   </div>
                   <div className="mt-2 text-center">
-                    <p className={cn(
-                      "text-sm font-semibold",
-                      currentStep >= step.id ? 'text-blue-600' : 'text-gray-500'
-                    )}>
+                    <p
+                      className={cn(
+                        "text-sm font-semibold",
+                        currentStep >= step.id
+                          ? "text-blue-600"
+                          : "text-gray-500"
+                      )}
+                    >
                       {step.title}
                     </p>
                   </div>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={cn(
-                    "flex-1 h-1 mx-4 rounded-full transition-all duration-500",
-                    completion?.steps[`step${step.id}`]
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600' 
-                      : 'bg-gray-200'
-                  )} />
+                  <div
+                    className={cn(
+                      "flex-1 h-1 mx-4 rounded-full transition-all duration-500",
+                      completion?.steps[`step${step.id}`]
+                        ? "bg-gradient-to-r from-blue-500 to-blue-600"
+                        : "bg-gray-200"
+                    )}
+                  />
                 )}
               </React.Fragment>
             ))}
-          </div>
-          <Progress value={progressPercentage} className="h-2 bg-gray-200" />
-          <div className="flex justify-between text-sm text-gray-500 mt-1">
-            <span>Step {currentStep} of 3</span>
-            <span>{Math.round(progressPercentage)}% Complete</span>
           </div>
         </div>
 
@@ -332,15 +465,21 @@ const VendorOnboarding = ({ onComplete }) => {
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 text-white">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                {React.createElement(steps[currentStep - 1].icon, { className: "w-5 h-5" })}
+                {React.createElement(steps[currentStep - 1].icon, {
+                  className: "w-5 h-5",
+                })}
               </div>
               <div>
-                <h2 className="text-xl font-bold">Step {currentStep}: {steps[currentStep - 1].title}</h2>
-                <p className="text-blue-100 text-sm">{steps[currentStep - 1].description}</p>
+                <h2 className="text-xl font-bold">
+                  Step {currentStep}: {steps[currentStep - 1].title}
+                </h2>
+                <p className="text-blue-100 text-sm">
+                  {steps[currentStep - 1].description}
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div className="p-6 space-y-6">
             {/* Step 1: Vendor Type Selection */}
             {currentStep === 1 && (
@@ -353,7 +492,7 @@ const VendorOnboarding = ({ onComplete }) => {
                     Choose the option that best describes your business
                   </p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {vendorTypes.map((type) => (
                     <button
@@ -363,9 +502,9 @@ const VendorOnboarding = ({ onComplete }) => {
                       className={cn(
                         "relative group cursor-pointer rounded-xl border-2 p-4 transition-all duration-300 hover:shadow-lg",
                         formData.vendorType === type.value
-                          ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 shadow-md'
-                          : 'border-gray-200 bg-white hover:border-blue-300',
-                        loading && 'opacity-50 cursor-not-allowed'
+                          ? "border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 shadow-md"
+                          : "border-gray-200 bg-white hover:border-blue-300",
+                        loading && "opacity-50 cursor-not-allowed"
                       )}
                     >
                       {formData.vendorType === type.value && (
@@ -375,7 +514,7 @@ const VendorOnboarding = ({ onComplete }) => {
                           </div>
                         </div>
                       )}
-                      
+
                       <div className="text-center space-y-2">
                         <div className="text-3xl">{type.icon}</div>
                         <h4 className="text-lg font-bold text-gray-900">
@@ -393,7 +532,9 @@ const VendorOnboarding = ({ onComplete }) => {
                   <div className="bg-red-50 border border-red-200 rounded-xl p-3">
                     <div className="flex items-center space-x-2">
                       <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
-                      <p className="text-red-800 text-sm">{errors.vendorType}</p>
+                      <p className="text-red-800 text-sm">
+                        {errors.vendorType}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -403,9 +544,18 @@ const VendorOnboarding = ({ onComplete }) => {
                     <div className="flex items-center space-x-3">
                       <CheckCircle className="h-5 w-5 text-green-600" />
                       <div>
-                        <h4 className="font-semibold text-green-800">Perfect Choice!</h4>
+                        <h4 className="font-semibold text-green-800">
+                          Perfect Choice!
+                        </h4>
                         <p className="text-green-700 text-sm">
-                          You selected: <strong>{vendorTypes.find(t => t.value === formData.vendorType)?.label}</strong>
+                          You selected:{" "}
+                          <strong>
+                            {
+                              vendorTypes.find(
+                                (t) => t.value === formData.vendorType
+                              )?.label
+                            }
+                          </strong>
                         </p>
                       </div>
                     </div>
@@ -433,11 +583,15 @@ const VendorOnboarding = ({ onComplete }) => {
                     </label>
                     <Input
                       value={formData.businessName}
-                      onChange={(e) => handleInputChange('businessName', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("businessName", e.target.value)
+                      }
                       placeholder="Enter your business name"
                       disabled={loading}
                       className={`h-10 border-2 rounded-lg ${
-                        errors.businessName ? 'border-red-500' : 'border-gray-200'
+                        errors.businessName
+                          ? "border-red-500"
+                          : "border-gray-200"
                       }`}
                     />
                     {errors.businessName && (
@@ -447,18 +601,22 @@ const VendorOnboarding = ({ onComplete }) => {
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
                       Business Address Line 1 *
                     </label>
                     <Input
                       value={formData.businessAddress1}
-                      onChange={(e) => handleInputChange('businessAddress1', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("businessAddress1", e.target.value)
+                      }
                       placeholder="Enter your business address"
                       disabled={loading}
                       className={`h-10 border-2 rounded-lg ${
-                        errors.businessAddress1 ? 'border-red-500' : 'border-gray-200'
+                        errors.businessAddress1
+                          ? "border-red-500"
+                          : "border-gray-200"
                       }`}
                     />
                     {errors.businessAddress1 && (
@@ -475,7 +633,9 @@ const VendorOnboarding = ({ onComplete }) => {
                     </label>
                     <Input
                       value={formData.businessAddress2}
-                      onChange={(e) => handleInputChange('businessAddress2', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("businessAddress2", e.target.value)
+                      }
                       placeholder="Suite, apartment, etc."
                       disabled={loading}
                       className="h-10 border-2 border-gray-200 rounded-lg"
@@ -489,11 +649,13 @@ const VendorOnboarding = ({ onComplete }) => {
                       </label>
                       <Input
                         value={formData.city}
-                        onChange={(e) => handleInputChange('city', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("city", e.target.value)
+                        }
                         placeholder="City"
                         disabled={loading}
                         className={`h-10 border-2 rounded-lg ${
-                          errors.city ? 'border-red-500' : 'border-gray-200'
+                          errors.city ? "border-red-500" : "border-gray-200"
                         }`}
                       />
                       {errors.city && (
@@ -510,11 +672,13 @@ const VendorOnboarding = ({ onComplete }) => {
                       </label>
                       <Input
                         value={formData.state}
-                        onChange={(e) => handleInputChange('state', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("state", e.target.value)
+                        }
                         placeholder="State"
                         disabled={loading}
                         className={`h-10 border-2 rounded-lg ${
-                          errors.state ? 'border-red-500' : 'border-gray-200'
+                          errors.state ? "border-red-500" : "border-gray-200"
                         }`}
                       />
                       {errors.state && (
@@ -531,12 +695,16 @@ const VendorOnboarding = ({ onComplete }) => {
                       </label>
                       <Input
                         value={formData.postalCode}
-                        onChange={(e) => handleInputChange('postalCode', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("postalCode", e.target.value)
+                        }
                         placeholder="000000"
                         maxLength={6}
                         disabled={loading}
                         className={`h-10 border-2 rounded-lg ${
-                          errors.postalCode ? 'border-red-500' : 'border-gray-200'
+                          errors.postalCode
+                            ? "border-red-500"
+                            : "border-gray-200"
                         }`}
                       />
                       {errors.postalCode && (
@@ -559,83 +727,263 @@ const VendorOnboarding = ({ onComplete }) => {
                     Upload verification documents
                   </h3>
                   <p className="text-gray-600">
-                    Please provide your GST number for verification
+                    Please provide your verification details
                   </p>
                 </div>
-                
-                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                  <div className="flex items-center space-x-3">
-                    <Shield className="w-5 h-5 text-yellow-600" />
+
+                {/* Radio Button Selection */}
+                <div className="flex space-x-6">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      name="verificationType"
+                      value="gst"
+                      checked={formData.verificationType === "gst"}
+                      onChange={() =>
+                        handleInputChange("verificationType", "gst")
+                      }
+                      className="text-blue-600"
+                    />
+                    <span className="text-gray-700 text-sm font-medium">
+                      Verification via GST
+                    </span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      name="verificationType"
+                      value="manual"
+                      checked={formData.verificationType === "manual"}
+                      onChange={() =>
+                        handleInputChange("verificationType", "manual")
+                      }
+                      className="text-blue-600"
+                    />
+                    <span className="text-gray-700 text-sm font-medium">
+                      Manual Verification
+                    </span>
+                  </label>
+                </div>
+
+                {/* GST Input */}
+                {formData.verificationType === "gst" && (
+                  <div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                      <div className="flex items-center space-x-3">
+                        <Shield className="w-5 h-5 text-blue-600" />
+                        <div>
+                          <h4 className="font-semibold text-gray-900">
+                            GST Verification Required
+                          </h4>
+                          <p className="text-gray-700 text-sm">
+                            Please provide your valid GST number to verify your
+                            business registration.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <label className="block text-sm font-semibold text-gray-700 mt-4">
+                      GST Number *
+                    </label>
+
+                    <Input
+                      value={formData.gstNumber}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "gstNumber",
+                          e.target.value.toUpperCase()
+                        )
+                      }
+                      placeholder="22AAAAA0000A1Z5"
+                      maxLength={15}
+                      disabled={loading}
+                      className={`h-10 border-2 rounded-lg font-mono ${
+                        errors.gstNumber ? "border-red-500" : "border-gray-200"
+                      }`}
+                    />
+                    {errors.gstNumber && (
+                      <p className="text-red-500 text-xs mt-1 flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        {errors.gstNumber}
+                      </p>
+                    )}
+                    <p className="text-gray-600 text-xs mt-1">
+                      Format: 22AAAAA0000A1Z5 (15 characters)
+                    </p>
+                  </div>
+                )}
+
+                {/* Manual Verification */}
+                {formData.verificationType === "manual" && (
+                  <div className="space-y-4">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                      <div className="flex items-center space-x-3">
+                        <Shield className="w-5 h-5 text-yellow-600" />
+                        <div>
+                          <h4 className="font-semibold text-gray-900">
+                            Manual Verification Required
+                          </h4>
+                          <p className="text-gray-700 text-sm">
+                            Please provide your valid document to verify your
+                            business registration.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div>
-                      <h4 className="font-semibold text-gray-900">GST Verification Required</h4>
-                      <p className="text-gray-700 text-sm">
-                        Please provide your valid GST number to verify your business registration.
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Select ID Type *
+                      </label>
+                      <select
+                        value={formData.idType}
+                        onChange={(e) =>
+                          handleInputChange("idType", e.target.value)
+                        }
+                        disabled={loading}
+                        className={`w-full h-10 border-2 rounded-lg text-sm text-gray-800 px-3 ${
+                          errors.idType ? "border-red-500" : "border-gray-200"
+                        }`}
+                      >
+                        <option value="">-- Select ID Type --</option>
+                        <option value="aadhaar">Aadhaar Card</option>
+                        <option value="pan">PAN Card</option>
+                      </select>
+                      {errors.idType && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          {errors.idType}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        {formData.idType === "aadhaar"
+                          ? "Aadhaar Number"
+                          : formData.idType === "pan"
+                          ? "PAN Number"
+                          : "ID Number"}{" "}
+                        *
+                      </label>
+                      <Input
+                        value={formData.idNumber}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "idNumber",
+                            formData.idType === "pan"
+                              ? e.target.value.toUpperCase()
+                              : e.target.value
+                          )
+                        }
+                        placeholder={
+                          formData.idType === "aadhaar"
+                            ? "1234 5678 9012"
+                            : formData.idType === "pan"
+                            ? "ABCDE1234F"
+                            : "Enter your ID number"
+                        }
+                        maxLength={
+                          formData.idType === "aadhaar"
+                            ? 14
+                            : formData.idType === "pan"
+                            ? 10
+                            : 20
+                        }
+                        disabled={loading}
+                        className={`h-10 border-2 rounded-lg font-mono ${
+                          errors.idNumber ? "border-red-500" : "border-gray-200"
+                        }`}
+                      />
+                      {errors.idNumber && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          {errors.idNumber}
+                        </p>
+                      )}
+                      {formData.idType && (
+                        <p className="text-gray-600 text-xs mt-1">
+                          {formData.idType === "aadhaar"
+                            ? "Format: 1234 5678 9012 (12 digits)"
+                            : "Format: ABCDE1234F (5 letters + 4 digits + 1 letter)"}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Upload Document *
+                      </label>
+                      <input
+                        disabled
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={(e) => handleFileUpload(e.target.files[0])}
+                        className={`w-full block border-2 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:bg-blue-100 file:text-blue-800 hover:file:bg-blue-200 ${
+                          errors.documentFile
+                            ? "border-red-500"
+                            : "border-gray-200"
+                        }`}
+                      />
+                      {errors.documentFile && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          {errors.documentFile}
+                        </p>
+                      )}
+                      <p className="text-gray-600 text-xs mt-1">
+                        Accepted formats: JPG, PNG, PDF (Max 5MB)
+                      </p>
+                      {formData.documentFile && (
+                        <p className="text-green-600 text-xs mt-1 flex items-center">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          File selected: {formData.documentFile.name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Info Note */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-3">
+                  <div className="flex items-start space-x-3">
+                    <InfoIcon className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <h5 className="font-semibold text-blue-800 text-sm mb-1">
+                        Profile Review Process
+                      </h5>
+                      <p className="text-blue-700 text-xs">
+                        Your profile will be reviewed within 24-48 hours. You'll
+                        receive an email notification once approved.
                       </p>
                     </div>
                   </div>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    GST Number *
-                  </label>
-                  <Input
-                    value={formData.gstNumber}
-                    onChange={(e) => handleInputChange('gstNumber', e.target.value.toUpperCase())}
-                    placeholder="22AAAAA0000A1Z5"
-                    maxLength={15}
-                    disabled={loading}
-                    className={`h-10 border-2 rounded-lg font-mono ${
-                      errors.gstNumber ? 'border-red-500' : 'border-gray-200'
-                    }`}
-                  />
-                  {errors.gstNumber && (
-                    <p className="text-red-500 text-xs mt-1 flex items-center">
-                      <AlertCircle className="h-3 w-3 mr-1" />
-                      {errors.gstNumber}
-                    </p>
-                  )}
-                  <p className="text-gray-600 text-xs mt-1">
-                    Format: 22AAAAA0000A1Z5 (15 characters)
-                  </p>
-                </div>
-
-                {formData.gstNumber && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(formData.gstNumber) && (
-                  <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-4">
-                    <div className="flex items-start space-x-3">
-                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                      <div>
-                        <div className="bg-white/60 rounded-lg p-3">
-                          <h5 className="font-semibold text-green-800 text-sm mb-1">Profile review within 24-48 hours</h5>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
             {/* Fixed Navigation Buttons */}
             <div className="flex justify-between pt-6 border-t border-gray-100">
-              <Button 
+              <Button
                 onClick={handlePrevious}
                 disabled={currentStep === 1 || loading}
                 className={`flex items-center px-6 py-2 rounded-xl font-semibold transition-all shadow-md ${
                   currentStep === 1 || loading
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
-                    : 'bg-gray-600 text-white hover:bg-gray-700 border border-gray-600 hover:shadow-lg'
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300"
+                    : "bg-gray-600 text-white hover:bg-gray-700 border border-gray-600 hover:shadow-lg"
                 }`}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Previous
               </Button>
-              
-              <Button 
+
+              <Button
                 onClick={handleNext}
                 disabled={!isStepValid() || loading}
                 className={`flex items-center px-6 py-2 rounded-xl font-semibold transition-all shadow-md ${
                   isStepValid() && !loading
-                    ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white hover:shadow-lg" 
+                    ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white hover:shadow-lg"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed border border-gray-300"
                 }`}
               >
@@ -646,7 +994,7 @@ const VendorOnboarding = ({ onComplete }) => {
                   </>
                 ) : currentStep === 3 ? (
                   <>
-                    Complete Setup
+                    Submit for Verification
                     <CheckCircle className="h-4 w-4 ml-2" />
                   </>
                 ) : (

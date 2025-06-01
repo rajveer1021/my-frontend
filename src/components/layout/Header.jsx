@@ -31,15 +31,10 @@ export const Header = ({
 }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  
+
   // Use the safe user hook instead of direct useAuth
-  const { 
-    displayName, 
-    email, 
-    initials, 
-    isAuthenticated, 
-    loading 
-  } = useSafeUser();
+  const { displayName, email, initials, isAuthenticated, loading } =
+    useSafeUser();
 
   const handleLogout = () => {
     logout();
@@ -107,7 +102,7 @@ export const Header = ({
     return null;
   }
 
-  ('Header: Rendering with user data:', { displayName, email, initials }); // Debug log
+  "Header: Rendering with user data:", { displayName, email, initials }; // Debug log
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-white/20 shadow-lg">
@@ -194,9 +189,7 @@ export const Header = ({
                       <p className="font-medium text-gray-900 truncate">
                         {displayName}
                       </p>
-                      <p className="text-sm text-gray-500 truncate">
-                        {email}
-                      </p>
+                      <p className="text-sm text-gray-500 truncate">{email}</p>
                     </div>
                   </div>
                 </div>
@@ -205,12 +198,12 @@ export const Header = ({
                 <div className="py-2">
                   <DropdownMenuItem
                     onClick={() => onPageChange("settings")}
-                    className="flex items-center px-4 py-3 hover:bg-gray-50 transition-colors rounded-lg mx-2"
+                    className="flex px-4 py-3 hover:bg-gray-50 transition-colors rounded-lg"
                   >
                     <div className="p-2 rounded-lg bg-blue-100 mr-3">
                       <Settings className="h-4 w-4 text-blue-600" />
                     </div>
-                    <div>
+                    <div className="flex flex-col items-start">
                       <p className="font-medium text-gray-900">Settings</p>
                       <p className="text-xs text-gray-500">
                         Preferences & privacy
@@ -224,12 +217,12 @@ export const Header = ({
                 <div className="py-2">
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    className="flex items-center px-4 py-3 hover:bg-red-50 transition-colors rounded-lg mx-2 text-red-600"
+                    className="flex px-4 py-3 hover:bg-red-50 transition-colors rounded-lg text-red-600"
                   >
                     <div className="p-2 rounded-lg bg-red-100 mr-3">
                       <LogOut className="h-4 w-4 text-red-600" />
                     </div>
-                    <div>
+                    <div className="flex flex-col items-start">
                       <p className="font-medium">Sign Out</p>
                       <p className="text-xs text-red-500">
                         Log out of your account

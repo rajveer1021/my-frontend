@@ -95,7 +95,7 @@ export const ProductCard = ({
         )}
 
         {/* Stock Status Badge */}
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3 w-fit-content">
           <span className={cn(
             'px-2 py-1 text-xs font-medium text-white rounded-full',
             stockStatus.color
