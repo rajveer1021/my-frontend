@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.jsx - Fixed method names
+// src/contexts/AuthContext.jsx - Fixed with bypass
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { authService } from "../services/authService";
 
@@ -50,8 +50,6 @@ export const AuthProvider = ({ children }) => {
         return null;
       }
 
-      // Check if cache is still valid
-      const cacheAge = Date.now() - parseInt(timestamp);
       const parsedUser = JSON.parse(userData);
       return parsedUser;
     } catch (error) {
@@ -277,32 +275,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // FIXED: Method name should match the authService method
-  // UPDATED: Google login method with account type selection handling
-  const googleLogin = async (googleToken, accountType = null) => {
+  // BYPASS: Google login method - simplified without account type selection
+  const googleLogin = async (googleToken, accountType = 'VENDOR') => {
     try {
       setLoading(true);
       setError(null);
 
-      const result = await authService.googleAuth(googleToken, accountType);
+      console.log('🔧 Google Login Bypass: Using VENDOR account type');
 
-      // Check if account type selection is needed
-      if (result.needsAccountTypeSelection) {
-        return {
-          needsAccountTypeSelection: true,
-          userInfo: result.userInfo,
-          message: result.message,
-        };
-      }
+      // BYPASS: Always use VENDOR and skip account type selection entirely
+      const result = await authService.googleAuth(googleToken, 'VENDOR');
 
-      // Normal authentication success
+      // Since we're bypassing account type selection, we should always get a user back
       if (result && result.user) {
         updateUserState(result.user);
 
         return {
           success: true,
           user: result.user,
-          message: result.message,
+          message: result.message || 'Welcome to Multi-Vendor!',
         };
       }
 
@@ -310,41 +301,6 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("❌ Google login error:", error);
       const errorMessage = error.message || "Google login failed";
-      setError(errorMessage);
-      setIsAuthenticated(false);
-      setUser(null);
-      clearUserFromStorage();
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // NEW METHOD: Set account type for Google users
-  const setGoogleUserAccountType = async (userInfo, accountType) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const result = await authService.setGoogleUserAccountType(
-        userInfo,
-        accountType
-      );
-
-      if (result && result.user) {
-        updateUserState(result.user);
-
-        return {
-          success: true,
-          user: result.user,
-          message: result.message,
-        };
-      }
-
-      throw new Error("Invalid response from account type setup");
-    } catch (error) {
-      console.error("❌ Set account type error:", error);
-      const errorMessage = error.message || "Failed to set account type";
       setError(errorMessage);
       setIsAuthenticated(false);
       setUser(null);
@@ -441,7 +397,6 @@ export const AuthProvider = ({ children }) => {
       const currentUser = await authService.getCurrentUser();
       if (currentUser && isValidUserData(currentUser)) {
         updateUserState(currentUser);
-      } else {
       }
     } catch (error) {
       console.error("Failed to refresh user data:", error);
@@ -450,23 +405,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-const value = {
-  user,
-  loading,
-  error,
-  isAuthenticated,
-  login,
-  signup,
-  googleLogin, // Updated method
-  setGoogleUserAccountType, // New method
-  logout,
-  updateUser,
-  requestPasswordReset,
-  resetPassword,
-  clearError,
-  refreshUser,
-  getToken: authService.getToken
-};
+  const value = {
+    user,
+    loading,
+    error,
+    isAuthenticated,
+    login,
+    signup,
+    googleLogin, // Simplified method without account type selection
+    logout,
+    updateUser,
+    requestPasswordReset,
+    resetPassword,
+    clearError,
+    refreshUser,
+    getToken: authService.getToken
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

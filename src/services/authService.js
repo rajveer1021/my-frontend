@@ -1,4 +1,4 @@
-// src/services/authService.js - Fixed frontend auth service
+// src/services/authService.js - Fixed with VENDOR bypass
 import { apiService } from './api';
 
 export const authService = {
@@ -61,174 +61,116 @@ export const authService = {
     }
   },
 
-async googleAuth(googleCredential, accountType = null) {
-  try {      
-    if (!googleCredential) {
-      throw new Error('Google credential is required');
-    }
-
-    const payload = {
-      credential: googleCredential,
-    };
-
-    // Only include accountType if provided (for returning users or after selection)
-    if (accountType) {
-      payload.accountType = accountType.toUpperCase();
-    }
-
-    const response = await apiService.post('/auth/google', payload);
-
-    // Check if account type selection is needed
-    if (response.success && response.needsAccountTypeSelection) {
-      return {
-        needsAccountTypeSelection: true,
-        userInfo: response.userInfo,
-        message: response.message || 'Please select your account type'
-      };
-    }
-
-    // Normal authentication success
-    if (response.success && response.data && response.data.token) {
-      const authToken = response.data.token;
-      localStorage.setItem('authToken', authToken);
-      
-      const user = this.transformUserData(response.data.user);
-
-      return {
-        success: true,
-        user,
-        token: authToken,
-        message: response.message || 'Google authentication successful'
-      };
-    }
-
-    throw new Error('Invalid response format from server');
-  } catch (error) {
-    console.error('❌ AuthService: Google auth error:', error);
-    
-    localStorage.removeItem('authToken');
-    
-    // Don't throw error for account type selection flow
-    if (error.response?.data?.needsAccountTypeSelection) {
-      return {
-        needsAccountTypeSelection: true,
-        userInfo: error.response.data.userInfo,
-        message: error.response.data.message
-      };
-    }
-    
-    // Provide specific error messages based on response
-    let errorMessage = 'Google authentication failed';
-    
-    if (error.status) {
-      const status = error.status;
-      const serverMessage = error.message;
-      
-      switch (status) {
-        case 400:
-          errorMessage = serverMessage || 'Invalid Google credential';
-          break;
-        case 401:
-          errorMessage = 'Google authentication failed. Please try again.';
-          break;
-        case 409:
-          errorMessage = serverMessage || 'An account with this email already exists with a different account type';
-          break;
-        case 422:
-          errorMessage = serverMessage || 'Invalid account type or missing data';
-          break;
-        case 500:
-          errorMessage = 'Server error during authentication. Please try again later.';
-          break;
-        default:
-          errorMessage = serverMessage || `Authentication failed (Error ${status})`;
+  // BYPASS: Google authentication with default VENDOR account type
+  async googleAuth(googleCredential, accountType = 'VENDOR') {
+    try {      
+      if (!googleCredential) {
+        throw new Error('Google credential is required');
       }
-    } else if (error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
-      errorMessage = 'Network error. Please check your connection and try again.';
-    } else {
-      errorMessage = error.message || 'Google authentication failed';
-    }
-    
-    throw new Error(errorMessage);
-  }
-},
 
-// NEW METHOD: Set account type for Google users
-async setGoogleUserAccountType(userInfo, accountType) {
-  try {
-    console.log('🔧 Setting Google user account type:', accountType);
-
-    if (!userInfo || !userInfo.email || !userInfo.googleId) {
-      throw new Error('User information is required');
-    }
-
-    if (!accountType || !['BUYER', 'VENDOR'].includes(accountType.toUpperCase())) {
-      throw new Error('Valid account type is required');
-    }
-
-    const payload = {
-      email: userInfo.email,
-      googleId: userInfo.googleId,
-      accountType: accountType.toUpperCase(),
-      userInfo: {
-        firstName: userInfo.firstName || userInfo.name?.split(' ')[0] || 'User',
-        lastName: userInfo.lastName || userInfo.name?.split(' ').slice(1).join(' ') || '',
-        name: userInfo.name,
-        picture: userInfo.picture
-      }
-    };
-
-    const response = await apiService.post('/auth/google/set-account-type', payload);
-
-    if (response.success && response.data && response.data.token) {
-      const authToken = response.data.token;
-      localStorage.setItem('authToken', authToken);
-      
-      const user = this.transformUserData(response.data.user);
-
-      return {
-        success: true,
-        user,
-        token: authToken,
-        message: response.message || 'Account setup completed successfully'
+      // BYPASS: Always use VENDOR account type for deployment
+      const payload = {
+        credential: googleCredential,
+        accountType: 'VENDOR' // Force VENDOR for bypass
       };
-    }
 
-    throw new Error('Invalid response format from server');
-  } catch (error) {
-    console.error('❌ AuthService: Set account type error:', error);
-    
-    localStorage.removeItem('authToken');
-    
-    let errorMessage = 'Failed to set account type';
-    
-    if (error.status) {
-      const status = error.status;
-      const serverMessage = error.message;
-      
-      switch (status) {
-        case 400:
-          errorMessage = serverMessage || 'Invalid request data';
-          break;
-        case 409:
-          errorMessage = 'User account already exists';
-          break;
-        case 422:
-          errorMessage = serverMessage || 'Invalid account type';
-          break;
-        case 500:
-          errorMessage = 'Server error. Please try again later.';
-          break;
-        default:
-          errorMessage = serverMessage || `Request failed (Error ${status})`;
+      console.log('🔧 Google Auth Bypass: Using VENDOR account type');
+
+      const response = await apiService.post('/auth/google', payload);
+
+      // BYPASS: Skip account type selection flow entirely
+      if (response.success && response.data && response.data.token) {
+        const authToken = response.data.token;
+        localStorage.setItem('authToken', authToken);
+        
+        const user = this.transformUserData(response.data.user);
+
+        return {
+          success: true,
+          user,
+          token: authToken,
+          message: response.message || 'Google authentication successful'
+        };
       }
-    } else {
-      errorMessage = error.message || 'Failed to set account type';
+
+      // If the response indicates account type selection is needed, bypass it
+      if (response.success && response.needsAccountTypeSelection) {
+        console.log('🔧 Bypassing account type selection - calling setGoogleUserAccountType directly');
+        
+        // Try to set account type automatically
+        try {
+          const setAccountTypeResponse = await apiService.post('/auth/google/set-account-type', {
+            email: response.userInfo.email,
+            googleId: response.userInfo.googleId,
+            accountType: 'VENDOR',
+            userInfo: {
+              firstName: response.userInfo.firstName || response.userInfo.name?.split(' ')[0] || 'User',
+              lastName: response.userInfo.lastName || response.userInfo.name?.split(' ').slice(1).join(' ') || '',
+              name: response.userInfo.name,
+              picture: response.userInfo.picture
+            }
+          });
+
+          if (setAccountTypeResponse.success && setAccountTypeResponse.data && setAccountTypeResponse.data.token) {
+            const authToken = setAccountTypeResponse.data.token;
+            localStorage.setItem('authToken', authToken);
+            
+            const user = this.transformUserData(setAccountTypeResponse.data.user);
+
+            return {
+              success: true,
+              user,
+              token: authToken,
+              message: setAccountTypeResponse.message || 'Account created successfully with VENDOR access'
+            };
+          }
+        } catch (setAccountError) {
+          console.error('❌ Failed to set account type automatically:', setAccountError);
+          // Fall through to original error handling
+        }
+      }
+
+      throw new Error('Invalid response format from server');
+    } catch (error) {
+      console.error('❌ AuthService: Google auth error:', error);
+      
+      localStorage.removeItem('authToken');
+      
+      // Provide specific error messages based on response
+      let errorMessage = 'Google authentication failed';
+      
+      if (error.status) {
+        const status = error.status;
+        const serverMessage = error.message;
+        
+        switch (status) {
+          case 400:
+            errorMessage = serverMessage || 'Invalid Google credential';
+            break;
+          case 401:
+            errorMessage = 'Google authentication failed. Please try again.';
+            break;
+          case 409:
+            errorMessage = serverMessage || 'An account with this email already exists with a different account type';
+            break;
+          case 422:
+            errorMessage = serverMessage || 'Invalid account type or missing data';
+            break;
+          case 500:
+            errorMessage = 'Server error during authentication. Please try again later.';
+            break;
+          default:
+            errorMessage = serverMessage || `Authentication failed (Error ${status})`;
+        }
+      } else if (error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else {
+        errorMessage = error.message || 'Google authentication failed';
+      }
+      
+      throw new Error(errorMessage);
     }
-    
-    throw new Error(errorMessage);
-  }
-},
+  },
 
   async getCurrentUser() {
     try {

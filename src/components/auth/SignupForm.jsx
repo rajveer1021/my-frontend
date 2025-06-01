@@ -1,5 +1,4 @@
-// src/components/auth/SignupForm.jsx - Updated with account type selection
-
+// src/components/auth/SignupForm.jsx - Fixed with bypass
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../ui/Button";
@@ -17,14 +16,13 @@ import {
 } from "lucide-react";
 import { useToast } from "../ui/Toast";
 import { GoogleLogin } from "@react-oauth/google";
-import AccountTypeSelectionModal from './AccountTypeSelectionModal'; // Import the modal
 
 const SignupForm = ({ onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
-    userType: "vendor",
+    userType: "vendor", // Default to vendor for bypass
     password: "",
     confirmPassword: "",
   });
@@ -33,11 +31,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
   const [formErrors, setFormErrors] = useState({});
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // NEW: Account type selection state
-  const [showAccountTypeModal, setShowAccountTypeModal] = useState(false);
-  const [pendingGoogleUserInfo, setPendingGoogleUserInfo] = useState(null);
-
-  const { signup, loading, error, clearError, googleLogin, setGoogleUserAccountType } = useAuth();
+  const { signup, loading, error, clearError, googleLogin } = useAuth();
   const { addToast } = useToast();
 
   const validateForm = () => {
@@ -101,7 +95,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
     }
   };
 
-  // UPDATED: Google signup handler with account type selection
+  // BYPASS: Google signup handler - Always use VENDOR
   const handleGoogleSuccess = async (credentialResponse) => {
     if (googleLoading) return;
 
@@ -113,14 +107,13 @@ const SignupForm = ({ onSwitchToLogin }) => {
         throw new Error("No credential received from Google");
       }
 
-      // Send the credential to your backend without account type
-      const result = await googleLogin(credentialResponse.credential);
+      // BYPASS: Always pass VENDOR as account type for deployment
+      const result = await googleLogin(credentialResponse.credential, 'VENDOR');
 
-      // Check if account type selection is needed
+      // Handle account type selection flow (though we're bypassing it)
       if (result.needsAccountTypeSelection) {
-        console.log('🎯 Account type selection needed for signup');
-        setPendingGoogleUserInfo(result.userInfo);
-        setShowAccountTypeModal(true);
+        console.log('🎯 Account type selection needed for signup - but bypassing with VENDOR');
+        addToast("Setting up your vendor account...", "info");
         return;
       }
 
@@ -156,39 +149,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
     }
   };
 
-  // NEW: Handle account type confirmation
-  const handleAccountTypeConfirm = async (accountType) => {
-    if (!pendingGoogleUserInfo) {
-      addToast("Error: Missing user information", "error");
-      return;
-    }
-
-    try {
-      console.log('🔧 Setting account type for signup:', accountType);
-      
-      const result = await setGoogleUserAccountType(pendingGoogleUserInfo, accountType);
-      
-      if (result.success) {
-        setShowAccountTypeModal(false);
-        setPendingGoogleUserInfo(null);
-        addToast(
-          result.message || "Account created successfully! Welcome to Multi-Vendor!",
-          "success"
-        );
-      }
-    } catch (error) {
-      console.error('Set account type error:', error);
-      addToast(error.message || "Failed to set account type", "error");
-    }
-  };
-
-  // NEW: Handle account type modal close
-  const handleAccountTypeModalClose = () => {
-    setShowAccountTypeModal(false);
-    setPendingGoogleUserInfo(null);
-    setGoogleLoading(false);
-  };
-
   const handleGoogleError = () => {
     addToast(
       "Google sign-up failed. Please try again or use the form below.",
@@ -214,382 +174,338 @@ const SignupForm = ({ onSwitchToLogin }) => {
     }
   };
 
-  const isFormDisabled = loading || googleLoading || showAccountTypeModal;
+  const isFormDisabled = loading || googleLoading;
 
   return (
-    <>
-      <div className="space-y-4">
-        {/* Display general error */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 animate-fade-in">
-            <div className="flex items-center space-x-3">
-              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-              <p className="text-red-800 text-sm font-medium">{error}</p>
-            </div>
+    <div className="space-y-4">
+      {/* Display general error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 animate-fade-in">
+          <div className="flex items-center space-x-3">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <p className="text-red-800 text-sm font-medium">{error}</p>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Signup Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* First Name and Last Name Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label
-                htmlFor="firstName"
-                className="block text-xs font-semibold text-gray-700"
-              >
-                First Name
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 text-gray-400" />
-                </div>
-                <Input
-                  id="firstName"
-                  placeholder="Enter your first name"
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange("firstName", e.target.value)}
-                  className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
-                    formErrors.firstName ? "border-red-500" : "border-gray-200"
-                  }`}
-                  disabled={isFormDisabled}
-                  required
-                />
-              </div>
-              {formErrors.firstName && (
-                <p className="text-red-500 text-xs mt-1 flex items-center">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  {formErrors.firstName}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label
-                htmlFor="lastName"
-                className="block text-xs font-semibold text-gray-700"
-              >
-                Last Name
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 text-gray-400" />
-                </div>
-                <Input
-                  id="lastName"
-                  placeholder="Enter your last name"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange("lastName", e.target.value)}
-                  className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
-                    formErrors.lastName ? "border-red-500" : "border-gray-200"
-                  }`}
-                  disabled={isFormDisabled}
-                  required
-                />
-              </div>
-              {formErrors.lastName && (
-                <p className="text-red-500 text-xs mt-1 flex items-center">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  {formErrors.lastName}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Email Field */}
+      {/* Signup Form */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* First Name and Last Name Fields */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label
-              htmlFor="email"
+              htmlFor="firstName"
               className="block text-xs font-semibold text-gray-700"
             >
-              Email Address
+              First Name
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-4 w-4 text-gray-400" />
+                <User className="h-4 w-4 text-gray-400" />
               </div>
               <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
+                id="firstName"
+                placeholder="Enter your first name"
+                value={formData.firstName}
+                onChange={(e) => handleInputChange("firstName", e.target.value)}
                 className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
-                  formErrors.email ? "border-red-500" : "border-gray-200"
+                  formErrors.firstName ? "border-red-500" : "border-gray-200"
                 }`}
                 disabled={isFormDisabled}
                 required
               />
             </div>
-            {formErrors.email && (
+            {formErrors.firstName && (
               <p className="text-red-500 text-xs mt-1 flex items-center">
                 <AlertCircle className="h-3 w-3 mr-1" />
-                {formErrors.email}
+                {formErrors.firstName}
               </p>
             )}
           </div>
 
-          {/* Account Type Selection - For regular signup form */}
-          <div className="space-y-2">
-            <label className="block text-xs font-semibold text-gray-700">
-              Select Account Type
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleInputChange("userType", "vendor")}
-                disabled={isFormDisabled}
-                className={`relative p-3 rounded-lg border-2 transition-all duration-300 text-left ${
-                  formData.userType === "vendor"
-                    ? "border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 shadow-md"
-                    : "border-gray-200 bg-white hover:border-blue-300"
-                } ${isFormDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                {formData.userType === "vendor" && (
-                  <div className="absolute -top-1 -right-1">
-                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-full p-0.5">
-                      <CheckCircle className="h-3 w-3 text-white" />
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  <div
-                    className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                      formData.userType === "vendor"
-                        ? "bg-gradient-to-br from-blue-500 to-blue-600"
-                        : "bg-gray-100"
-                    }`}
-                  >
-                    <Building
-                      className={`w-3 h-3 ${
-                        formData.userType === "vendor"
-                          ? "text-white"
-                          : "text-gray-600"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 text-xs">
-                      Vendor
-                    </h4>
-                    <p className="text-xs text-gray-600">Sell products</p>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleInputChange("userType", "buyer")}
-                disabled={isFormDisabled}
-                className={`relative p-3 rounded-lg border-2 transition-all duration-300 text-left ${
-                  formData.userType === "buyer"
-                    ? "border-green-500 bg-gradient-to-br from-green-50 to-blue-50 shadow-md"
-                    : "border-gray-200 bg-white hover:border-green-300"
-                } ${isFormDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                {formData.userType === "buyer" && (
-                  <div className="absolute -top-1 -right-1">
-                    <div className="bg-gradient-to-r from-green-500 to-blue-600 rounded-full p-0.5">
-                      <CheckCircle className="h-3 w-3 text-white" />
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  <div
-                    className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                      formData.userType === "buyer"
-                        ? "bg-gradient-to-br from-green-500 to-green-600"
-                        : "bg-gray-100"
-                    }`}
-                  >
-                    <ShoppingCart
-                      className={`w-3 h-3 ${
-                        formData.userType === "buyer"
-                          ? "text-white"
-                          : "text-gray-600"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 text-xs">Buyer</h4>
-                    <p className="text-xs text-gray-600">Purchase products</p>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Password Field */}
           <div className="space-y-1">
             <label
-              htmlFor="password"
+              htmlFor="lastName"
               className="block text-xs font-semibold text-gray-700"
             >
-              Password
+              Last Name
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-4 w-4 text-gray-400" />
+                <User className="h-4 w-4 text-gray-400" />
               </div>
               <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Create a password"
-                value={formData.password}
-                onChange={(e) => handleInputChange("password", e.target.value)}
-                className={`h-10 pl-9 pr-10 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
-                  formErrors.password ? "border-red-500" : "border-gray-200"
+                id="lastName"
+                placeholder="Enter your last name"
+                value={formData.lastName}
+                onChange={(e) => handleInputChange("lastName", e.target.value)}
+                className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                  formErrors.lastName ? "border-red-500" : "border-gray-200"
                 }`}
                 disabled={isFormDisabled}
                 required
               />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isFormDisabled}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
-                ) : (
-                  <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
-                )}
-              </button>
             </div>
-            {formErrors.password && (
+            {formErrors.lastName && (
               <p className="text-red-500 text-xs mt-1 flex items-center">
                 <AlertCircle className="h-3 w-3 mr-1" />
-                {formErrors.password}
+                {formErrors.lastName}
               </p>
             )}
-          </div>
-
-          {/* Confirm Password Field */}
-          <div className="space-y-1">
-            <label
-              htmlFor="confirmPassword"
-              className="block text-xs font-semibold text-gray-700"
-            >
-              Confirm Password
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-4 w-4 text-gray-400" />
-              </div>
-              <Input
-                id="confirmPassword"
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirm your password"
-                value={formData.confirmPassword}
-                onChange={(e) =>
-                  handleInputChange("confirmPassword", e.target.value)
-                }
-                className={`h-10 pl-9 pr-10 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
-                  formErrors.confirmPassword
-                    ? "border-red-500"
-                    : "border-gray-200"
-                }`}
-                disabled={isFormDisabled}
-                required
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                disabled={isFormDisabled}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
-                ) : (
-                  <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
-                )}
-              </button>
-            </div>
-            {formErrors.confirmPassword && (
-              <p className="text-red-500 text-xs mt-1 flex items-center">
-                <AlertCircle className="h-3 w-3 mr-1" />
-                {formErrors.confirmPassword}
-              </p>
-            )}
-          </div>
-
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full h-10 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
-            disabled={isFormDisabled}
-          >
-            {loading ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Creating Account...</span>
-              </div>
-            ) : (
-              "Create Account"
-            )}
-          </Button>
-        </form>
-
-        {/* Divider */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-200" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-3 text-gray-500 font-medium">Or</span>
           </div>
         </div>
 
-        {/* Google Signup Button */}
-        <div className="w-full">
-          {googleLoading ? (
-            <Button
-              variant="outline"
-              className="w-full h-12 text-gray-700 border-2 border-gray-200 rounded-xl text-sm cursor-not-allowed opacity-50"
-              disabled
-            >
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                <span>Creating account with Google...</span>
-              </div>
-            </Button>
-          ) : (
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              theme="outline"
-              size="large"
-              width="100%"
-              text="signup_with"
-              shape="rectangular"
-              logo_alignment="left"
+        {/* Email Field */}
+        <div className="space-y-1">
+          <label
+            htmlFor="email"
+            className="block text-xs font-semibold text-gray-700"
+          >
+            Email Address
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Mail className="h-4 w-4 text-gray-400" />
+            </div>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={(e) => handleInputChange("email", e.target.value)}
+              className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                formErrors.email ? "border-red-500" : "border-gray-200"
+              }`}
               disabled={isFormDisabled}
+              required
             />
+          </div>
+          {formErrors.email && (
+            <p className="text-red-500 text-xs mt-1 flex items-center">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              {formErrors.email}
+            </p>
           )}
         </div>
 
-        {/* Switch to Login */}
-        <div className="text-center">
-          <span className="text-gray-600 text-sm">Already have an account? </span>
-          <Button
-            variant="ghost"
-            onClick={onSwitchToLogin}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-semibold p-1 rounded transition-all duration-200 text-sm"
-            disabled={isFormDisabled}
+        {/* Account Type Selection - Default to vendor for bypass */}
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold text-gray-700">
+            Select Account Type
+          </label>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
+            <div className="flex items-center space-x-2">
+              <Building className="w-4 h-4 text-blue-600" />
+              <p className="text-blue-800 text-sm font-medium">
+                Currently creating Vendor accounts only
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleInputChange("userType", "vendor")}
+              disabled={true} // Disabled for bypass
+              className="relative p-3 rounded-lg border-2 transition-all duration-300 text-left border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 shadow-md opacity-100"
+            >
+              <div className="absolute -top-1 -right-1">
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-full p-0.5">
+                  <CheckCircle className="h-3 w-3 text-white" />
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600">
+                  <Building className="w-3 h-3 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 text-xs">
+                    Vendor
+                  </h4>
+                  <p className="text-xs text-gray-600">Sell products</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              disabled={true} // Disabled for bypass
+              className="relative p-3 rounded-lg border-2 transition-all duration-300 text-left border-gray-200 bg-white opacity-50 cursor-not-allowed"
+            >
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gray-100">
+                  <ShoppingCart className="w-3 h-3 text-gray-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 text-xs">Buyer</h4>
+                  <p className="text-xs text-gray-600">Coming soon</p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Password Field */}
+        <div className="space-y-1">
+          <label
+            htmlFor="password"
+            className="block text-xs font-semibold text-gray-700"
           >
-            Sign in
-          </Button>
+            Password
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Lock className="h-4 w-4 text-gray-400" />
+            </div>
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="Create a password"
+              value={formData.password}
+              onChange={(e) => handleInputChange("password", e.target.value)}
+              className={`h-10 pl-9 pr-10 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                formErrors.password ? "border-red-500" : "border-gray-200"
+              }`}
+              disabled={isFormDisabled}
+              required
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              onClick={() => setShowPassword(!showPassword)}
+              disabled={isFormDisabled}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
+              ) : (
+                <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
+              )}
+            </button>
+          </div>
+          {formErrors.password && (
+            <p className="text-red-500 text-xs mt-1 flex items-center">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              {formErrors.password}
+            </p>
+          )}
+        </div>
+
+        {/* Confirm Password Field */}
+        <div className="space-y-1">
+          <label
+            htmlFor="confirmPassword"
+            className="block text-xs font-semibold text-gray-700"
+          >
+            Confirm Password
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Lock className="h-4 w-4 text-gray-400" />
+            </div>
+            <Input
+              id="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="Confirm your password"
+              value={formData.confirmPassword}
+              onChange={(e) =>
+                handleInputChange("confirmPassword", e.target.value)
+              }
+              className={`h-10 pl-9 pr-10 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
+                formErrors.confirmPassword
+                  ? "border-red-500"
+                  : "border-gray-200"
+              }`}
+              disabled={isFormDisabled}
+              required
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              disabled={isFormDisabled}
+            >
+              {showConfirmPassword ? (
+                <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
+              ) : (
+                <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
+              )}
+            </button>
+          </div>
+          {formErrors.confirmPassword && (
+            <p className="text-red-500 text-xs mt-1 flex items-center">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              {formErrors.confirmPassword}
+            </p>
+          )}
+        </div>
+
+        {/* Submit Button */}
+        <Button
+          type="submit"
+          className="w-full h-10 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
+          disabled={isFormDisabled}
+        >
+          {loading ? (
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Creating Account...</span>
+            </div>
+          ) : (
+            "Create Vendor Account"
+          )}
+        </Button>
+      </form>
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-gray-200" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white px-3 text-gray-500 font-medium">Or</span>
         </div>
       </div>
 
-      {/* NEW: Account Type Selection Modal */}
-      <AccountTypeSelectionModal
-        isOpen={showAccountTypeModal}
-        onConfirm={handleAccountTypeConfirm}
-        userInfo={pendingGoogleUserInfo}
-        loading={loading}
-      />
-    </>
+      {/* Google Signup Button */}
+      <div className="w-full">
+        {googleLoading ? (
+          <Button
+            variant="outline"
+            className="w-full h-12 text-gray-700 border-2 border-gray-200 rounded-xl text-sm cursor-not-allowed opacity-50"
+            disabled
+          >
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              <span>Creating vendor account with Google...</span>
+            </div>
+          </Button>
+        ) : (
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            theme="outline"
+            size="large"
+            width="100%"
+            text="signup_with"
+            shape="rectangular"
+            logo_alignment="left"
+            disabled={isFormDisabled}
+          />
+        )}
+      </div>
+
+      {/* Switch to Login */}
+      <div className="text-center">
+        <span className="text-gray-600 text-sm">Already have an account? </span>
+        <Button
+          variant="ghost"
+          onClick={onSwitchToLogin}
+          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-semibold p-1 rounded transition-all duration-200 text-sm"
+          disabled={isFormDisabled}
+        >
+          Sign in
+        </Button>
+      </div>
+    </div>
   );
 };
 
