@@ -1,4 +1,4 @@
-// src/services/authService.js - Fixed  statements
+// src/services/authService.js - Simplified for @react-oauth/google
 import { apiService } from './api';
 
 export const authService = {
@@ -10,11 +10,9 @@ export const authService = {
       });
 
       if (response.success && response.data && response.data.token) {
-        // Store token IMMEDIATELY after successful response
         const token = response.data.token;
         localStorage.setItem('authToken', token);
         
-        // Transform API response to match app structure
         const user = this.transformUserData(response.data.user);
 
         return {
@@ -27,7 +25,6 @@ export const authService = {
       throw new Error('Invalid response format from server');
     } catch (error) {
       console.error('❌ AuthService: Login error:', error);
-      // Make sure to clear any partial token on error
       localStorage.removeItem('authToken');
       throw new Error(error.message || 'Login failed');
     }
@@ -44,11 +41,9 @@ export const authService = {
       });
 
       if (response.success && response.data && response.data.token) {
-        // Store token IMMEDIATELY after successful response
         const token = response.data.token;
         localStorage.setItem('authToken', token);
         
-        // Transform API response to match app structure
         const user = this.transformUserData(response.data.user);
 
         return {
@@ -61,40 +56,88 @@ export const authService = {
       throw new Error('Invalid response format from server');
     } catch (error) {
       console.error('❌ AuthService: Signup error:', error);
-      // Make sure to clear any partial token on error
       localStorage.removeItem('authToken');
       throw new Error(error.message || 'Signup failed');
     }
   },
 
-  async googleAuth(token, accountType = 'VENDOR') {
+  async googleAuth(googleCredential, accountType = 'VENDOR') {
     try {
-      const response = await apiService.post('/auth/google', {
-        token,
+      console.log('🔍 GoogleAuth: Starting authentication process');
+      
+      if (!googleCredential) {
+        throw new Error('Google credential is required');
+      }
+
+      const payload = {
+        credential: googleCredential, // The JWT token from Google
         accountType: accountType.toUpperCase()
+      };
+
+      console.log('📤 GoogleAuth: Sending request to backend');
+
+      const response = await apiService.post('/auth/google', payload);
+
+      console.log('📥 GoogleAuth: Response received:', { 
+        success: response.success,
+        hasToken: !!response.data?.token,
+        hasUser: !!response.data?.user 
       });
 
       if (response.success && response.data && response.data.token) {
-        // Store token IMMEDIATELY after successful response
         const authToken = response.data.token;
         localStorage.setItem('authToken', authToken);
         
-        // Transform API response to match app structure
         const user = this.transformUserData(response.data.user);
+
+        console.log('✅ GoogleAuth: Authentication successful for user:', user.email);
 
         return {
           user,
           token: authToken,
-          message: response.message
+          message: response.message || 'Google authentication successful'
         };
       }
 
       throw new Error('Invalid response format from server');
     } catch (error) {
       console.error('❌ AuthService: Google auth error:', error);
-      // Make sure to clear any partial token on error
+      
       localStorage.removeItem('authToken');
-      throw new Error(error.message || 'Google authentication failed');
+      
+      // Provide specific error messages
+      let errorMessage = 'Google authentication failed';
+      
+      if (error.response) {
+        const status = error.response.status;
+        const serverMessage = error.response.data?.message || error.message;
+        
+        switch (status) {
+          case 400:
+            errorMessage = serverMessage || 'Invalid Google credential';
+            break;
+          case 401:
+            errorMessage = 'Google authentication failed. Please try again.';
+            break;
+          case 409:
+            errorMessage = serverMessage || 'An account with this email already exists';
+            break;
+          case 422:
+            errorMessage = serverMessage || 'Invalid account type or missing data';
+            break;
+          case 500:
+            errorMessage = 'Server error during authentication. Please try again later.';
+            break;
+          default:
+            errorMessage = serverMessage || `Authentication failed (Error ${status})`;
+        }
+      } else if (error.request) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else {
+        errorMessage = error.message || 'Google authentication failed';
+      }
+      
+      throw new Error(errorMessage);
     }
   },
 
@@ -106,23 +149,15 @@ export const authService = {
         return null;
       }
       
-      // Verify token and get current user
       const response = await apiService.get('/auth/profile');
       
       if (response.success && response.data) {
         const user = this.transformUserData(response.data);
-        
-        // Validate that we got meaningful data
-        if (this.isValidUserData(user)) {
-          return user;
-        } else {
-          return user; // Return anyway, let AuthContext decide what to do
-        }
+        return user;
       }
 
       return null;
     } catch (error) {
-      // If token is invalid, remove it
       if (error.status === 401) {
         localStorage.removeItem('authToken');
       }
@@ -132,7 +167,6 @@ export const authService = {
 
   async updateProfile(userData) {
     try {      
-      // Prepare the request payload according to API specification
       const payload = {};
       
       if (userData.firstName) payload.firstName = userData.firstName;
@@ -141,7 +175,6 @@ export const authService = {
       const response = await apiService.put('/auth/profile', payload);
 
       if (response.success && response.data && response.data.user) {
-        // Transform API response to match app structure
         const user = this.transformUserData(response.data.user);
         return user;
       }
@@ -153,13 +186,45 @@ export const authService = {
     }
   },
 
-  // Helper method to transform and validate user data from API
+  async requestPasswordReset(email) {
+    try {
+      const response = await apiService.post('/auth/forgot-password', { email });
+      
+      if (response.success) {
+        return response.message || 'Password reset email sent successfully';
+      }
+      
+      throw new Error('Invalid response from server');
+    } catch (error) {
+      console.error('❌ AuthService: Password reset request error:', error);
+      throw new Error(error.message || 'Failed to send password reset email');
+    }
+  },
+
+  async resetPassword(token, newPassword) {
+    try {
+      const response = await apiService.post('/auth/reset-password', {
+        token,
+        password: newPassword
+      });
+      
+      if (response.success) {
+        return response.message || 'Password reset successfully';
+      }
+      
+      throw new Error('Invalid response from server');
+    } catch (error) {
+      console.error('❌ AuthService: Password reset error:', error);
+      throw new Error(error.message || 'Failed to reset password');
+    }
+  },
+
+  // Helper method to transform user data from API
   transformUserData(apiUserData) {
     if (!apiUserData) {
       return null;
     }
 
-    // Helper function to clean undefined values
     const cleanValue = (value) => {
       if (value === null || value === undefined || value === 'undefined') {
         return '';
@@ -167,11 +232,9 @@ export const authService = {
       return String(value);
     };
 
-    // Extract and clean the data
     const firstName = cleanValue(apiUserData.firstName);
     const lastName = cleanValue(apiUserData.lastName);
     
-    // Build fullName intelligently
     let fullName = '';
     if (firstName && lastName) {
       fullName = `${firstName} ${lastName}`;
@@ -181,23 +244,24 @@ export const authService = {
       fullName = lastName;
     }
 
-    const user = {
+    return {
       id: apiUserData.id || '',
       email: cleanValue(apiUserData.email),
       fullName: fullName,
       firstName: firstName,
       lastName: lastName,
       accountType: apiUserData.accountType || 'VENDOR',
+      googleId: apiUserData.googleId || null,
+      picture: apiUserData.picture || null,
+      emailVerified: apiUserData.emailVerified || false,
     };
-
-    return user;
   },
 
-  // Helper method to validate user data quality
+  // Helper method to validate user data
   isValidUserData(userData) {
     if (!userData) return false;
     
-    const hasRequiredFields = !!(
+    return !!(
       userData.id && 
       userData.email && 
       userData.email !== 'undefined' &&
@@ -205,57 +269,44 @@ export const authService = {
       userData.firstName !== 'undefined' &&
       userData.fullName !== 'undefined undefined'
     );
-
-    return hasRequiredFields;
   },
-
 
   logout() {
     localStorage.removeItem('authToken');
   },
 
-  // Helper method to check if user is authenticated
   isAuthenticated() {
     const token = localStorage.getItem('authToken');
-    const isAuth = !!token;
-    return isAuth;
+    return !!token;
   },
 
-  // Helper method to get stored token
   getToken() {
-    const token = localStorage.getItem('authToken');
-    return token;
+    return localStorage.getItem('authToken');
   },
 
-  // Helper method to validate token format (basic check)
   isValidTokenFormat(token) {
     if (!token || typeof token !== 'string') return false;
-    // Basic JWT format check (3 parts separated by dots)
     const parts = token.split('.');
     return parts.length === 3;
   },
 
-  // Helper method to check if token is expired (basic check)
   isTokenExpired(token) {
     if (!token || !this.isValidTokenFormat(token)) return true;
     
     try {
-      // Decode the payload (second part of JWT)
       const payload = JSON.parse(atob(token.split('.')[1]));
       const currentTime = Date.now() / 1000;
       
-      // Check if token has exp claim and if it's expired
       if (payload.exp && payload.exp < currentTime) {
         return true;
       }
       
       return false;
     } catch (error) {
-      return true; // Assume expired if we can't parse it
+      return true;
     }
   },
 
-  // Helper method to clean up invalid tokens
   cleanupInvalidToken() {
     const token = this.getToken();
     if (token && (this.isTokenExpired(token) || !this.isValidTokenFormat(token))) {

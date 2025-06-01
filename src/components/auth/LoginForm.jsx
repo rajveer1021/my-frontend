@@ -1,4 +1,4 @@
-// src/components/auth/LoginForm.jsx - Fixed Google Auth and
+// src/components/auth/LoginForm.jsx - Using @react-oauth/google
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../ui/Button";
@@ -9,24 +9,32 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
-  CheckCircle,
 } from "lucide-react";
 import { useToast } from "../ui/Toast";
-
-// Mock Google Auth function - replace with real implementation
-const getGoogleAuthToken = async () => {
-  // This should be replaced with actual Google OAuth implementation
-  throw new Error("Google authentication not implemented yet");
-};
+import { GoogleLogin, useGoogleOneTapLogin } from '@react-oauth/google';
 
 const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const { login, loading, error, clearError, googleLogin } = useAuth();
   const { addToast } = useToast();
+
+  // Google One Tap Login (automatic popup)
+  useGoogleOneTapLogin({
+    onSuccess: async (credentialResponse) => {
+      await handleGoogleSuccess(credentialResponse);
+    },
+    onError: () => {
+      console.log('Google One Tap Login Failed');
+    },
+    // Optional: disable auto-select and cancel on tap outside
+    auto_select: false,
+    cancel_on_tap_outside: true,
+  });
 
   const validateForm = () => {
     const errors = {};
@@ -69,18 +77,47 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (googleLoading) return; // Prevent multiple requests
+
+    setGoogleLoading(true);
+    clearError();
+
     try {
-      addToast("Google authentication integration coming soon!", "info");
-      // Uncomment when Google OAuth is implemented
-      // const googleToken = await getGoogleAuthToken();
-      // const result = await googleLogin(googleToken, 'vendor');
-      // if (result.success) {
-      //   addToast(result.message || "Welcome!", "success");
-      // }
+      console.log('🔐 Google login credential received');
+      
+      if (!credentialResponse.credential) {
+        throw new Error('No credential received from Google');
+      }
+
+      // Send the credential to your backend
+      const result = await googleLogin(credentialResponse.credential, 'vendor');
+      
+      if (result.success) {
+        addToast(result.message || "Welcome back!", "success");
+      }
     } catch (error) {
-      addToast(error.message, "error");
+      console.error('Google login error:', error);
+      
+      let errorMessage = error.message;
+      
+      if (error.message.includes('popup_closed_by_user')) {
+        errorMessage = "Google sign-in was cancelled. Please try again.";
+      } else if (error.message.includes('popup_blocked')) {
+        errorMessage = "Popup was blocked. Please allow popups for this site and try again.";
+      } else if (error.message.includes('network')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+      
+      addToast(errorMessage, "error");
+    } finally {
+      setGoogleLoading(false);
     }
+  };
+
+  const handleGoogleError = () => {
+    addToast("Google sign-in failed. Please try again or use email/password.", "error");
+    setGoogleLoading(false);
   };
 
   const handleInputChange = (field, value) => {
@@ -103,6 +140,8 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
       clearError();
     }
   };
+
+  const isFormDisabled = loading || googleLoading;
 
   return (
     <div className="space-y-4">
@@ -139,7 +178,7 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
               className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
                 formErrors.email ? "border-red-500" : "border-gray-200"
               }`}
-              disabled={loading}
+              disabled={isFormDisabled}
               required
             />
           </div>
@@ -172,14 +211,14 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
               className={`h-10 pl-9 pr-10 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
                 formErrors.password ? "border-red-500" : "border-gray-200"
               }`}
-              disabled={loading}
+              disabled={isFormDisabled}
               required
             />
             <button
               type="button"
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
               onClick={() => setShowPassword(!showPassword)}
-              disabled={loading}
+              disabled={isFormDisabled}
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
@@ -200,7 +239,7 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
         <Button
           type="submit"
           className="w-full h-10 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
-          disabled={loading}
+          disabled={isFormDisabled}
         >
           {loading ? (
             <div className="flex items-center space-x-2">
@@ -220,24 +259,38 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
         </div>
         <div className="relative flex justify-center text-xs uppercase">
           <span className="bg-white px-3 text-gray-500 font-medium">
-            Or continue with Google
+            Or
           </span>
         </div>
       </div>
 
       {/* Google Login Button */}
-      <Button
-        onClick={handleGoogleLogin}
-        variant="outline"
-        className="w-full h-10 text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md text-sm"
-        type="button"
-        disabled={loading}
-      >
-        <div className="w-4 h-4 mr-2 bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 rounded-full flex items-center justify-center">
-          <Mail className="w-2.5 h-2.5 text-white" />
-        </div>
-        Continue with Google
-      </Button>
+      <div className="w-full">
+        {googleLoading ? (
+          <Button
+            variant="outline"
+            className="w-full h-10 text-gray-700 border-2 border-gray-200 rounded-xl text-sm cursor-not-allowed opacity-50"
+            disabled
+          >
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              <span>Signing in with Google...</span>
+            </div>
+          </Button>
+        ) : (
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            theme="outline"
+            size="large"
+            width="100%"
+            text="signin_with"
+            shape="rectangular"
+            logo_alignment="left"
+            disabled={isFormDisabled}
+          />
+        )}
+      </div>
 
       {/* Action Links */}
       <div className="space-y-2">
@@ -247,7 +300,7 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
             variant="ghost"
             onClick={onSwitchToSignup}
             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-semibold p-1 rounded transition-all duration-200 text-sm"
-            disabled={loading}
+            disabled={isFormDisabled}
           >
             Sign up
           </Button>

@@ -1,4 +1,4 @@
-// src/components/auth/SignupForm.jsx - Fixed Google Auth and
+// src/components/auth/SignupForm.jsx - Using @react-oauth/google
 import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../ui/Button";
@@ -15,12 +15,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useToast } from "../ui/Toast";
-
-// Mock Google Auth function - replace with real implementation
-const getGoogleAuthToken = async () => {
-  // This should be replaced with actual Google OAuth implementation
-  throw new Error("Google authentication not implemented yet");
-};
+import { GoogleLogin } from '@react-oauth/google';
 
 const SignupForm = ({ onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
@@ -34,6 +29,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const { signup, loading, error, clearError, googleLogin } = useAuth();
   const { addToast } = useToast();
@@ -101,19 +97,49 @@ const SignupForm = ({ onSwitchToLogin }) => {
     }
   };
 
-  const handleGoogleSignup = async () => {
-    try {
-      addToast("Google authentication integration coming soon!", "info");
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (googleLoading) return; // Prevent multiple requests
 
-      // Uncomment when Google OAuth is implemented
-      // const googleToken = await getGoogleAuthToken();
-      // const result = await googleLogin(googleToken, formData.userType);
-      // if (result.success) {
-      //   addToast(result.message || "Account created successfully!", "success");
-      // }
+    setGoogleLoading(true);
+    clearError();
+
+    try {
+      console.log('🔐 Google signup credential received');
+      
+      if (!credentialResponse.credential) {
+        throw new Error('No credential received from Google');
+      }
+
+      // Send the credential to your backend with the selected account type
+      const result = await googleLogin(credentialResponse.credential, formData.userType);
+      
+      if (result.success) {
+        addToast(result.message || "Account created successfully! Welcome to Multi-Vendor!", "success");
+      }
     } catch (error) {
-      addToast(error.message, "error");
+      console.error('Google signup error:', error);
+      
+      let errorMessage = error.message;
+      
+      if (error.message.includes('popup_closed_by_user')) {
+        errorMessage = "Google sign-up was cancelled. Please try again.";
+      } else if (error.message.includes('popup_blocked')) {
+        errorMessage = "Popup was blocked. Please allow popups for this site and try again.";
+      } else if (error.message.includes('network')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      } else if (error.message.includes('already exists')) {
+        errorMessage = "An account with this email already exists. Please try signing in instead.";
+      }
+      
+      addToast(errorMessage, "error");
+    } finally {
+      setGoogleLoading(false);
     }
+  };
+
+  const handleGoogleError = () => {
+    addToast("Google sign-up failed. Please try again or use the form below.", "error");
+    setGoogleLoading(false);
   };
 
   const handleInputChange = (field, value) => {
@@ -133,6 +159,8 @@ const SignupForm = ({ onSwitchToLogin }) => {
     }
   };
 
+  const isFormDisabled = loading || googleLoading;
+
   return (
     <div className="space-y-4">
       {/* Display general error */}
@@ -144,6 +172,136 @@ const SignupForm = ({ onSwitchToLogin }) => {
           </div>
         </div>
       )}
+
+      {/* Account Type Selection - At the top for Google signup */}
+      <div className="space-y-2">
+        <label className="block text-xs font-semibold text-gray-700">
+          Select Account Type
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => handleInputChange("userType", "vendor")}
+            disabled={isFormDisabled}
+            className={`relative p-3 rounded-lg border-2 transition-all duration-300 text-left ${
+              formData.userType === "vendor"
+                ? "border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 shadow-md"
+                : "border-gray-200 bg-white hover:border-blue-300"
+            } ${isFormDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {formData.userType === "vendor" && (
+              <div className="absolute -top-1 -right-1">
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-full p-0.5">
+                  <CheckCircle className="h-3 w-3 text-white" />
+                </div>
+              </div>
+            )}
+            <div className="flex items-center space-x-2">
+              <div
+                className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                  formData.userType === "vendor"
+                    ? "bg-gradient-to-br from-blue-500 to-blue-600"
+                    : "bg-gray-100"
+                }`}
+              >
+                <Building
+                  className={`w-3 h-3 ${
+                    formData.userType === "vendor"
+                      ? "text-white"
+                      : "text-gray-600"
+                  }`}
+                />
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-900 text-xs">
+                  Vendor
+                </h4>
+                <p className="text-xs text-gray-600">Sell products</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleInputChange("userType", "buyer")}
+            disabled={isFormDisabled}
+            className={`relative p-3 rounded-lg border-2 transition-all duration-300 text-left ${
+              formData.userType === "buyer"
+                ? "border-green-500 bg-gradient-to-br from-green-50 to-blue-50 shadow-md"
+                : "border-gray-200 bg-white hover:border-green-300"
+            } ${isFormDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            {formData.userType === "buyer" && (
+              <div className="absolute -top-1 -right-1">
+                <div className="bg-gradient-to-r from-green-500 to-blue-600 rounded-full p-0.5">
+                  <CheckCircle className="h-3 w-3 text-white" />
+                </div>
+              </div>
+            )}
+            <div className="flex items-center space-x-2">
+              <div
+                className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                  formData.userType === "buyer"
+                    ? "bg-gradient-to-br from-green-500 to-green-600"
+                    : "bg-gray-100"
+                }`}
+              >
+                <ShoppingCart
+                  className={`w-3 h-3 ${
+                    formData.userType === "buyer"
+                      ? "text-white"
+                      : "text-gray-600"
+                  }`}
+                />
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-900 text-xs">Buyer</h4>
+                <p className="text-xs text-gray-600">Purchase products</p>
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Google Signup Button - Prominent placement */}
+      <div className="w-full">
+        {googleLoading ? (
+          <Button
+            variant="outline"
+            className="w-full h-12 text-gray-700 border-2 border-gray-200 rounded-xl text-sm cursor-not-allowed opacity-50"
+            disabled
+          >
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              <span>Creating account with Google...</span>
+            </div>
+          </Button>
+        ) : (
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            theme="outline"
+            size="large"
+            width="100%"
+            text="signup_with"
+            shape="rectangular"
+            logo_alignment="left"
+            disabled={isFormDisabled}
+          />
+        )}
+      </div>
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-gray-200" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white px-3 text-gray-500 font-medium">
+            Or sign up with email
+          </span>
+        </div>
+      </div>
 
       {/* Signup Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -168,7 +326,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
                 className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
                   formErrors.firstName ? "border-red-500" : "border-gray-200"
                 }`}
-                disabled={loading}
+                disabled={isFormDisabled}
                 required
               />
             </div>
@@ -199,7 +357,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
                 className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
                   formErrors.lastName ? "border-red-500" : "border-gray-200"
                 }`}
-                disabled={loading}
+                disabled={isFormDisabled}
                 required
               />
             </div>
@@ -233,7 +391,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
               className={`h-10 pl-9 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
                 formErrors.email ? "border-red-500" : "border-gray-200"
               }`}
-              disabled={loading}
+              disabled={isFormDisabled}
               required
             />
           </div>
@@ -243,96 +401,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
               {formErrors.email}
             </p>
           )}
-        </div>
-
-        {/* Account Type Selection - Compact */}
-        <div className="space-y-2">
-          <label className="block text-xs font-semibold text-gray-700">
-            Account Type
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleInputChange("userType", "vendor")}
-              disabled={loading}
-              className={`relative p-2 rounded-lg border-2 transition-all duration-300 text-left ${
-                formData.userType === "vendor"
-                  ? "border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 shadow-md"
-                  : "border-gray-200 bg-white hover:border-blue-300"
-              } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              {formData.userType === "vendor" && (
-                <div className="absolute -top-1 -right-1">
-                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-full p-0.5">
-                    <CheckCircle className="h-3 w-3 text-white" />
-                  </div>
-                </div>
-              )}
-              <div className="flex items-center space-x-2">
-                <div
-                  className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                    formData.userType === "vendor"
-                      ? "bg-gradient-to-br from-blue-500 to-blue-600"
-                      : "bg-gray-100"
-                  }`}
-                >
-                  <Building
-                    className={`w-3 h-3 ${
-                      formData.userType === "vendor"
-                        ? "text-white"
-                        : "text-gray-600"
-                    }`}
-                  />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 text-xs">
-                    Vendor
-                  </h4>
-                  <p className="text-xs text-gray-600">Sell</p>
-                </div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleInputChange("userType", "buyer")}
-              disabled={loading}
-              className={`relative p-2 rounded-lg border-2 transition-all duration-300 text-left ${
-                formData.userType === "buyer"
-                  ? "border-green-500 bg-gradient-to-br from-green-50 to-blue-50 shadow-md"
-                  : "border-gray-200 bg-white hover:border-green-300"
-              } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              {formData.userType === "buyer" && (
-                <div className="absolute -top-1 -right-1">
-                  <div className="bg-gradient-to-r from-green-500 to-blue-600 rounded-full p-0.5">
-                    <CheckCircle className="h-3 w-3 text-white" />
-                  </div>
-                </div>
-              )}
-              <div className="flex items-center space-x-2">
-                <div
-                  className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                    formData.userType === "buyer"
-                      ? "bg-gradient-to-br from-green-500 to-green-600"
-                      : "bg-gray-100"
-                  }`}
-                >
-                  <ShoppingCart
-                    className={`w-3 h-3 ${
-                      formData.userType === "buyer"
-                        ? "text-white"
-                        : "text-gray-600"
-                    }`}
-                  />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 text-xs">Buyer</h4>
-                  <p className="text-xs text-gray-600">Purchase</p>
-                </div>
-              </div>
-            </button>
-          </div>
         </div>
 
         {/* Password Field */}
@@ -356,14 +424,14 @@ const SignupForm = ({ onSwitchToLogin }) => {
               className={`h-10 pl-9 pr-10 text-sm border-2 rounded-xl focus:border-blue-500 focus:ring-blue-500 transition-all duration-200 ${
                 formErrors.password ? "border-red-500" : "border-gray-200"
               }`}
-              disabled={loading}
+              disabled={isFormDisabled}
               required
             />
             <button
               type="button"
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
               onClick={() => setShowPassword(!showPassword)}
-              disabled={loading}
+              disabled={isFormDisabled}
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
@@ -405,14 +473,14 @@ const SignupForm = ({ onSwitchToLogin }) => {
                   ? "border-red-500"
                   : "border-gray-200"
               }`}
-              disabled={loading}
+              disabled={isFormDisabled}
               required
             />
             <button
               type="button"
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              disabled={loading}
+              disabled={isFormDisabled}
             >
               {showConfirmPassword ? (
                 <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors" />
@@ -433,7 +501,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
         <Button
           type="submit"
           className="w-full h-10 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm"
-          disabled={loading}
+          disabled={isFormDisabled}
         >
           {loading ? (
             <div className="flex items-center space-x-2">
@@ -446,32 +514,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
         </Button>
       </form>
 
-      {/* Divider */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-gray-200" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-3 text-gray-500 font-medium">
-            Or continue with Google
-          </span>
-        </div>
-      </div>
-
-      {/* Google Signup Button */}
-      <Button
-        onClick={handleGoogleSignup}
-        variant="outline"
-        className="w-full h-10 text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md text-sm"
-        type="button"
-        disabled={loading}
-      >
-        <div className="w-4 h-4 mr-2 bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 rounded-full flex items-center justify-center">
-          <Mail className="w-2.5 h-2.5 text-white" />
-        </div>
-        Continue with Google
-      </Button>
-
       {/* Switch to Login */}
       <div className="text-center">
         <span className="text-gray-600 text-sm">Already have an account? </span>
@@ -479,7 +521,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
           variant="ghost"
           onClick={onSwitchToLogin}
           className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-semibold p-1 rounded transition-all duration-200 text-sm"
-          disabled={loading}
+          disabled={isFormDisabled}
         >
           Sign in
         </Button>
