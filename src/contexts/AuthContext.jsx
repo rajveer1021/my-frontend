@@ -1,22 +1,22 @@
 // src/contexts/AuthContext.jsx - Fixed method names
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/authService';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { authService } from "../services/authService";
 
 export const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
 
 // Local storage keys
 const STORAGE_KEYS = {
-  USER_DATA: 'vendorHub_userData',
-  AUTH_TOKEN: 'authToken',
-  USER_CACHE_TIMESTAMP: 'userCacheTimestamp'
+  USER_DATA: "vendorHub_userData",
+  AUTH_TOKEN: "authToken",
+  USER_CACHE_TIMESTAMP: "userCacheTimestamp",
 };
 
 // Cache duration (5 minutes)
@@ -32,9 +32,12 @@ export const AuthProvider = ({ children }) => {
   const saveUserToStorage = (userData) => {
     try {
       localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
-      localStorage.setItem(STORAGE_KEYS.USER_CACHE_TIMESTAMP, Date.now().toString());
+      localStorage.setItem(
+        STORAGE_KEYS.USER_CACHE_TIMESTAMP,
+        Date.now().toString()
+      );
     } catch (error) {
-      console.error('❌ Failed to save user data to localStorage:', error);
+      console.error("❌ Failed to save user data to localStorage:", error);
     }
   };
 
@@ -42,7 +45,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
       const timestamp = localStorage.getItem(STORAGE_KEYS.USER_CACHE_TIMESTAMP);
-      
+
       if (!userData || !timestamp) {
         return null;
       }
@@ -52,7 +55,7 @@ export const AuthProvider = ({ children }) => {
       const parsedUser = JSON.parse(userData);
       return parsedUser;
     } catch (error) {
-      console.error('❌ Failed to load user data from localStorage:', error);
+      console.error("❌ Failed to load user data from localStorage:", error);
       return null;
     }
   };
@@ -62,42 +65,41 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem(STORAGE_KEYS.USER_DATA);
       localStorage.removeItem(STORAGE_KEYS.USER_CACHE_TIMESTAMP);
     } catch (error) {
-      console.error('❌ Failed to clear user data from localStorage:', error);
+      console.error("❌ Failed to clear user data from localStorage:", error);
     }
   };
 
   // Helper function to validate user data quality
   const isValidUserData = (userData) => {
     if (!userData) return false;
-    
+
     const hasRequiredFields = !!(
-      userData.id && 
-      userData.email && 
+      userData.id &&
+      userData.email &&
       (userData.firstName || userData.fullName)
     );
-    
-    const hasUndefinedValues = (
+
+    const hasUndefinedValues =
       userData.firstName === "undefined" ||
       userData.lastName === "undefined" ||
       userData.fullName === "undefined undefined" ||
-      userData.email === "undefined"
-    );
-      
+      userData.email === "undefined";
+
     return hasRequiredFields && !hasUndefinedValues;
   };
 
   const mergeUserData = (currentUser, newUser) => {
     if (!currentUser) return newUser;
     if (!newUser) return currentUser;
-    
+
     if (!isValidUserData(newUser)) {
       return currentUser;
     }
-    
+
     if (!isValidUserData(currentUser)) {
       return newUser;
     }
-    
+
     const merged = {
       ...currentUser,
       ...newUser,
@@ -105,9 +107,12 @@ export const AuthProvider = ({ children }) => {
       lastName: newUser.lastName || currentUser.lastName,
       email: newUser.email || currentUser.email,
       id: newUser.id || currentUser.id,
-      fullName: newUser.fullName !== "undefined undefined" ? newUser.fullName : currentUser.fullName
+      fullName:
+        newUser.fullName !== "undefined undefined"
+          ? newUser.fullName
+          : currentUser.fullName,
     };
-    
+
     return merged;
   };
 
@@ -121,7 +126,7 @@ export const AuthProvider = ({ children }) => {
 
     const currentUserData = user || getUserFromStorage();
     const finalUserData = mergeUserData(currentUserData, userData);
-    
+
     setUser(finalUserData);
     setIsAuthenticated(!!finalUserData);
     saveUserToStorage(finalUserData);
@@ -133,9 +138,9 @@ export const AuthProvider = ({ children }) => {
       try {
         setLoading(true);
         setError(null);
-        
+
         const token = authService.getToken();
-        
+
         if (!token) {
           setIsAuthenticated(false);
           setUser(null);
@@ -151,14 +156,14 @@ export const AuthProvider = ({ children }) => {
 
         try {
           const currentUser = await authService.getCurrentUser();
-          
+
           if (currentUser && isValidUserData(currentUser)) {
             updateUserState(currentUser);
           } else if (currentUser) {
             if (cachedUser && isValidUserData(cachedUser)) {
               setUser(cachedUser);
             } else {
-              setError('User data is incomplete. Please try logging in again.');
+              setError("User data is incomplete. Please try logging in again.");
             }
           } else {
             authService.logout();
@@ -167,8 +172,11 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
           }
         } catch (apiError) {
-          console.warn('⚠️ API fetch failed, using cached data if available:', apiError.message);
-          
+          console.warn(
+            "⚠️ API fetch failed, using cached data if available:",
+            apiError.message
+          );
+
           if (cachedUser && isValidUserData(cachedUser)) {
             setUser(cachedUser);
           } else {
@@ -178,15 +186,21 @@ export const AuthProvider = ({ children }) => {
               setIsAuthenticated(false);
               setUser(null);
             } else {
-              setError('Unable to sync user data. Some features may be limited.');
+              setError(
+                "Unable to sync user data. Some features may be limited."
+              );
             }
           }
         }
       } catch (error) {
-        console.error('💥 Auth initialization error:', error);
-        setError('Failed to initialize authentication');
+        console.error("💥 Auth initialization error:", error);
+        setError("Failed to initialize authentication");
         const cachedUser = getUserFromStorage();
-        if (cachedUser && isValidUserData(cachedUser) && authService.getToken()) {
+        if (
+          cachedUser &&
+          isValidUserData(cachedUser) &&
+          authService.getToken()
+        ) {
           setUser(cachedUser);
           setIsAuthenticated(true);
         } else {
@@ -205,23 +219,23 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const result = await authService.login({ email, password });
-      
+
       if (result && result.user) {
         updateUserState(result.user);
-        
+
         return {
           success: true,
           user: result.user,
-          message: result.message
+          message: result.message,
         };
       }
-      
-      throw new Error('Invalid response from login');
+
+      throw new Error("Invalid response from login");
     } catch (error) {
-      console.error('❌ Login error:', error);
-      const errorMessage = error.message || 'Login failed';
+      console.error("❌ Login error:", error);
+      const errorMessage = error.message || "Login failed";
       setError(errorMessage);
       setIsAuthenticated(false);
       setUser(null);
@@ -236,23 +250,23 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const result = await authService.signup(userData);
-      
+
       if (result && result.user) {
         updateUserState(result.user);
-        
+
         return {
           success: true,
           user: result.user,
-          message: result.message
+          message: result.message,
         };
       }
-      
-      throw new Error('Invalid response from signup');
+
+      throw new Error("Invalid response from signup");
     } catch (error) {
-      console.error('❌ Signup error:', error);
-      const errorMessage = error.message || 'Signup failed';
+      console.error("❌ Signup error:", error);
+      const errorMessage = error.message || "Signup failed";
       setError(errorMessage);
       setIsAuthenticated(false);
       setUser(null);
@@ -264,27 +278,73 @@ export const AuthProvider = ({ children }) => {
   };
 
   // FIXED: Method name should match the authService method
-  const googleLogin = async (googleToken, accountType = 'vendor') => {
+  // UPDATED: Google login method with account type selection handling
+  const googleLogin = async (googleToken, accountType = null) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const result = await authService.googleAuth(googleToken, accountType);
-      
+
+      // Check if account type selection is needed
+      if (result.needsAccountTypeSelection) {
+        return {
+          needsAccountTypeSelection: true,
+          userInfo: result.userInfo,
+          message: result.message,
+        };
+      }
+
+      // Normal authentication success
       if (result && result.user) {
         updateUserState(result.user);
-        
+
         return {
           success: true,
           user: result.user,
-          message: result.message
+          message: result.message,
         };
       }
-      
-      throw new Error('Invalid response from Google login');
+
+      throw new Error("Invalid response from Google login");
     } catch (error) {
-      console.error('❌ Google login error:', error);
-      const errorMessage = error.message || 'Google login failed';
+      console.error("❌ Google login error:", error);
+      const errorMessage = error.message || "Google login failed";
+      setError(errorMessage);
+      setIsAuthenticated(false);
+      setUser(null);
+      clearUserFromStorage();
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NEW METHOD: Set account type for Google users
+  const setGoogleUserAccountType = async (userInfo, accountType) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const result = await authService.setGoogleUserAccountType(
+        userInfo,
+        accountType
+      );
+
+      if (result && result.user) {
+        updateUserState(result.user);
+
+        return {
+          success: true,
+          user: result.user,
+          message: result.message,
+        };
+      }
+
+      throw new Error("Invalid response from account type setup");
+    } catch (error) {
+      console.error("❌ Set account type error:", error);
+      const errorMessage = error.message || "Failed to set account type";
       setError(errorMessage);
       setIsAuthenticated(false);
       setUser(null);
@@ -299,18 +359,18 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const updatedUser = await authService.updateProfile(userData);
-      
+
       updateUserState(updatedUser);
-      
+
       return {
         success: true,
-        user: updatedUser
+        user: updatedUser,
       };
     } catch (error) {
-      console.error('❌ Profile update error:', error);
-      const errorMessage = error.message || 'Profile update failed';
+      console.error("❌ Profile update error:", error);
+      const errorMessage = error.message || "Profile update failed";
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -322,15 +382,15 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const message = await authService.requestPasswordReset(email);
-      
+
       return {
         success: true,
-        message
+        message,
       };
     } catch (error) {
-      const errorMessage = error.message || 'Password reset request failed';
+      const errorMessage = error.message || "Password reset request failed";
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -342,15 +402,15 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const message = await authService.resetPassword(token, newPassword);
-      
+
       return {
         success: true,
-        message
+        message,
       };
     } catch (error) {
-      const errorMessage = error.message || 'Password reset failed';
+      const errorMessage = error.message || "Password reset failed";
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -364,7 +424,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setError(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('vendorOnboarded');
+    localStorage.removeItem("vendorOnboarded");
   };
 
   const clearError = () => {
@@ -384,32 +444,29 @@ export const AuthProvider = ({ children }) => {
       } else {
       }
     } catch (error) {
-      console.error('Failed to refresh user data:', error);
+      console.error("Failed to refresh user data:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const value = {
-    user,
-    loading,
-    error,
-    isAuthenticated,
-    login,
-    signup,
-    googleLogin, // This method calls authService.googleAuth
-    logout,
-    updateUser,
-    requestPasswordReset,
-    resetPassword,
-    clearError,
-    refreshUser,
-    getToken: authService.getToken
-  };
+const value = {
+  user,
+  loading,
+  error,
+  isAuthenticated,
+  login,
+  signup,
+  googleLogin, // Updated method
+  setGoogleUserAccountType, // New method
+  logout,
+  updateUser,
+  requestPasswordReset,
+  resetPassword,
+  clearError,
+  refreshUser,
+  getToken: authService.getToken
+};
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

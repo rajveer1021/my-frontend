@@ -1,9 +1,10 @@
+// 1. First, update your Google OAuth Provider configuration
 // src/providers/GoogleOAuthProvider.jsx
+
 import React from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const GoogleAuthProvider = ({ children }) => {
-  // For Vite, use import.meta.env instead of process.env
   const clientId = import.meta.env?.VITE_GOOGLE_CLIENT_ID || 
                    (typeof process !== 'undefined' ? process.env?.REACT_APP_GOOGLE_CLIENT_ID : null);
 
@@ -16,8 +17,14 @@ const GoogleAuthProvider = ({ children }) => {
     return <>{children}</>;
   }
 
+  console.log('🔑 Google Client ID configured:', clientId);
+
   return (
-    <GoogleOAuthProvider clientId={clientId}>
+    <GoogleOAuthProvider 
+      clientId={clientId}
+      onScriptLoadError={() => console.error('Failed to load Google OAuth script')}
+      onScriptLoadSuccess={() => console.log('Google OAuth script loaded successfully')}
+    >
       {children}
     </GoogleOAuthProvider>
   );
