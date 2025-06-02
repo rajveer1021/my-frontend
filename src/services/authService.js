@@ -74,8 +74,6 @@ export const authService = {
         accountType: 'VENDOR' // Force VENDOR for bypass
       };
 
-      console.log('🔧 Google Auth Bypass: Using VENDOR account type');
-
       const response = await apiService.post('/auth/google', payload);
 
       // BYPASS: Skip account type selection flow entirely
@@ -95,7 +93,6 @@ export const authService = {
 
       // If the response indicates account type selection is needed, bypass it
       if (response.success && response.needsAccountTypeSelection) {
-        console.log('🔧 Bypassing account type selection - calling setGoogleUserAccountType directly');
         
         // Try to set account type automatically
         try {

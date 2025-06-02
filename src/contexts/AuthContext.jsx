@@ -281,8 +281,6 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      console.log('🔧 Google Login Bypass: Using VENDOR account type');
-
       // BYPASS: Always use VENDOR and skip account type selection entirely
       const result = await authService.googleAuth(googleToken, 'VENDOR');
 

@@ -1,6 +1,5 @@
-// src/components/onboarding/VendorOnboarding.jsx - Complete Responsive Version with Redirection Fix
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import Button from "../ui/Button";
@@ -33,6 +32,9 @@ const VendorOnboarding = ({ onComplete }) => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [completion, setCompletion] = useState(null);
   const { addToast } = useToast();
+  
+  const hasLoadedProfile = useRef(false);
+  const isNavigating = useRef(false);
 
   const [formData, setFormData] = useState({
     // Step 1
@@ -101,11 +103,17 @@ const VendorOnboarding = ({ onComplete }) => {
     },
   ];
 
-  // Load existing vendor profile on component mount
+  // FIXED: Load profile only once
   useEffect(() => {
     const loadVendorProfile = async () => {
+      if (hasLoadedProfile.current) {
+        return;
+      }
+
       try {
         setInitialLoading(true);
+        hasLoadedProfile.current = true;
+        
         const { vendor, completion } = await vendorService.getVendorProfile();
 
         if (vendor) {
@@ -127,25 +135,32 @@ const VendorOnboarding = ({ onComplete }) => {
 
         if (completion) {
           setCompletion(completion);
-          setCurrentStep(completion.currentStep || 1);
         }
+
+        // Always start from step 1 for proper flow
+        setCurrentStep(1);
+
       } catch (error) {
         console.error("Failed to load vendor profile:", error);
         addToast("Failed to load your profile. Starting fresh.", "warning");
+        setCurrentStep(1);
       } finally {
         setInitialLoading(false);
       }
     };
 
     loadVendorProfile();
-  }, [addToast]);
+  }, []); // FIXED: Empty dependency array to run only once
+
+  // FIXED: Monitor step changes
+  useEffect(() => {
+  }, [currentStep]);
 
   const handleInputChange = (field, value) => {
-    const stringValue = typeof value === 'string' ? value : String(value || '');
     
     setFormData((prev) => ({ 
       ...prev, 
-      [field]: stringValue 
+      [field]: value 
     }));
 
     if (errors[field]) {
@@ -181,7 +196,6 @@ const VendorOnboarding = ({ onComplete }) => {
     }
   };
 
-  // FIXED: Enhanced validation for manual verification
   const validateStep = (step) => {
     const newErrors = {};
 
@@ -224,14 +238,12 @@ const VendorOnboarding = ({ onComplete }) => {
             newErrors.gstNumber = "Please enter a valid GST number";
           }
         } else if (formData.verificationType === "manual") {
-          // FIXED: Enhanced manual verification validation
           if (!formData.idType) {
             newErrors.idType = "Please select an ID type";
           }
           if (!formData.idNumber.trim()) {
             newErrors.idNumber = "ID number is required";
           } else {
-            // FIXED: Better validation logic for manual verification
             const cleanIdNumber = formData.idNumber.replace(/\s/g, "");
             
             if (formData.idType === "aadhaar") {
@@ -252,60 +264,54 @@ const VendorOnboarding = ({ onComplete }) => {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const isValid = Object.keys(newErrors).length === 0;
+    return isValid;
   };
 
-  // PATCH: Enhanced completion handler with multiple fallback strategies
   const handleOnboardingComplete = () => {
-    
-    // Set completion flag immediately
     localStorage.setItem("vendorOnboarded", "true");
     
-    // Show success message
     addToast(
       "Onboarding completed successfully! Welcome to VendorHub!",
       "success"
     );
     
-    // FIXED: Multiple redirection strategies with error handling
     const redirectToHome = () => {
       try {
-        
-        // Strategy 1: Try onComplete callback first
         if (onComplete && typeof onComplete === 'function') {
           onComplete();
         } else {
-          // Strategy 2: Direct navigation
           navigate("/", { replace: true });
         }
       } catch (navigationError) {
         console.error("Navigation failed:", navigationError);
-        
-        // Strategy 3: Force page reload as ultimate fallback
         window.location.href = "/";
       }
     };
 
-    // FIXED: Immediate redirection for better UX, with fallback timeout
     try {
       redirectToHome();
     } catch (immediateError) {
       console.error("Immediate redirection failed:", immediateError);
-      
-      // Fallback with timeout
       setTimeout(() => {
         redirectToHome();
       }, 1500);
     }
   };
 
-  // PATCH: Fixed handleNext function with enhanced manual verification support
+  // FIXED: Completely rewritten handleNext
   const handleNext = async () => {
+    if (isNavigating.current) {
+      return;
+    }
+    
     if (!validateStep(currentStep)) {
       return;
     }
 
+    isNavigating.current = true;
     setLoading(true);
+
     try {
       let result;
 
@@ -316,95 +322,65 @@ const VendorOnboarding = ({ onComplete }) => {
           break;
 
         case 2:
-          result = await vendorService.updateStep2({
+          const step2Data = {
             businessName: formData.businessName,
             businessAddress1: formData.businessAddress1,
             businessAddress2: formData.businessAddress2,
             city: formData.city,
             state: formData.state,
             postalCode: formData.postalCode,
-          });
+          };
+          result = await vendorService.updateStep2(step2Data);
           addToast("Business information updated successfully!", "success");
           break;
 
         case 3:
-          // FIXED: Enhanced step 3 data preparation with better error handling
           const step3Data = {
             verificationType: formData.verificationType,
           };
 
-          // Add verification-specific data with validation
           if (formData.verificationType === "gst") {
             if (!formData.gstNumber || !formData.gstNumber.trim()) {
               throw new Error("GST number is required for GST verification");
             }
             step3Data.gstNumber = formData.gstNumber.trim();
           } else if (formData.verificationType === "manual") {
-            // FIXED: Ensure all manual verification fields are properly included
             if (!formData.idType || !formData.idNumber || !formData.idNumber.trim()) {
               throw new Error("ID type and number are required for manual verification");
             }
-            
             step3Data.idType = formData.idType;
             step3Data.idNumber = formData.idNumber.trim();
-            
-            // Optional: Add any additional manual verification fields if needed
-            // step3Data.documentFile = formData.documentFile; // Uncomment if document upload is implemented
           }
 
-
-          try {
-            result = await vendorService.updateStep3(step3Data);
-            addToast("Verification details updated successfully!", "success");
-          } catch (serviceError) {
-            console.error("Service error in step 3:", serviceError);
-            throw new Error(serviceError.message || "Failed to update verification details");
-          }
-          break;
+          result = await vendorService.updateStep3(step3Data);
+          addToast("Verification details updated successfully!", "success");
+          
+          setLoading(false);
+          isNavigating.current = false;
+          handleOnboardingComplete();
+          return;
 
         default:
           throw new Error("Invalid step");
       }
 
-
-      // Check if result exists and has completion data
+      // Update completion status without affecting navigation
       if (result && result.completion) {
         setCompletion(result.completion);
-
-        // FIXED: More robust completion check
-        if (result.completion.isComplete === true || 
-            result.completion.completionPercentage >= 100 ||
-            (currentStep === 3 && result.completion.steps && result.completion.steps.step3)) {
-          
-          handleOnboardingComplete();
-          return;
-        }
-      } else {
-        // FIXED: Fallback for when service doesn't return completion data
-        console.warn("No completion data returned from service"); // Debug log
-        
-        // If we're on step 3 and the service call succeeded, assume completion
-        if (currentStep === 3) {
-          handleOnboardingComplete();
-          return;
-        }
       }
 
-      // Move to next step only if not completed
+      // FIXED: Simple step increment after successful API call
       if (currentStep < 3) {
-        setCurrentStep(currentStep + 1);
-      } else {
-        // FIXED: If we reach here on step 3, something went wrong
-        console.error("Step 3 completed but not marked as complete");
-        // Force completion as fallback
-        handleOnboardingComplete();
+        const nextStep = currentStep + 1;
+        setCurrentStep(nextStep);
       }
 
     } catch (error) {
-      console.error("Failed to update step:", error);
+      console.error("❌ Failed to update step:", error);
       addToast(error.message || "Failed to update. Please try again.", "error");
     } finally {
       setLoading(false);
+      isNavigating.current = false;
     }
   };
 
@@ -414,14 +390,16 @@ const VendorOnboarding = ({ onComplete }) => {
     }
   };
 
-  // PATCH: Enhanced step validation for manual verification
   const isStepValid = () => {
+    let valid = false;
+    
     switch (currentStep) {
       case 1:
-        return formData.vendorType !== "";
+        valid = formData.vendorType !== "";
+        break;
       
       case 2:
-        return (
+        valid = (
           formData.businessName &&
           formData.businessAddress1 &&
           formData.city &&
@@ -429,35 +407,40 @@ const VendorOnboarding = ({ onComplete }) => {
           formData.postalCode &&
           /^\d{6}$/.test(formData.postalCode)
         );
+        break;
       
       case 3:
         if (formData.verificationType === "gst") {
-          return (
+          valid = (
             formData.gstNumber &&
             /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
               formData.gstNumber
             )
           );
         } else if (formData.verificationType === "manual") {
-          // FIXED: Proper validation for manual verification
           const hasBasicFields = formData.idType && formData.idNumber && formData.idNumber.trim();
-          if (!hasBasicFields) return false;
+          if (!hasBasicFields) {
+            valid = false;
+            break;
+          }
 
           const cleanIdNumber = formData.idNumber.replace(/\s/g, "");
           
           if (formData.idType === "aadhaar") {
-            return /^\d{12}$/.test(cleanIdNumber);
+            valid = /^\d{12}$/.test(cleanIdNumber);
           } else if (formData.idType === "pan") {
-            return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.idNumber.trim());
+            valid = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.idNumber.trim());
+          } else {
+            valid = true;
           }
-          
-          return true; // Allow other ID types if added in future
         }
-        return false;
+        break;
       
       default:
-        return false;
+        valid = false;
     }
+    
+    return valid;
   };
 
   const progressPercentage = completion
@@ -477,6 +460,7 @@ const VendorOnboarding = ({ onComplete }) => {
   return (
     <div className="fixed inset-0 z-50 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
       <div className="w-full max-w-xs sm:max-w-md md:max-w-2xl lg:max-w-4xl my-4 sm:my-0">
+
         {/* Header */}
         <div className="text-center mb-4 sm:mb-6">
           <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white mb-3 sm:mb-4">
@@ -721,29 +705,6 @@ const VendorOnboarding = ({ onComplete }) => {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-                    <div>
-                      <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
-                        City *
-                      </label>
-                      <Input
-                        value={formData.city}
-                        onChange={(e) =>
-                          handleInputChange("city", e.target.value)
-                        }
-                        placeholder="City"
-                        disabled={loading}
-                        className={`h-8 sm:h-10 border-2 rounded-md sm:rounded-lg text-sm ${
-                          errors.city ? "border-red-500" : "border-gray-200"
-                        }`}
-                      />
-                      {errors.city && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          {errors.city}
-                        </p>
-                      )}
-                    </div>
-
                     <div>
                       <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
                         State *
@@ -1053,8 +1014,8 @@ const VendorOnboarding = ({ onComplete }) => {
                   </>
                 ) : currentStep === 3 ? (
                   <>
-                    <span className="hidden sm:inline">Submit for Verification</span>
-                    <span className="sm:hidden">Submit</span>
+                    <span className="hidden sm:inline">Complete Onboarding</span>
+                    <span className="sm:hidden">Complete</span>
                     <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 ml-1 sm:ml-2" />
                   </>
                 ) : (

@@ -9,15 +9,10 @@ const GoogleAuthProvider = ({ children }) => {
                    (typeof process !== 'undefined' ? process.env?.REACT_APP_GOOGLE_CLIENT_ID : null);
 
   if (!clientId) {
-    console.warn('⚠️ Google Client ID not found. Google OAuth will not work.');
-    console.warn('💡 For Vite: Add VITE_GOOGLE_CLIENT_ID to your .env file');
-    console.warn('💡 For Create React App: Add REACT_APP_GOOGLE_CLIENT_ID to your .env file');
-    
     // Return children without Google OAuth if no client ID
     return <>{children}</>;
   }
 
-  console.log('🔑 Google Client ID configured:', clientId);
 
   return (
     <GoogleOAuthProvider 

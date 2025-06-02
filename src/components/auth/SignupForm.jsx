@@ -112,7 +112,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
 
       // Handle account type selection flow (though we're bypassing it)
       if (result.needsAccountTypeSelection) {
-        console.log('🎯 Account type selection needed for signup - but bypassing with VENDOR');
         addToast("Setting up your vendor account...", "info");
         return;
       }

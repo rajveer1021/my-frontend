@@ -70,7 +70,6 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
     clearError();
 
     try {
-      console.log('🔐 Google login credential received');
       
       if (!credentialResponse.credential) {
         throw new Error('No credential received from Google');
@@ -81,7 +80,6 @@ const LoginForm = ({ onSwitchToSignup, onForgotPassword }) => {
       
       // Handle account type selection flow (though we're bypassing it)
       if (result.needsAccountTypeSelection) {
-        console.log('🎯 Account type selection needed - but bypassing with VENDOR');
         // For the bypass, we'll call the setGoogleUserAccountType directly
         // This shouldn't happen with our bypass, but just in case
         addToast("Setting up your vendor account...", "info");

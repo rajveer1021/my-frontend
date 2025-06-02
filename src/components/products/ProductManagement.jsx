@@ -1,5 +1,5 @@
-// src/components/products/ProductManagement.jsx - Updated to use appropriate API endpoints
-import React, { useState, useEffect } from "react";
+// src/components/products/ProductManagement.jsx - Fixed with robust filter handling
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -25,6 +25,11 @@ import { productService } from "../../services/productService";
 const ProductManagement = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
+
+  // Refs for managing debouncing and preventing duplicate API calls
+  const searchTimeoutRef = useRef(null);
+  const lastFetchParamsRef = useRef(null);
+  const isFetchingRef = useRef(false);
 
   // State for products and filters
   const [products, setProducts] = useState([]);
@@ -57,53 +62,77 @@ const ProductManagement = () => {
   const [productToDelete, setProductToDelete] = useState(null);
 
   // Determine which API to use based on filters
-  const shouldUseSearch = () => {
+  const shouldUseSearch = useCallback((currentFilters) => {
     return !!(
-      filters.search?.trim() ||
-      (filters.category && filters.category !== "all") ||
-      filters.sortBy !== "createdAt" ||
-      filters.sortOrder !== "desc"
+      currentFilters.search?.trim() ||
+      (currentFilters.category && currentFilters.category !== "all" && currentFilters.category !== "") ||
+      currentFilters.sortBy !== "createdAt" ||
+      currentFilters.sortOrder !== "desc"
     );
-  };
+  }, []);
 
-  // Fetch products using appropriate API
-  const fetchProducts = async (newFilters = {}) => {
+  // Create a stable reference for filter comparison
+  const createFilterSignature = useCallback((filterObj) => {
+    return JSON.stringify({
+      search: filterObj.search?.trim() || "",
+      category: filterObj.category === "all" ? "" : filterObj.category || "",
+      sortBy: filterObj.sortBy || "createdAt",
+      sortOrder: filterObj.sortOrder || "desc",
+      page: filterObj.page || 1,
+      limit: filterObj.limit || 10,
+    });
+  }, []);
+
+  // Robust fetch products function with duplicate call prevention
+  const fetchProducts = useCallback(async (newFilters = {}, forceRefresh = false) => {
+    // Prevent duplicate API calls
+    if (isFetchingRef.current && !forceRefresh) {
+      return;
+    }
+
+    const currentFilters = { ...filters, ...newFilters };
+    const filterSignature = createFilterSignature(currentFilters);
+
+    // Check if we're making the same request
+    if (!forceRefresh && lastFetchParamsRef.current === filterSignature) {
+      return;
+    }
+
     try {
+      isFetchingRef.current = true;
       setLoading(true);
-
-      const searchFilters = {
-        ...filters,
-        ...newFilters,
-      };
+      lastFetchParamsRef.current = filterSignature;
 
       let response;
+      const useSearchAPI = shouldUseSearch(currentFilters);
 
-      if (shouldUseSearch()) {
+      if (useSearchAPI) {
         // Use search API when filters are applied
 
         const params = {
-          page: searchFilters.page,
-          limit: searchFilters.limit,
-          sortBy: searchFilters.sortBy,
-          sortOrder: searchFilters.sortOrder,
+          page: currentFilters.page,
+          limit: currentFilters.limit,
+          sortBy: currentFilters.sortBy,
+          sortOrder: currentFilters.sortOrder,
         };
 
         // Add search if provided
-        if (searchFilters.search?.trim()) {
-          params.search = searchFilters.search.trim();
+        if (currentFilters.search?.trim()) {
+          params.search = currentFilters.search.trim();
         }
 
         // Add category if selected and not 'all'
-        if (searchFilters.category && searchFilters.category !== "all") {
-          params.category = searchFilters.category;
+        if (currentFilters.category && currentFilters.category !== "all" && currentFilters.category !== "") {
+          params.category = currentFilters.category;
         }
 
         response = await productService.searchProducts(params);
       } else {
         // Use basic vendor products API for simple listing
+        
         const params = {
-          page: searchFilters.page,
-          limit: searchFilters.limit,
+          page: currentFilters.page,
+          limit: currentFilters.limit,
         };
 
         response = await productService.getProducts(params);
@@ -111,15 +140,19 @@ const ProductManagement = () => {
 
       if (response.success && response.data) {
         setProducts(response.data.products || []);
-        setPagination(response.data.pagination || pagination);
+        setPagination(response.data.pagination || {
+          page: 1,
+          limit: 10,
+          total: 0,
+          pages: 1,
+          hasNext: false,
+          hasPrev: false,
+        });
         setAvailableCategories(response.data.availableCategories || []);
 
-        // Update filters state
-        setFilters((prev) => ({
-          ...prev,
-          ...newFilters,
-        }));
-
+        // Update filters state only if successful
+        setFilters(currentFilters);
+        
       } else {
         throw new Error("Invalid response format");
       }
@@ -127,75 +160,130 @@ const ProductManagement = () => {
       console.error("Failed to fetch products:", error);
       addToast(error.message || "Failed to load products", "error");
       setProducts([]);
+      
+      // Reset last fetch params on error to allow retry
+      lastFetchParamsRef.current = null;
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, [filters, shouldUseSearch, createFilterSignature, addToast]);
 
   // Initialize products on component mount
   useEffect(() => {
     const initializeProducts = async () => {
-      await fetchProducts();
+      await fetchProducts({}, true); // Force refresh on init
       setIsInitialized(true);
     };
 
     if (!isInitialized) {
       initializeProducts();
     }
-  }, [isInitialized]);
+  }, [isInitialized, fetchProducts]);
 
-  // Handle search input change (with debouncing)
-  const handleSearchChange = (searchTerm) => {
-    setFilters((prev) => ({ ...prev, search: searchTerm, page: 1 }));
-  };
+  // Handle search input change with proper debouncing
+  const handleSearchChange = useCallback((searchTerm) => {
+    
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
 
-  // Handle category filter change
-  const handleCategoryChange = (category) => {
+    // Update filters immediately for UI responsiveness
+    setFilters(prev => ({ 
+      ...prev, 
+      search: searchTerm, 
+      page: 1 
+    }));
+
+    // Debounce the API call
+    searchTimeoutRef.current = setTimeout(() => {
+      const newFilters = { 
+        search: searchTerm, 
+        page: 1 
+      };
+      fetchProducts(newFilters);
+    }, 500);
+  }, [fetchProducts]);
+
+  // Handle category filter change - immediate API call
+  const handleCategoryChange = useCallback((category) => {
+    
+    // Clear any pending search timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    const normalizedCategory = category === "all" ? "" : category;
     const newFilters = {
-      ...filters,
-      category: category === "all" ? "" : category,
+      category: normalizedCategory,
       page: 1,
     };
-    setFilters(newFilters);
-    fetchProducts(newFilters);
-  };
 
-  // Handle sort change
-  const handleSortChange = (sortOption) => {
+    // Update filters and fetch immediately for category changes
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    fetchProducts(newFilters);
+  }, [fetchProducts]);
+
+  // Handle sort change - immediate API call
+  const handleSortChange = useCallback((sortOption) => {
+    
+    // Clear any pending search timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
     const [sortBy, sortOrder] = sortOption.includes("-")
       ? sortOption.split("-")
       : [sortOption, "asc"];
 
     const newFilters = {
-      ...filters,
       sortBy,
-      sortOrder:
-        sortOrder === "high" ? "desc" : sortOrder === "low" ? "asc" : sortOrder,
+      sortOrder: sortOrder === "high" ? "desc" : sortOrder === "low" ? "asc" : sortOrder,
       page: 1,
     };
-    setFilters(newFilters);
-    fetchProducts(newFilters);
-  };
 
-  // Handle pagination
-  const handlePageChange = (page) => {
-    const newFilters = { ...filters, page };
-    setFilters(newFilters);
+    setFilters(prev => ({ ...prev, ...newFilters }));
     fetchProducts(newFilters);
-  };
+  }, [fetchProducts]);
 
-  // Debounced search effect
+  // Handle pagination - immediate API call
+  const handlePageChange = useCallback((page) => {
+    
+    const newFilters = { page };
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    fetchProducts(newFilters);
+  }, [fetchProducts]);
+
+  // Clear all filters
+  const clearAllFilters = useCallback(() => {
+    
+    // Clear any pending timeouts
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    const newFilters = {
+      search: "",
+      category: "",
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      page: 1,
+      limit: 10,
+    };
+    
+    setFilters(newFilters);
+    fetchProducts(newFilters, true); // Force refresh
+  }, [fetchProducts]);
+
+  // Cleanup timeouts on unmount
   useEffect(() => {
-    if (!isInitialized) return;
-
-    const timeoutId = setTimeout(() => {
-      if (filters.search !== undefined) {
-        fetchProducts();
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
       }
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [filters.search]);
+    };
+  }, []);
 
   // Handle view product
   const handleView = async (productId) => {
@@ -274,20 +362,6 @@ const ProductManagement = () => {
     navigate("/add-product");
   };
 
-  // Clear all filters
-  const clearAllFilters = () => {
-    const newFilters = {
-      search: "",
-      category: "",
-      sortBy: "createdAt",
-      sortOrder: "desc",
-      page: 1,
-      limit: 10,
-    };
-    setFilters(newFilters);
-    fetchProducts(newFilters);
-  };
-
   // Show loading only during initial load
   if (!isInitialized && loading) {
     return (
@@ -359,14 +433,6 @@ const ProductManagement = () => {
                   </div>
                   <div className="text-blue-100 text-sm">Categories</div>
                 </div>
-                {/* <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                  <div className="text-2xl font-bold">
-                    Page {pagination.page}
-                  </div>
-                  <div className="text-blue-100 text-sm">
-                    of {pagination.pages}
-                  </div>
-                </div> */}
               </div>
             )}
           </div>
@@ -390,6 +456,7 @@ const ProductManagement = () => {
                 variant="ghost"
                 onClick={clearAllFilters}
                 className="text-sm text-gray-500 hover:text-gray-700"
+                disabled={loading}
               >
                 Clear All Filters
               </Button>
@@ -451,6 +518,12 @@ const ProductManagement = () => {
                   <Package className="w-5 h-5 lg:w-6 lg:h-6 mr-3 text-blue-600" />
                   Products ({pagination.total})
                 </h2>
+                {/* Debug info in development */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="text-xs text-gray-500">
+                    API: {shouldUseSearch(filters) ? 'Search' : 'Basic'}
+                  </div>
+                )}
               </div>
 
               <ProductTable

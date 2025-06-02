@@ -1,5 +1,5 @@
-// src/components/products/ProductFilters.jsx - Updated for search API integration
-import React, { useState } from 'react';
+// src/components/products/ProductFilters.jsx - Improved with better event handling
+import React, { useState, useCallback } from 'react';
 import { Search, Filter, X, Loader2 } from 'lucide-react';
 import { Input } from '../ui/Input';
 import Button from '../ui/Button';
@@ -26,11 +26,41 @@ export const ProductFilters = ({
 }) => {
   const [showFilters, setShowFilters] = useState(false);
 
-  const clearFilters = () => {
+  // Handle search input with proper event handling
+  const handleSearchInputChange = useCallback((e) => {
+    const value = e.target.value;
+    onSearchChange(value);
+  }, [onSearchChange]);
+
+  // Handle category change with proper event handling
+  const handleCategorySelectChange = useCallback((e) => {
+    const value = e.target.value;
+    onCategoryChange(value);
+  }, [onCategoryChange]);
+
+  // Handle sort change with proper event handling
+  const handleSortSelectChange = useCallback((e) => {
+    const value = e.target.value;
+    onSortChange(value);
+  }, [onSortChange]);
+
+  const clearFilters = useCallback(() => {
     onSearchChange('');
     onCategoryChange('all');
     onSortChange('createdAt-desc');
-  };
+  }, [onSearchChange, onCategoryChange, onSortChange]);
+
+  const clearSearch = useCallback(() => {
+    onSearchChange('');
+  }, [onSearchChange]);
+
+  const clearCategory = useCallback(() => {
+    onCategoryChange('all');
+  }, [onCategoryChange]);
+
+  const clearSort = useCallback(() => {
+    onSortChange('createdAt-desc');
+  }, [onSortChange]);
 
   const hasActiveFilters = searchTerm || categoryFilter !== 'all' || sortBy !== 'createdAt-desc';
   const activeFilterCount = [
@@ -49,13 +79,22 @@ export const ProductFilters = ({
           <Input
             type="text"
             placeholder="Search products by name, description..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={searchTerm || ''}
+            onChange={handleSearchInputChange}
             className="pl-10 h-11"
             disabled={loading}
           />
           {loading && (
             <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 animate-spin" />
+          )}
+          {searchTerm && !loading && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 w-4 h-4 flex items-center justify-center"
+              disabled={loading}
+            >
+              <X className="w-3 h-3" />
+            </button>
           )}
         </div>
 
@@ -90,8 +129,8 @@ export const ProductFilters = ({
         {/* Desktop Filters */}
         <div className="hidden sm:flex space-x-2">
           <select
-            value={categoryFilter}
-            onChange={(e) => onCategoryChange(e.target.value)}
+            value={categoryFilter || 'all'}
+            onChange={handleCategorySelectChange}
             disabled={loading}
             className="px-3 py-2 h-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm min-w-[140px] disabled:opacity-50"
           >
@@ -104,8 +143,8 @@ export const ProductFilters = ({
           </select>
 
           <select
-            value={sortBy}
-            onChange={(e) => onSortChange(e.target.value)}
+            value={sortBy || 'createdAt-desc'}
+            onChange={handleSortSelectChange}
             disabled={loading}
             className="px-3 py-2 h-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm min-w-[140px] disabled:opacity-50"
           >
@@ -139,8 +178,8 @@ export const ProductFilters = ({
               Category
             </label>
             <select
-              value={categoryFilter}
-              onChange={(e) => onCategoryChange(e.target.value)}
+              value={categoryFilter || 'all'}
+              onChange={handleCategorySelectChange}
               disabled={loading}
               className="w-full px-3 py-2 h-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:opacity-50"
             >
@@ -158,8 +197,8 @@ export const ProductFilters = ({
               Sort By
             </label>
             <select
-              value={sortBy}
-              onChange={(e) => onSortChange(e.target.value)}
+              value={sortBy || 'createdAt-desc'}
+              onChange={handleSortSelectChange}
               disabled={loading}
               className="w-full px-3 py-2 h-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:opacity-50"
             >
@@ -204,35 +243,35 @@ export const ProductFilters = ({
             <Badge variant="secondary" className="flex items-center gap-1">
               Search: "{searchTerm}"
               <button
-                onClick={() => onSearchChange('')}
+                onClick={clearSearch}
                 disabled={loading}
-                className="ml-1 hover:bg-gray-300 rounded-full p-0.5 transition-colors"
+                className="ml-1 hover:bg-gray-300 rounded-full p-0.5 transition-colors disabled:opacity-50"
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
           
-          {categoryFilter !== 'all' && (
+          {categoryFilter !== 'all' && categoryFilter && (
             <Badge variant="secondary" className="flex items-center gap-1">
               Category: {categoryFilter}
               <button
-                onClick={() => onCategoryChange('all')}
+                onClick={clearCategory}
                 disabled={loading}
-                className="ml-1 hover:bg-gray-300 rounded-full p-0.5 transition-colors"
+                className="ml-1 hover:bg-gray-300 rounded-full p-0.5 transition-colors disabled:opacity-50"
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
           
-          {sortBy !== 'createdAt-desc' && (
+          {sortBy !== 'createdAt-desc' && sortBy && (
             <Badge variant="secondary" className="flex items-center gap-1">
-              Sort: {SORT_OPTIONS.find(opt => opt.value === sortBy)?.label}
+              Sort: {SORT_OPTIONS.find(opt => opt.value === sortBy)?.label || sortBy}
               <button
-                onClick={() => onSortChange('createdAt-desc')}
+                onClick={clearSort}
                 disabled={loading}
-                className="ml-1 hover:bg-gray-300 rounded-full p-0.5 transition-colors"
+                className="ml-1 hover:bg-gray-300 rounded-full p-0.5 transition-colors disabled:opacity-50"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -242,15 +281,25 @@ export const ProductFilters = ({
       )}
 
       {/* Results Summary */}
-      {(searchTerm || categoryFilter !== 'all') && !loading && (
+      {(searchTerm || (categoryFilter !== 'all' && categoryFilter)) && !loading && (
         <div className="text-sm text-gray-600">
           {searchTerm && (
             <span>Searching for "{searchTerm}"</span>
           )}
-          {searchTerm && categoryFilter !== 'all' && <span> in </span>}
-          {categoryFilter !== 'all' && (
+          {searchTerm && categoryFilter !== 'all' && categoryFilter && <span> in </span>}
+          {categoryFilter !== 'all' && categoryFilter && (
             <span>category "{categoryFilter}"</span>
           )}
+        </div>
+      )}
+
+      {/* Loading indicator for filters */}
+      {loading && (
+        <div className="flex items-center justify-center py-2">
+          <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Updating results...</span>
+          </div>
         </div>
       )}
     </div>
