@@ -96,7 +96,7 @@ const DeleteConfirmationModal = ({ product, isOpen, onClose, onConfirm, loading 
                     Important Warning
                   </h5>
                   <ul className="text-red-700 text-sm space-y-1">
-                    <li>• This action cannot be undone</li>
+                    <li>This action cannot be undone</li>
                   </ul>
                 </div>
               </div>

@@ -250,7 +250,7 @@ const VendorDashboard = () => {
             <div className="text-white">
               <p className="text-sm opacity-90 mb-1">Inventory Check</p>
               <p className="text-3xl font-bold">
-                {dashboardStats.inventoryValue?.toLocaleString() || "0"}
+                {dashboardStats.totalProducts?.toLocaleString() || "0"}
               </p>
             </div>
           </div>
