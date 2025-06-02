@@ -488,6 +488,13 @@ const SignupForm = ({ onSwitchToLogin }) => {
             shape="rectangular"
             logo_alignment="left"
             disabled={isFormDisabled}
+            containerProps={{
+                style: {
+                  width: '100%',
+                  display: 'flex',
+                  justifyContent: 'center'
+                }
+              }}
           />
         )}
       </div>
