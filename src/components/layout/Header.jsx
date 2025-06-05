@@ -33,8 +33,20 @@ export const Header = ({
   const navigate = useNavigate();
 
   // Use the safe user hook instead of direct useAuth
-  const { displayName, email, initials, isAuthenticated, loading } =
-    useSafeUser();
+  const {
+    displayName,
+    email,
+    initials,
+    isAuthenticated,
+    loading,
+    isAdmin,
+    accountTypeDisplay,
+  } = useSafeUser();
+
+  // If user is admin, don't show this header (admin has its own layout)
+  if (isAdmin) {
+    return null;
+  }
 
   const handleLogout = () => {
     logout();

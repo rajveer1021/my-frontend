@@ -1,4 +1,4 @@
-// src/App.jsx - Fixed version with proper provider structure
+// src/App.jsx - Complete file with admin support
 import React, { useEffect } from "react";
 import {
   BrowserRouter,
@@ -24,6 +24,9 @@ import { NotFound } from "./components/common/NotFound";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
 import GoogleAuthProvider from "./providers/GoogleOAuthProvider";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import AdminRoute from "./components/admin/AdminRoute";
+import AdminLayout from "./components/admin/AdminLayout";
 import "./index.css";
 
 const ProtectedRoute = ({ children }) => {
@@ -50,6 +53,11 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
+  // Redirect admin users to admin dashboard
+  if (user?.accountType === 'ADMIN') {
+    return <Navigate to="/admin" replace />;
+  }
+
   return children;
 };
 
@@ -58,15 +66,18 @@ const AuthRoute = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      // Get the intended destination from state or default to dashboard
-      const from = location.state?.from?.pathname || "/";
-
+      // Get the intended destination from state or default based on user type
+      let defaultRoute = "/";
+      if (user?.accountType === 'ADMIN') {
+        defaultRoute = "/admin";
+      }
+      
+      const from = location.state?.from?.pathname || defaultRoute;
       navigate(from, { replace: true });
     }
-  }, [loading, isAuthenticated, navigate, location.state]);
+  }, [loading, isAuthenticated, navigate, location.state, user]);
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -146,14 +157,24 @@ const VendorOnboardingWrapper = () => {
 
 const AppRoutes = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Get default route based on user type
+  const getDefaultRoute = () => {
+    if (user?.accountType === 'ADMIN') {
+      return '/admin';
+    }
+    return '/';
+  };
 
   const handleNavigate = (page, params = {}) => {
     const routes = {
-      dashboard: "/",
+      dashboard: user?.accountType === 'ADMIN' ? "/admin" : "/",
       products: "/products",
       "add-product": "/add-product",
       settings: "/settings",
       "vendor-onboarding": "/vendor-onboarding",
+      admin: "/admin"
     };
 
     if (page === "edit-product" && params.productId) {
@@ -175,7 +196,19 @@ const AppRoutes = () => {
         }
       />
 
-      {/* Protected Routes */}
+      {/* Admin Routes with Special Layout */}
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminDashboard />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+
+      {/* Protected Vendor Routes */}
       <Route
         path="/"
         element={
@@ -244,10 +277,18 @@ const AppRoutes = () => {
         }
       />
 
+      {/* Redirect handler for different user types */}
+      <Route
+        path="/dashboard"
+        element={
+          <Navigate to={getDefaultRoute()} replace />
+        }
+      />
+
       {/* 404 Page */}
       <Route
         path="*"
-        element={<NotFound onNavigateHome={() => navigate("/")} />}
+        element={<NotFound onNavigateHome={() => navigate(getDefaultRoute())} />}
       />
     </Routes>
   );

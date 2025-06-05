@@ -6,16 +6,22 @@ import { cn } from '../../utils/helpers';
 import { useSafeUser } from '../../hooks/useSafeUser'; // Use safe user hook instead
 
 export const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
-  const { 
+const { 
     displayName, 
     email, 
     initials, 
     isAuthenticated, 
-    loading 
-  } = useSafeUser(); // Use safe user hook
+    loading,
+    isAdmin 
+  } = useSafeUser();
   
   const location = useLocation();
   const navigate = useNavigate();
+
+  // If user is admin, don't show this sidebar (admin has its own layout)
+  if (isAdmin) {
+    return null;
+  }
 
   const navigationItems = [
     {
