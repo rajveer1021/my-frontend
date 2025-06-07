@@ -31,6 +31,7 @@ import "./index.css";
 import AdminVendors from "./components/admin/AdminVendors";
 import AdminProfileVerification from "./components/admin/AdminProfileVerification";
 import AdminBuyers from "./components/admin/AdminBuyers";
+import SubscriptionPlans from "./components/admin/SubscriptionPlans";
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading, isAuthenticated, error } = useAuth();
@@ -239,6 +240,17 @@ const AppRoutes = () => {
           <AdminRoute>
             <AdminLayout>
               <AdminBuyers />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/subscription"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <SubscriptionPlans />
             </AdminLayout>
           </AdminRoute>
         }

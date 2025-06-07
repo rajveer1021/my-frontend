@@ -78,12 +78,12 @@ const adminNavigationItems = [
     path: '/admin/products',
   },
   {
-    id: 'admin-settings',
-    label: 'Settings',
+    id: 'admin-subscriptions',
+    label: 'Subscriptions',
     icon: Cog,
-    description: 'System settings',
+    description: 'Subscriptions',
     badge: null,
-    path: '/admin/settings',
+    path: '/admin/subscription',
   },
 ];
 
