@@ -31,7 +31,8 @@ import "./index.css";
 import AdminVendors from "./components/admin/AdminVendors";
 import AdminProfileVerification from "./components/admin/AdminProfileVerification";
 import AdminBuyers from "./components/admin/AdminBuyers";
-import SubscriptionPlans from "./components/admin/SubscriptionPlans";
+import SubscriptionPlansPage from "./components/subscriptions/SubscriptionPlansPage";
+import PlanFormModal from "./components/subscriptions/PlanFormModal";
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading, isAuthenticated, error } = useAuth();
@@ -250,7 +251,18 @@ const AppRoutes = () => {
         element={
           <AdminRoute>
             <AdminLayout>
-              <SubscriptionPlans />
+              <SubscriptionPlansPage />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/subscription/management"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <PlanFormModal />
             </AdminLayout>
           </AdminRoute>
         }

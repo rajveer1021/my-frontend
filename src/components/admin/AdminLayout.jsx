@@ -1,103 +1,53 @@
-import React from 'react';
+// src/components/layout/AdminLayout.jsx - Improved with shared utilities
+import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Header } from '../layout/Header';
 import { Sidebar } from '../layout/Sidebar';
+import { 
+  useSidebarState, 
+  navigationUtils, 
+  layoutConstants,
+  layoutValidation 
+} from '../layout/shared/layoutUtils';
 
 const AdminLayout = ({ children }) => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  
+  // Use shared sidebar state management
+  const [sidebarOpen, setSidebarOpen] = useSidebarState(true);
 
-  // Don't render layout for non-admin users
-  if (user?.accountType !== 'ADMIN') {
+  // Validate user access and redirect if necessary
+  useEffect(() => {
+    const redirectPath = layoutValidation.shouldRedirect(user, true);
+    if (redirectPath) {
+      navigate(redirectPath, { replace: true });
+      return;
+    }
+  }, [user, navigate]);
+
+  // Don't render layout for non-admin users or if validation fails
+  if (!layoutValidation.validateUserAccess(user, true)) {
     return null;
   }
 
-  // Get current page from location
-  const getCurrentPage = () => {
-    const path = location.pathname;
-    
-    switch (path) {
-      case '/admin':
-        return 'admin-dashboard';
-      case '/admin/vendors':
-        return 'admin-vendors';
-      case '/admin/profile-verification':
-        return 'admin-profile-verification';
-      case '/admin/buyers':
-        return 'admin-buyers';
-      case '/admin/products':
-        return 'admin-products';
-      case '/admin/settings':
-        return 'admin-settings';
-      default:
-        return 'admin-dashboard';
-    }
-  };
+  // Get current page from location using shared utilities
+  const currentPage = navigationUtils.getCurrentPage(location, true);
 
-  const currentPage = getCurrentPage();
-
-  // Handle navigation
+  // Handle navigation using shared utilities
   const handlePageChange = (pageId) => {
-    const routes = {
-      'admin-dashboard': '/admin',
-      'admin-vendors': '/admin/vendors',
-      'admin-profile-verification': '/admin/profile-verification',
-      'admin-buyers': '/admin/buyers',
-      'admin-products': '/admin/products',
-      'admin-settings': '/admin/settings',
-    };
-
+    const routes = navigationUtils.getRoutesMapping(true);
     const route = routes[pageId];
+    
     if (route) {
       navigate(route);
     }
   };
 
-  // Close sidebar on mobile when route changes
-  React.useEffect(() => {
-    if (window.innerWidth < 1024) {
-      setSidebarOpen(false);
-    }
-  }, [currentPage]);
-
-  // Handle resize to manage sidebar state
-  React.useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 1024) {
-        setSidebarOpen(false);
-      } else {
-        const savedState = localStorage.getItem("adminSidebarOpen");
-        setSidebarOpen(savedState !== null ? JSON.parse(savedState) : true);
-      }
-    };
-
-    // Save sidebar state for desktop
-    if (window.innerWidth >= 1024) {
-      localStorage.setItem("adminSidebarOpen", JSON.stringify(sidebarOpen));
-    }
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [sidebarOpen]);
-
-  // Prevent body scroll when mobile sidebar is open
-  React.useEffect(() => {
-    if (sidebarOpen && window.innerWidth < 1024) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [sidebarOpen]);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50">
+    <div className={layoutConstants.ADMIN_GRADIENTS.background + " min-h-screen"}>
       <Header
         user={user}
         sidebarOpen={sidebarOpen}

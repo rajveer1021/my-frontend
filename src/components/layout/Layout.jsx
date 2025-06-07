@@ -1,81 +1,73 @@
-import React, { useState, useEffect } from "react";
+// src/components/layout/Layout.jsx - Improved with shared utilities
+import React, { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 import { useAuth } from "../../hooks/useAuth";
+import { 
+  useSidebarState, 
+  navigationUtils, 
+  layoutConstants,
+  layoutValidation 
+} from "./shared/layoutUtils";
 
 const Layout = ({ children, currentPage, onPageChange }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Use shared sidebar state management
+  const [sidebarOpen, setSidebarOpen] = useSidebarState(true);
 
-  // If user is admin, redirect to admin dashboard
+  // Validate user access and redirect if necessary
   useEffect(() => {
-    if (user?.accountType === "ADMIN") {
-      window.location.href = "/admin";
+    const redirectPath = layoutValidation.shouldRedirect(user, false);
+    if (redirectPath) {
+      navigate(redirectPath, { replace: true });
       return;
     }
-  }, [user]);
+  }, [user, navigate]);
 
-  // Don't render layout for admin users
-  if (user?.accountType === "ADMIN") {
+  // Don't render layout for admin users or if validation fails
+  if (!layoutValidation.validateUserAccess(user, false)) {
     return null;
   }
 
-  // Close sidebar on mobile when route changes
-  useEffect(() => {
-    if (window.innerWidth < 1024) {
-      setSidebarOpen(false);
+  // Get current page from location if not provided
+  const actualCurrentPage = currentPage || navigationUtils.getCurrentPage(location, false);
+
+  // Handle navigation using shared utilities
+  const handlePageChange = (pageId) => {
+    const routes = navigationUtils.getRoutesMapping(false);
+    const route = routes[pageId];
+    
+    if (route) {
+      navigate(route);
     }
-  }, [currentPage]);
-
-  // Handle resize to manage sidebar state
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 1024) {
-        setSidebarOpen(false);
-      } else {
-        const savedState = localStorage.getItem("sidebarOpen");
-        setSidebarOpen(savedState !== null ? JSON.parse(savedState) : true);
-      }
-    };
-
-    // Save sidebar state for desktop
-    if (window.innerWidth >= 1024) {
-      localStorage.setItem("sidebarOpen", JSON.stringify(sidebarOpen));
+    
+    if (onPageChange) {
+      onPageChange(pageId);
     }
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [sidebarOpen]);
-
-  // Prevent body scroll when mobile sidebar is open
-  useEffect(() => {
-    if (sidebarOpen && window.innerWidth < 1024) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [sidebarOpen]);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className={layoutConstants.VENDOR_GRADIENTS.background + " min-h-screen"}>
       <Header
         user={user}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        currentPage={currentPage}
-        onPageChange={onPageChange}
+        currentPage={actualCurrentPage}
+        onPageChange={handlePageChange}
+        isAdmin={false}
       />
 
       <div className="flex">
         <Sidebar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
-          currentPage={currentPage}
-          onPageChange={onPageChange}
+          currentPage={actualCurrentPage}
+          onPageChange={handlePageChange}
+          isAdmin={false}
         />
 
         <main
