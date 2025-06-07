@@ -36,48 +36,56 @@ export const Sidebar = ({
   const location = useLocation();
   const navigate = useNavigate();
 
-  const adminNavigationItems = [
-    {
-      id: 'admin-dashboard',
-      label: 'Dashboard',
-      icon: LayoutDashboard,
-      description: 'System overview',
-      badge: null,
-      path: '/admin',
-    },
-    {
-      id: 'admin-users',
-      label: 'Users',
-      icon: Users,
-      description: 'User management',
-      badge: null,
-      path: '/admin/users',
-    },
-    {
-      id: 'admin-vendors',
-      label: 'Vendors',
-      icon: Building,
-      description: 'Vendor verification',
-      badge: null,
-      path: '/admin/vendors',
-    },
-    {
-      id: 'admin-products',
-      label: 'Products',
-      icon: Package,
-      description: 'Product moderation',
-      badge: null,
-      path: '/admin/products',
-    },
-    {
-      id: 'admin-settings',
-      label: 'Settings',
-      icon: Cog,
-      description: 'System settings',
-      badge: null,
-      path: '/admin/settings',
-    },
-  ];
+const adminNavigationItems = [
+  {
+    id: 'admin-dashboard',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    description: 'System overview',
+    badge: null,
+    path: '/admin',
+  },
+  {
+    id: 'admin-vendors',
+    label: 'Vendors',
+    icon: Building,
+    description: 'Manage vendors',
+    badge: null,
+    path: '/admin/vendors',
+  },
+  {
+    id: 'admin-profile-verification',
+    label: 'Verifications',
+    icon: Shield,
+    description: 'Profile approvals',
+    badge: null,
+    path: '/admin/profile-verification',
+  },
+  {
+    id: 'admin-buyers',
+    label: 'Buyers',
+    icon: Users,
+    description: 'Manage buyers',
+    badge: null,
+    path: '/admin/buyers',
+  },
+  {
+    id: 'admin-products',
+    label: 'Products',
+    icon: Package,
+    description: 'Product moderation',
+    badge: null,
+    path: '/admin/products',
+  },
+  {
+    id: 'admin-settings',
+    label: 'Settings',
+    icon: Cog,
+    description: 'System settings',
+    badge: null,
+    path: '/admin/settings',
+  },
+];
 
   const vendorNavigationItems = [
     {

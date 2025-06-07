@@ -1,18 +1,60 @@
-// src/components/admin/AdminLayout.jsx - Updated to use sidebar layout
 import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { useSafeUser } from '../../hooks/useSafeUser';
 import { Header } from '../layout/Header';
 import { Sidebar } from '../layout/Sidebar';
 
-const AdminLayout = ({ children, currentPage, onPageChange }) => {
+const AdminLayout = ({ children }) => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
 
   // Don't render layout for non-admin users
   if (user?.accountType !== 'ADMIN') {
     return null;
   }
+
+  // Get current page from location
+  const getCurrentPage = () => {
+    const path = location.pathname;
+    
+    switch (path) {
+      case '/admin':
+        return 'admin-dashboard';
+      case '/admin/vendors':
+        return 'admin-vendors';
+      case '/admin/profile-verification':
+        return 'admin-profile-verification';
+      case '/admin/buyers':
+        return 'admin-buyers';
+      case '/admin/products':
+        return 'admin-products';
+      case '/admin/settings':
+        return 'admin-settings';
+      default:
+        return 'admin-dashboard';
+    }
+  };
+
+  const currentPage = getCurrentPage();
+
+  // Handle navigation
+  const handlePageChange = (pageId) => {
+    const routes = {
+      'admin-dashboard': '/admin',
+      'admin-vendors': '/admin/vendors',
+      'admin-profile-verification': '/admin/profile-verification',
+      'admin-buyers': '/admin/buyers',
+      'admin-products': '/admin/products',
+      'admin-settings': '/admin/settings',
+    };
+
+    const route = routes[pageId];
+    if (route) {
+      navigate(route);
+    }
+  };
 
   // Close sidebar on mobile when route changes
   React.useEffect(() => {
@@ -61,7 +103,7 @@ const AdminLayout = ({ children, currentPage, onPageChange }) => {
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         currentPage={currentPage}
-        onPageChange={onPageChange}
+        onPageChange={handlePageChange}
         isAdmin={true}
       />
 
@@ -70,7 +112,7 @@ const AdminLayout = ({ children, currentPage, onPageChange }) => {
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           currentPage={currentPage}
-          onPageChange={onPageChange}
+          onPageChange={handlePageChange}
           isAdmin={true}
         />
 

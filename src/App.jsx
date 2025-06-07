@@ -28,6 +28,9 @@ import AdminDashboard from "./components/admin/AdminDashboard";
 import AdminRoute from "./components/admin/AdminRoute";
 import AdminLayout from "./components/admin/AdminLayout";
 import "./index.css";
+import AdminVendors from "./components/admin/AdminVendors";
+import AdminProfileVerification from "./components/admin/AdminProfileVerification";
+import AdminBuyers from "./components/admin/AdminBuyers";
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading, isAuthenticated, error } = useAuth();
@@ -54,7 +57,7 @@ const ProtectedRoute = ({ children }) => {
   }
 
   // Redirect admin users to admin dashboard
-  if (user?.accountType === 'ADMIN') {
+  if (user?.accountType === "ADMIN") {
     return <Navigate to="/admin" replace />;
   }
 
@@ -70,10 +73,10 @@ const AuthRoute = ({ children }) => {
     if (!loading && isAuthenticated) {
       // Get the intended destination from state or default based on user type
       let defaultRoute = "/";
-      if (user?.accountType === 'ADMIN') {
+      if (user?.accountType === "ADMIN") {
         defaultRoute = "/admin";
       }
-      
+
       const from = location.state?.from?.pathname || defaultRoute;
       navigate(from, { replace: true });
     }
@@ -161,20 +164,20 @@ const AppRoutes = () => {
 
   // Get default route based on user type
   const getDefaultRoute = () => {
-    if (user?.accountType === 'ADMIN') {
-      return '/admin';
+    if (user?.accountType === "ADMIN") {
+      return "/admin";
     }
-    return '/';
+    return "/";
   };
 
   const handleNavigate = (page, params = {}) => {
     const routes = {
-      dashboard: user?.accountType === 'ADMIN' ? "/admin" : "/",
+      dashboard: user?.accountType === "ADMIN" ? "/admin" : "/",
       products: "/products",
       "add-product": "/add-product",
       settings: "/settings",
       "vendor-onboarding": "/vendor-onboarding",
-      admin: "/admin"
+      admin: "/admin",
     };
 
     if (page === "edit-product" && params.productId) {
@@ -203,6 +206,39 @@ const AppRoutes = () => {
           <AdminRoute>
             <AdminLayout>
               <AdminDashboard />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/vendors"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminVendors />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/profile-verification"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminProfileVerification />
+            </AdminLayout>
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/buyers"
+        element={
+          <AdminRoute>
+            <AdminLayout>
+              <AdminBuyers />
             </AdminLayout>
           </AdminRoute>
         }
@@ -246,10 +282,7 @@ const AppRoutes = () => {
         path="/edit-product/:productId"
         element={
           <ProtectedRoute>
-            <Layout
-              currentPage="edit-product"
-              onPageChange={handleNavigate}
-            >
+            <Layout currentPage="edit-product" onPageChange={handleNavigate}>
               <EditProductWrapper />
             </Layout>
           </ProtectedRoute>
@@ -280,15 +313,15 @@ const AppRoutes = () => {
       {/* Redirect handler for different user types */}
       <Route
         path="/dashboard"
-        element={
-          <Navigate to={getDefaultRoute()} replace />
-        }
+        element={<Navigate to={getDefaultRoute()} replace />}
       />
 
       {/* 404 Page */}
       <Route
         path="*"
-        element={<NotFound onNavigateHome={() => navigate(getDefaultRoute())} />}
+        element={
+          <NotFound onNavigateHome={() => navigate(getDefaultRoute())} />
+        }
       />
     </Routes>
   );
