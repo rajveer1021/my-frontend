@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.jsx - Fixed with bypass
+// src/contexts/AuthContext.jsx - Complete file with admin support
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { authService } from "../services/authService";
 
@@ -105,6 +105,7 @@ export const AuthProvider = ({ children }) => {
       lastName: newUser.lastName || currentUser.lastName,
       email: newUser.email || currentUser.email,
       id: newUser.id || currentUser.id,
+      accountType: newUser.accountType || currentUser.accountType,
       fullName:
         newUser.fullName !== "undefined undefined"
           ? newUser.fullName
@@ -222,6 +223,13 @@ export const AuthProvider = ({ children }) => {
 
       if (result && result.user) {
         updateUserState(result.user);
+
+        // Handle admin redirection
+        if (result.user.accountType === 'ADMIN') {
+          setTimeout(() => {
+            window.location.href = '/admin';
+          }, 100);
+        }
 
         return {
           success: true,
@@ -379,6 +387,11 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     setIsAuthenticated(false);
     localStorage.removeItem("vendorOnboarded");
+    
+    // Redirect to auth page
+    setTimeout(() => {
+      window.location.href = '/auth';
+    }, 100);
   };
 
   const clearError = () => {

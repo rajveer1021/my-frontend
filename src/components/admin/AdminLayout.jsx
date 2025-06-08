@@ -1,17 +1,17 @@
-// src/components/layout/Layout.jsx - Improved with shared utilities
-import React, { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Header } from "./Header";
-import { Sidebar } from "./Sidebar";
-import { useAuth } from "../../hooks/useAuth";
+// src/components/layout/AdminLayout.jsx - Improved with shared utilities
+import React, { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { Header } from '../layout/Header';
+import { Sidebar } from '../layout/Sidebar';
 import { 
   useSidebarState, 
   navigationUtils, 
   layoutConstants,
   layoutValidation 
-} from "./shared/layoutUtils";
+} from '../layout/shared/layoutUtils';
 
-const Layout = ({ children, currentPage, onPageChange }) => {
+const AdminLayout = ({ children }) => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -21,53 +21,49 @@ const Layout = ({ children, currentPage, onPageChange }) => {
 
   // Validate user access and redirect if necessary
   useEffect(() => {
-    const redirectPath = layoutValidation.shouldRedirect(user, false);
+    const redirectPath = layoutValidation.shouldRedirect(user, true);
     if (redirectPath) {
       navigate(redirectPath, { replace: true });
       return;
     }
   }, [user, navigate]);
 
-  // Don't render layout for admin users or if validation fails
-  if (!layoutValidation.validateUserAccess(user, false)) {
+  // Don't render layout for non-admin users or if validation fails
+  if (!layoutValidation.validateUserAccess(user, true)) {
     return null;
   }
 
-  // Get current page from location if not provided
-  const actualCurrentPage = currentPage || navigationUtils.getCurrentPage(location, false);
+  // Get current page from location using shared utilities
+  const currentPage = navigationUtils.getCurrentPage(location, true);
 
   // Handle navigation using shared utilities
   const handlePageChange = (pageId) => {
-    const routes = navigationUtils.getRoutesMapping(false);
+    const routes = navigationUtils.getRoutesMapping(true);
     const route = routes[pageId];
     
     if (route) {
       navigate(route);
     }
-    
-    if (onPageChange) {
-      onPageChange(pageId);
-    }
   };
 
   return (
-    <div className={layoutConstants.VENDOR_GRADIENTS.background + " min-h-screen"}>
+    <div className={layoutConstants.ADMIN_GRADIENTS.background + " min-h-screen"}>
       <Header
         user={user}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        currentPage={actualCurrentPage}
+        currentPage={currentPage}
         onPageChange={handlePageChange}
-        isAdmin={false}
+        isAdmin={true}
       />
 
       <div className="flex">
         <Sidebar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
-          currentPage={actualCurrentPage}
+          currentPage={currentPage}
           onPageChange={handlePageChange}
-          isAdmin={false}
+          isAdmin={true}
         />
 
         <main
@@ -84,4 +80,4 @@ const Layout = ({ children, currentPage, onPageChange }) => {
   );
 };
 
-export default Layout;
+export default AdminLayout;

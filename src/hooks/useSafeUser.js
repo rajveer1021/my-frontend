@@ -1,4 +1,4 @@
-// src/hooks/useSafeUser.js - Safe user data access hook
+// src/hooks/useSafeUser.js - Complete file with admin support
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -10,7 +10,15 @@ export const useSafeUser = () => {
 
   // Helper function to get user display name with fallbacks
   const getDisplayName = () => {
-    if (!user) return "Vendor";
+    if (!user) return "User";
+    
+    // For admin users, show admin-specific display name
+    if (user.accountType === 'ADMIN') {
+      if (user.fullName) return user.fullName;
+      if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
+      if (user.firstName) return user.firstName;
+      return "Super Admin";
+    }
     
     if (user.fullName) return user.fullName;
     if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
@@ -21,12 +29,12 @@ export const useSafeUser = () => {
 
   // Helper function to get user email with fallback
   const getEmail = () => {
-    return user?.email || "vendor@example.com";
+    return user?.email || "user@example.com";
   };
 
   // Helper function to get user initials with fallbacks
   const getInitials = () => {
-    if (!user) return "V";
+    if (!user) return "U";
     
     if (user.fullName) {
       const names = user.fullName.split(' ');
@@ -48,17 +56,17 @@ export const useSafeUser = () => {
       return user.email.charAt(0).toUpperCase();
     }
     
-    return "V";
+    return "U";
   };
 
   // Helper function to get first name with fallback
   const getFirstName = () => {
-    if (!user) return "Vendor";
+    if (!user) return "User";
     
     if (user.firstName) return user.firstName;
     if (user.fullName) return user.fullName.split(' ')[0];
     if (user.email) return user.email.split('@')[0];
-    return "Vendor";
+    return "User";
   };
 
   // Helper function to get last name with fallback
@@ -88,9 +96,35 @@ export const useSafeUser = () => {
     return user?.accountType || user?.userType?.toUpperCase() || "VENDOR";
   };
 
+  // Helper function to check if user is admin
+  const isAdmin = () => {
+    return user?.accountType === 'ADMIN';
+  };
+
+  // Helper function to get account type display text
+  const getAccountTypeDisplay = () => {
+    const accountType = getAccountType();
+    switch (accountType) {
+      case 'ADMIN':
+        return 'Super Admin';
+      case 'VENDOR':
+        return 'Vendor Account';
+      case 'BUYER':
+        return 'Buyer Account';
+      default:
+        return 'User Account';
+    }
+  };
+
   // Helper function to check if user data is complete
   const isProfileComplete = () => {
     if (!user) return false;
+    
+    // Admin users have different completion requirements
+    if (user.accountType === 'ADMIN') {
+      return !!(user.firstName && user.email);
+    }
+    
     return !!(user.firstName && user.lastName && user.email);
   };
 
@@ -99,11 +133,48 @@ export const useSafeUser = () => {
     if (!user) return ['firstName', 'lastName', 'email'];
     
     const missing = [];
+    
+    // Admin users have different requirements
+    if (user.accountType === 'ADMIN') {
+      if (!user.firstName) missing.push('firstName');
+      if (!user.email) missing.push('email');
+      return missing;
+    }
+    
     if (!user.firstName) missing.push('firstName');
     if (!user.lastName) missing.push('lastName');
     if (!user.email) missing.push('email');
     
     return missing;
+  };
+
+  // Helper function to check if user has admin permissions
+  const hasAdminAccess = () => {
+    return user?.accountType === 'ADMIN';
+  };
+
+  // Helper function to check if user is vendor
+  const isVendor = () => {
+    return user?.accountType === 'VENDOR';
+  };
+
+  // Helper function to check if user is buyer
+  const isBuyer = () => {
+    return user?.accountType === 'BUYER';
+  };
+
+  // Helper function to get role-specific dashboard URL
+  const getDashboardUrl = () => {
+    switch (user?.accountType) {
+      case 'ADMIN':
+        return '/admin';
+      case 'VENDOR':
+        return '/';
+      case 'BUYER':
+        return '/marketplace';
+      default:
+        return '/';
+    }
   };
 
   return {
@@ -123,6 +194,13 @@ export const useSafeUser = () => {
     phone: getPhone(),
     address: getAddress(),
     accountType: getAccountType(),
+    accountTypeDisplay: getAccountTypeDisplay(),
+    
+    // Role checks
+    isAdmin: isAdmin(),
+    isVendor: isVendor(),
+    isBuyer: isBuyer(),
+    hasAdminAccess: hasAdminAccess(),
     
     // Helper methods
     getDisplayName,
@@ -133,6 +211,8 @@ export const useSafeUser = () => {
     getPhone,
     getAddress,
     getAccountType,
+    getAccountTypeDisplay,
+    getDashboardUrl,
     
     // Profile completeness helpers
     isProfileComplete: isProfileComplete(),
