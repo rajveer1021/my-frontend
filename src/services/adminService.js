@@ -1,4 +1,4 @@
-// src/services/adminService.js - Simplified with only 3 dashboard APIs
+// src/services/adminService.js - Complete implementation
 import { apiService } from "./api";
 
 export const adminService = {
@@ -12,7 +12,7 @@ export const adminService = {
     try {
       console.log("📊 Fetching core KPIs...");
       const response = await apiService.get("/admin/dashboard/core-kpis");
-      
+
       if (response.success && response.data) {
         console.log("✅ Core KPIs fetched successfully");
         return response.data;
@@ -21,7 +21,7 @@ export const adminService = {
       }
     } catch (error) {
       console.error("❌ Failed to fetch core KPIs:", error);
-      
+
       if (error.response?.status === 401) {
         throw new Error("Authentication required. Please login again.");
       } else if (error.response?.status === 403) {
@@ -31,7 +31,7 @@ export const adminService = {
       } else if (error.response?.status >= 500) {
         throw new Error("Server error. Please try again later.");
       }
-      
+
       throw new Error(error.message || "Failed to fetch core KPIs");
     }
   },
@@ -43,8 +43,10 @@ export const adminService = {
   async getActivityMetrics() {
     try {
       console.log("📈 Fetching activity metrics...");
-      const response = await apiService.get("/admin/dashboard/activity-metrics");
-      
+      const response = await apiService.get(
+        "/admin/dashboard/activity-metrics"
+      );
+
       if (response.success && response.data) {
         console.log("✅ Activity metrics fetched successfully");
         return response.data;
@@ -53,7 +55,7 @@ export const adminService = {
       }
     } catch (error) {
       console.error("❌ Failed to fetch activity metrics:", error);
-      
+
       if (error.response?.status === 401) {
         throw new Error("Authentication required. Please login again.");
       } else if (error.response?.status === 403) {
@@ -61,7 +63,7 @@ export const adminService = {
       } else if (error.response?.status >= 500) {
         throw new Error("Server error. Please try again later.");
       }
-      
+
       throw new Error(error.message || "Failed to fetch activity metrics");
     }
   },
@@ -74,8 +76,10 @@ export const adminService = {
   async getRecentActivities(limit = 10) {
     try {
       console.log(`🔄 Fetching recent activities (limit: ${limit})...`);
-      const response = await apiService.get(`/admin/dashboard/recent-activities?limit=${limit}`);
-      
+      const response = await apiService.get(
+        `/admin/dashboard/recent-activities?limit=${limit}`
+      );
+
       if (response.success && response.data) {
         console.log("✅ Recent activities fetched successfully");
         return response.data;
@@ -84,7 +88,7 @@ export const adminService = {
       }
     } catch (error) {
       console.error("❌ Failed to fetch recent activities:", error);
-      
+
       if (error.response?.status === 401) {
         throw new Error("Authentication required. Please login again.");
       } else if (error.response?.status === 403) {
@@ -92,66 +96,8 @@ export const adminService = {
       } else if (error.response?.status >= 500) {
         throw new Error("Server error. Please try again later.");
       }
-      
+
       throw new Error(error.message || "Failed to fetch recent activities");
-    }
-  },
-
-  /**
-   * Get all dashboard data in one call for initial load
-   * @returns {Promise} Complete dashboard data
-   */
-  async getAllDashboardData() {
-    try {
-      console.log("🔄 Fetching all dashboard data...");
-      
-      const [coreKPIs, activityMetrics, recentActivities] = await Promise.allSettled([
-        this.getCoreKPIs(),
-        this.getActivityMetrics(),
-        this.getRecentActivities(10),
-      ]);
-
-      const result = {
-        coreKPIs: coreKPIs.status === "fulfilled" ? coreKPIs.value : null,
-        activityMetrics: activityMetrics.status === "fulfilled" ? activityMetrics.value : null,
-        recentActivities: recentActivities.status === "fulfilled" ? recentActivities.value : { activities: [] },
-        errors: {
-          coreKPIs: coreKPIs.status === "rejected" ? coreKPIs.reason : null,
-          activityMetrics: activityMetrics.status === "rejected" ? activityMetrics.reason : null,
-          recentActivities: recentActivities.status === "rejected" ? recentActivities.reason : null,
-        },
-      };
-
-      console.log("✅ Dashboard data fetch completed", result);
-      return result;
-    } catch (error) {
-      console.error("❌ Failed to fetch dashboard data:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Refresh dashboard data with cache busting
-   * @returns {Promise} Fresh dashboard data
-   */
-  async refreshDashboardData() {
-    try {
-      console.log("🔄 Refreshing dashboard data...");
-      const timestamp = Date.now();
-      const [coreKPIs, activityMetrics, recentActivities] = await Promise.allSettled([
-        apiService.get(`/admin/dashboard/core-kpis?_t=${timestamp}`),
-        apiService.get(`/admin/dashboard/activity-metrics?_t=${timestamp}`),
-        apiService.get(`/admin/dashboard/recent-activities?_t=${timestamp}&limit=10`),
-      ]);
-
-      return {
-        coreKPIs: coreKPIs.status === "fulfilled" && coreKPIs.value.success ? coreKPIs.value.data : null,
-        activityMetrics: activityMetrics.status === "fulfilled" && activityMetrics.value.success ? activityMetrics.value.data : null,
-        recentActivities: recentActivities.status === "fulfilled" && recentActivities.value.success ? recentActivities.value.data : { activities: [] },
-      };
-    } catch (error) {
-      console.error("❌ Failed to refresh dashboard data:", error);
-      throw error;
     }
   },
 
@@ -160,7 +106,7 @@ export const adminService = {
     try {
       console.log("📊 Fetching legacy dashboard stats...");
       const response = await apiService.get("/admin/dashboard/stats");
-      
+
       if (response.success && response.data) {
         return response.data;
       } else {
@@ -169,6 +115,62 @@ export const adminService = {
     } catch (error) {
       console.error("❌ Failed to fetch dashboard stats:", error);
       throw new Error(error.message || "Failed to fetch dashboard stats");
+    }
+  },
+
+  // ===== USER ACTIVATION MANAGEMENT APIS =====
+
+  /**
+   * Toggle user activation status (activate/deactivate)
+   * @param {string} userId - User ID to toggle
+   * @param {boolean} isActive - New activation status
+   * @param {string} reason - Reason for deactivation (optional)
+   * @returns {Promise} Updated user data
+   */
+  async toggleUserStatus(userId, isActive, reason = null) {
+    try {
+      console.log(
+        `🔄 ${isActive ? "Activating" : "Deactivating"} user ${userId}...`
+      );
+
+      const payload = { isActive };
+
+      // If deactivating, reason should be provided
+      if (!isActive && reason && reason.trim()) {
+        payload.reason = reason.trim();
+      }
+
+      const response = await apiService.put(
+        `/admin/users/${userId}/toggle-status`,
+        payload
+      );
+
+      if (response.success) {
+        console.log(
+          `✅ User ${isActive ? "activated" : "deactivated"} successfully`
+        );
+        return {
+          success: true,
+          data: response.data,
+          message:
+            response.message ||
+            `User ${isActive ? "activated" : "deactivated"} successfully`,
+        };
+      }
+
+      throw new Error("Failed to toggle user status");
+    } catch (error) {
+      console.error("Toggle user status error:", error);
+
+      if (error.response?.status === 404) {
+        throw new Error("User not found");
+      } else if (error.response?.status === 400) {
+        throw new Error(error.response.data?.message || "Invalid request data");
+      } else if (error.response?.status === 403) {
+        throw new Error("Cannot deactivate admin users");
+      }
+
+      throw new Error(error.message || "Failed to toggle user status");
     }
   },
 
@@ -192,6 +194,12 @@ export const adminService = {
       if (params.status && params.status !== "all") {
         queryParams.append("status", params.status);
       }
+      if (params.isActive && params.isActive !== "all") {
+        queryParams.append(
+          "isActive",
+          params.isActive === "active" ? "true" : "false"
+        );
+      }
       if (params.city && params.city.trim()) {
         queryParams.append("city", params.city.trim());
       }
@@ -200,71 +208,33 @@ export const adminService = {
       }
       if (params.sortBy) queryParams.append("sortBy", params.sortBy);
       if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
-      if (params.dateFrom) queryParams.append("dateFrom", params.dateFrom);
-      if (params.dateTo) queryParams.append("dateTo", params.dateTo);
 
-      const url = `/admin/vendors${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+      const url = `/admin/vendors${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`;
       console.log("Fetching vendors from:", url);
 
       const response = await apiService.get(url);
 
       if (response.success) {
-        if (response.data && response.data.vendors) {
-          return {
-            success: true,
-            data: {
-              vendors: response.data.vendors || [],
-              pagination: response.data.pagination || {
-                page: parseInt(params.page) || 1,
-                limit: parseInt(params.limit) || 10,
-                total: response.data.total || 0,
-                pages: Math.ceil((response.data.total || 0) / (parseInt(params.limit) || 10)),
-                hasNext: false,
-                hasPrev: false,
-              },
-              filters: response.data.filters || {},
-              stats: response.data.stats || {},
+        return {
+          success: true,
+          data: {
+            vendors: response.data.vendors || response.data || [],
+            pagination: response.data.pagination || {
+              page: parseInt(params.page) || 1,
+              limit: parseInt(params.limit) || 10,
+              total: response.data.total || 0,
+              pages: Math.ceil(
+                (response.data.total || 0) / (parseInt(params.limit) || 10)
+              ),
+              hasNext: false,
+              hasPrev: false,
             },
-          };
-        }
-
-        if (Array.isArray(response.data)) {
-          return {
-            success: true,
-            data: {
-              vendors: response.data,
-              pagination: {
-                page: parseInt(params.page) || 1,
-                limit: parseInt(params.limit) || 10,
-                total: response.data.length,
-                pages: 1,
-                hasNext: false,
-                hasPrev: false,
-              },
-              filters: {},
-              stats: {},
-            },
-          };
-        }
-
-        if (response.vendors) {
-          return {
-            success: true,
-            data: {
-              vendors: response.vendors,
-              pagination: response.pagination || {
-                page: parseInt(params.page) || 1,
-                limit: parseInt(params.limit) || 10,
-                total: response.total || response.vendors.length,
-                pages: response.pages || 1,
-                hasNext: response.hasNext || false,
-                hasPrev: response.hasPrev || false,
-              },
-              filters: response.filters || {},
-              stats: response.stats || {},
-            },
-          };
-        }
+            filters: response.data.filters || {},
+            stats: response.data.stats || {},
+          },
+        };
       }
 
       throw new Error("Invalid response format from server");
@@ -275,8 +245,6 @@ export const adminService = {
         throw new Error("Authentication required. Please login again.");
       } else if (error.response?.status === 403) {
         throw new Error("Access denied. Admin privileges required.");
-      } else if (error.response?.status === 404) {
-        throw new Error("Vendors endpoint not found.");
       } else if (error.response?.status >= 500) {
         throw new Error("Server error. Please try again later.");
       }
@@ -310,9 +278,12 @@ export const adminService = {
 
   async updateVendorStatus(vendorId, status) {
     try {
-      const response = await apiService.put(`/admin/vendors/${vendorId}/status`, {
-        status: status.toUpperCase(),
-      });
+      const response = await apiService.put(
+        `/admin/vendors/${vendorId}/status`,
+        {
+          status: status.toUpperCase(),
+        }
+      );
 
       if (response.success) {
         return {
@@ -336,18 +307,36 @@ export const adminService = {
 
   async updateVendorVerification(vendorId, verified, rejectionReason = null) {
     try {
+      console.log(
+        `🔄 ${verified ? "Verifying" : "Rejecting"} vendor ${vendorId}...`
+      );
+
       const payload = { verified };
-      if (!verified && rejectionReason) {
-        payload.rejectionReason = rejectionReason;
+
+      if (!verified) {
+        if (!rejectionReason || rejectionReason.trim() === "") {
+          throw new Error(
+            "Rejection reason is required when rejecting a vendor"
+          );
+        }
+        payload.rejectionReason = rejectionReason.trim();
       }
 
-      const response = await apiService.put(`/admin/vendors/${vendorId}/verify`, payload);
+      const response = await apiService.put(
+        `/admin/vendors/${vendorId}/verify`,
+        payload
+      );
 
       if (response.success) {
+        console.log(
+          `✅ Vendor ${verified ? "verified" : "rejected"} successfully`
+        );
         return {
           success: true,
           data: response.data,
-          message: response.message || `Vendor ${verified ? "verified" : "unverified"} successfully`,
+          message:
+            response.message ||
+            `Vendor ${verified ? "verified" : "rejected"} successfully`,
         };
       }
 
@@ -357,6 +346,10 @@ export const adminService = {
 
       if (error.response?.status === 404) {
         throw new Error("Vendor not found");
+      } else if (error.response?.status === 400) {
+        throw new Error(
+          error.response.data?.message || "Invalid verification data"
+        );
       }
 
       throw new Error(error.message || "Failed to update vendor verification");
@@ -400,85 +393,47 @@ export const adminService = {
       if (params.status && params.status !== "all") {
         queryParams.append("status", params.status);
       }
+      if (params.isActive && params.isActive !== "all") {
+        queryParams.append(
+          "isActive",
+          params.isActive === "active" ? "true" : "false"
+        );
+      }
       if (params.registrationDate && params.registrationDate !== "all") {
         queryParams.append("registrationDate", params.registrationDate);
       }
       if (params.activity && params.activity !== "all") {
         queryParams.append("activity", params.activity);
       }
-      if (params.city && params.city.trim()) {
-        queryParams.append("city", params.city.trim());
-      }
-      if (params.state && params.state.trim()) {
-        queryParams.append("state", params.state.trim());
-      }
       if (params.sortBy) queryParams.append("sortBy", params.sortBy);
       if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
-      if (params.dateFrom) queryParams.append("dateFrom", params.dateFrom);
-      if (params.dateTo) queryParams.append("dateTo", params.dateTo);
 
-      const url = `/admin/buyers${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+      const url = `/admin/buyers${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`;
       console.log("Fetching buyers from:", url);
 
       const response = await apiService.get(url);
 
       if (response.success) {
-        if (response.data && response.data.buyers) {
-          return {
-            success: true,
-            data: {
-              buyers: response.data.buyers || [],
-              pagination: response.data.pagination || {
-                page: parseInt(params.page) || 1,
-                limit: parseInt(params.limit) || 25,
-                total: response.data.total || 0,
-                pages: Math.ceil((response.data.total || 0) / (parseInt(params.limit) || 25)),
-                hasNext: false,
-                hasPrev: false,
-              },
-              filters: response.data.filters || {},
-              stats: response.data.stats || {},
+        return {
+          success: true,
+          data: {
+            buyers: response.data.buyers || response.data || [],
+            pagination: response.data.pagination || {
+              page: parseInt(params.page) || 1,
+              limit: parseInt(params.limit) || 25,
+              total: response.data.total || 0,
+              pages: Math.ceil(
+                (response.data.total || 0) / (parseInt(params.limit) || 25)
+              ),
+              hasNext: false,
+              hasPrev: false,
             },
-          };
-        }
-
-        if (Array.isArray(response.data)) {
-          return {
-            success: true,
-            data: {
-              buyers: response.data,
-              pagination: {
-                page: parseInt(params.page) || 1,
-                limit: parseInt(params.limit) || 25,
-                total: response.data.length,
-                pages: 1,
-                hasNext: false,
-                hasPrev: false,
-              },
-              filters: {},
-              stats: {},
-            },
-          };
-        }
-
-        if (response.buyers) {
-          return {
-            success: true,
-            data: {
-              buyers: response.buyers,
-              pagination: response.pagination || {
-                page: parseInt(params.page) || 1,
-                limit: parseInt(params.limit) || 25,
-                total: response.total || response.buyers.length,
-                pages: response.pages || 1,
-                hasNext: response.hasNext || false,
-                hasPrev: response.hasPrev || false,
-              },
-              filters: response.filters || {},
-              stats: response.stats || {},
-            },
-          };
-        }
+            filters: response.data.filters || {},
+            stats: response.data.stats || {},
+          },
+        };
       }
 
       throw new Error("Invalid response format from server");
@@ -489,8 +444,6 @@ export const adminService = {
         throw new Error("Authentication required. Please login again.");
       } else if (error.response?.status === 403) {
         throw new Error("Access denied. Admin privileges required.");
-      } else if (error.response?.status === 404) {
-        throw new Error("Buyers endpoint not found.");
       } else if (error.response?.status >= 500) {
         throw new Error("Server error. Please try again later.");
       }
@@ -571,53 +524,6 @@ export const adminService = {
     }
   },
 
-  // ===== USER MANAGEMENT APIS =====
-
-  async getUsers(params = {}) {
-    try {
-      const queryParams = new URLSearchParams();
-
-      if (params.page) queryParams.append("page", params.page);
-      if (params.limit) queryParams.append("limit", params.limit);
-      if (params.search && params.search.trim()) {
-        queryParams.append("search", params.search.trim());
-      }
-      if (params.accountType && params.accountType !== "all") {
-        queryParams.append("accountType", params.accountType);
-      }
-      if (params.status && params.status !== "all") {
-        queryParams.append("status", params.status);
-      }
-      if (params.sortBy) queryParams.append("sortBy", params.sortBy);
-      if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
-
-      const url = `/admin/users${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-      const response = await apiService.get(url);
-
-      if (response.success && response.data) {
-        return {
-          success: true,
-          data: {
-            users: response.data.users || response.data,
-            pagination: response.data.pagination || {
-              page: parseInt(params.page) || 1,
-              limit: parseInt(params.limit) || 20,
-              total: response.data.total || 0,
-              pages: Math.ceil((response.data.total || 0) / (parseInt(params.limit) || 20)),
-              hasNext: false,
-              hasPrev: false,
-            },
-          },
-        };
-      }
-
-      throw new Error("Invalid response format");
-    } catch (error) {
-      console.error("Get users error:", error);
-      throw new Error(error.message || "Failed to fetch users");
-    }
-  },
-
   // ===== HELPER METHODS =====
 
   getVendorFilterOptions() {
@@ -636,12 +542,17 @@ export const adminService = {
         { value: "active", label: "Active" },
         { value: "blocked", label: "Blocked" },
       ],
+      activationStatuses: [
+        { value: "active", label: "Activated" },
+        { value: "inactive", label: "Deactivated" },
+      ],
       sortOptions: [
         { value: "businessName", label: "Business Name" },
         { value: "createdAt", label: "Registration Date" },
         { value: "updatedAt", label: "Last Updated" },
         { value: "city", label: "City" },
         { value: "state", label: "State" },
+        { value: "isActive", label: "Activation Status" },
       ],
     };
   },
@@ -651,6 +562,10 @@ export const adminService = {
       statuses: [
         { value: "active", label: "Active" },
         { value: "blocked", label: "Blocked" },
+      ],
+      activationStatuses: [
+        { value: "active", label: "Activated" },
+        { value: "inactive", label: "Deactivated" },
       ],
       registrationPeriods: [
         { value: "today", label: "Today" },
@@ -670,6 +585,7 @@ export const adminService = {
         { value: "createdAt", label: "Registration Date" },
         { value: "lastLogin", label: "Last Login" },
         { value: "email", label: "Email" },
+        { value: "isActive", label: "Activation Status" },
       ],
     };
   },

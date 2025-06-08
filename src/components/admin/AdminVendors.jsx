@@ -15,6 +15,8 @@ import {
   Activity,
   AlertTriangle,
   Trash2,
+  Power,
+  PowerOff,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
 import Button from "../ui/Button";
@@ -28,8 +30,97 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/DropdownMenu";
-// Removed AdminSearchAndFilter import as we're using inline implementation
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/Dialog";
+
+// Confirmation Dialog Component
+const ConfirmationDialog = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  title, 
+  message, 
+  confirmText = "Confirm", 
+  cancelText = "Cancel",
+  variant = "danger",
+  loading = false,
+  reasonRequired = false,
+}) => {
+  const [reason, setReason] = useState("");
+  
+  const handleConfirm = () => {
+    if (reasonRequired && !reason.trim()) {
+      return;
+    }
+    onConfirm(reason.trim() || null);
+  };
+
+  const handleClose = () => {
+    setReason("");
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            {variant === "danger" && <AlertTriangle className="w-5 h-5 text-red-600" />}
+            {variant === "warning" && <AlertTriangle className="w-5 h-5 text-yellow-600" />}
+            {variant === "info" && <CheckCircle className="w-5 h-5 text-blue-600" />}
+            <span>{title}</span>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="py-4">
+          <p className="text-gray-600 mb-4">{message}</p>
+          
+          {reasonRequired && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Reason for deactivation <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Please provide a reason for deactivating this vendor..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                rows={3}
+                required
+              />
+              {reasonRequired && !reason.trim() && (
+                <p className="text-sm text-red-600">Reason is required</p>
+              )}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex justify-end space-x-3 pt-4 border-t">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={loading}
+          >
+            {cancelText}
+          </Button>
+          <Button
+            variant={variant === "danger" ? "destructive" : "default"}
+            onClick={handleConfirm}
+            disabled={loading || (reasonRequired && !reason.trim())}
+            className={
+              variant === "danger" 
+                ? "bg-red-600 hover:bg-red-700" 
+                : variant === "warning"
+                ? "bg-yellow-600 hover:bg-yellow-700"
+                : "bg-blue-600 hover:bg-blue-700"
+            }
+          >
+            {loading ? <LoadingSpinner size="sm" /> : confirmText}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 // Debounce hook for search
 const useDebounce = (value, delay) => {
@@ -57,6 +148,7 @@ const AdminVendors = () => {
     status: "all",
     verificationStatus: "all",
     vendorType: "all",
+    isActive: "all",
     city: "",
     state: "",
     sortBy: "createdAt",
@@ -64,7 +156,7 @@ const AdminVendors = () => {
   });
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 5, // Changed from 10 to 5
+    limit: 5,
     total: 0,
     pages: 1,
     hasNext: false,
@@ -72,6 +164,12 @@ const AdminVendors = () => {
   });
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    type: null,
+    vendor: null,
+    loading: false,
+  });
   const [stats, setStats] = useState({});
   const { addToast } = useToast();
 
@@ -86,6 +184,7 @@ const AdminVendors = () => {
     status: "all",
     verificationStatus: "all",
     vendorType: "all",
+    isActive: "all",
     city: "",
     state: "",
     sortBy: "createdAt",
@@ -99,6 +198,7 @@ const AdminVendors = () => {
       filters.status !== defaultFilters.status ||
       filters.verificationStatus !== defaultFilters.verificationStatus ||
       filters.vendorType !== defaultFilters.vendorType ||
+      filters.isActive !== defaultFilters.isActive ||
       filters.city !== defaultFilters.city ||
       filters.state !== defaultFilters.state ||
       filters.sortBy !== defaultFilters.sortBy ||
@@ -114,6 +214,7 @@ const AdminVendors = () => {
     if (filters.verificationStatus !== defaultFilters.verificationStatus)
       count++;
     if (filters.vendorType !== defaultFilters.vendorType) count++;
+    if (filters.isActive !== defaultFilters.isActive) count++;
     if (filters.city !== defaultFilters.city) count++;
     if (filters.state !== defaultFilters.state) count++;
     if (
@@ -177,6 +278,52 @@ const AdminVendors = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle user activation toggle
+  const handleToggleActivation = async (vendor, isActive, reason = null) => {
+    try {
+      setActionLoading((prev) => ({ ...prev, [vendor.id]: true }));
+      setConfirmDialog((prev) => ({ ...prev, loading: true }));
+
+      const response = await adminService.toggleUserStatus(vendor.userId, isActive, reason);
+
+      if (response.success) {
+        setVendors((prev) =>
+          prev.map((v) =>
+            v.id === vendor.id
+              ? { ...v, user: { ...v.user, isActive } }
+              : v
+          )
+        );
+        
+        const action = isActive ? 'activated' : 'deactivated';
+        addToast(`Vendor ${action} successfully`, "success");
+        
+        // Close confirmation dialog
+        setConfirmDialog({
+          isOpen: false,
+          type: null,
+          vendor: null,
+          loading: false,
+        });
+      }
+    } catch (error) {
+      addToast(error.message || `Failed to toggle vendor activation`, "error");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [vendor.id]: false }));
+      setConfirmDialog((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Show confirmation dialog for activation toggle
+  const showToggleConfirmation = (vendor, isActive) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: isActive ? 'activate' : 'deactivate',
+      vendor,
+      loading: false,
+    });
   };
 
   const handleUpdateVendorStatus = async (vendorId, status) => {
@@ -314,6 +461,21 @@ const AdminVendors = () => {
     );
   };
 
+  // Get activation status badge
+  const getActivationBadge = (isActive) => {
+    return isActive ? (
+      <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
+        <CheckCircle className="w-3 h-3" />
+        Activated
+      </Badge>
+    ) : (
+      <Badge className="bg-red-100 text-red-800 flex items-center gap-1">
+        <XCircle className="w-3 h-3" />
+        Deactivated
+      </Badge>
+    );
+  };
+
   const VendorRow = ({ vendor }) => (
     <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200">
       <div className="flex items-center justify-between">
@@ -334,6 +496,7 @@ const AdminVendors = () => {
                   `${vendor.user?.firstName} ${vendor.user?.lastName}`}
               </h4>
               {getVerificationBadge(vendor.verified)}
+              {getActivationBadge(vendor.user?.isActive !== false)}
             </div>
 
             <div className="flex items-center space-x-4 text-sm text-gray-500">
@@ -385,6 +548,26 @@ const AdminVendors = () => {
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
+
+              {/* Activation Toggle Options */}
+              {vendor.user?.isActive !== false ? (
+                <DropdownMenuItem
+                  onClick={() => showToggleConfirmation(vendor, false)}
+                  className="text-orange-600"
+                >
+                  <PowerOff className="mr-2 h-4 w-4" />
+                  Deactivate User
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => showToggleConfirmation(vendor, true)}
+                  className="text-green-600"
+                >
+                  <Power className="mr-2 h-4 w-4" />
+                  Activate User
+                </DropdownMenuItem>
+              )}
+
               {vendor.status !== "blocked" && vendor.status !== "BLOCKED" ? (
                 <DropdownMenuItem
                   onClick={() => handleUpdateVendorStatus(vendor.id, "blocked")}
@@ -419,12 +602,16 @@ const AdminVendors = () => {
     const blockedCount = vendors.filter(
       (v) => (v.status || "").toLowerCase() === "blocked"
     ).length;
+    const activatedCount = vendors.filter((v) => v.user?.isActive !== false).length;
+    const deactivatedCount = vendors.filter((v) => v.user?.isActive === false).length;
 
     return {
       total: totalVendors,
       verified: verifiedCount,
       active: activeCount,
       blocked: blockedCount,
+      activated: activatedCount,
+      deactivated: deactivatedCount,
       ...stats,
     };
   };
@@ -448,7 +635,7 @@ const AdminVendors = () => {
         </div>
 
         {/* Stats */}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-5 gap-4">
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
             <div className="text-2xl font-bold">{currentStats.total}</div>
             <div className="text-blue-100 text-sm">Total Vendors</div>
@@ -460,6 +647,14 @@ const AdminVendors = () => {
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
             <div className="text-2xl font-bold">{currentStats.blocked}</div>
             <div className="text-blue-100 text-sm">Blocked</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+            <div className="text-2xl font-bold">{currentStats.activated}</div>
+            <div className="text-blue-100 text-sm">Activated</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+            <div className="text-2xl font-bold">{currentStats.deactivated}</div>
+            <div className="text-blue-100 text-sm">Deactivated</div>
           </div>
         </div>
       </div>
@@ -569,7 +764,7 @@ const AdminVendors = () => {
         </div>
 
         {/* Filter Dropdowns */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
@@ -583,6 +778,26 @@ const AdminVendors = () => {
             >
               <option value="all">All Status</option>
               {filterOptions.statuses.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Activation
+            </label>
+            <select
+              value={filters.isActive}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, isActive: e.target.value }))
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Users</option>
+              {filterOptions.activationStatuses.map((status) => (
                 <option key={status.value} value={status.value}>
                   {status.label}
                 </option>
@@ -764,6 +979,7 @@ const AdminVendors = () => {
                     <div className="flex items-center space-x-3 mt-2">
                       {getStatusBadge(selectedVendor.status)}
                       {getVerificationBadge(selectedVendor.verified)}
+                      {getActivationBadge(selectedVendor.user?.isActive !== false)}
                     </div>
                   </div>
                 </div>
@@ -837,6 +1053,15 @@ const AdminVendors = () => {
                       {selectedVendor.user?.phoneNumber || "Not provided"}
                     </p>
                   </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                      Account Status
+                    </label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      {getStatusBadge(selectedVendor.status)}
+                      {getActivationBadge(selectedVendor.user?.isActive !== false)}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -889,6 +1114,24 @@ const AdminVendors = () => {
                   </div>
                 </div>
               )}
+
+              {/* Alert Section for Deactivated Users */}
+              {selectedVendor.user?.isActive === false && (
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+                  <div className="flex items-center">
+                    <PowerOff className="w-6 h-6 text-orange-600 mr-3" />
+                    <div>
+                      <h4 className="font-semibold text-orange-800">
+                        Account Deactivated
+                      </h4>
+                      <p className="text-orange-700 mt-1">
+                        This vendor account has been deactivated by an administrator.
+                        The vendor cannot access the platform until reactivated.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -904,6 +1147,38 @@ const AdminVendors = () => {
                   </Button>
                 </div>
                 <div className="flex space-x-3">
+                  {/* Activation Toggle Button */}
+                  {selectedVendor.user?.isActive !== false ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsDetailModalOpen(false);
+                        showToggleConfirmation(selectedVendor, false);
+                      }}
+                      disabled={actionLoading[selectedVendor.id]}
+                      className="text-orange-600 border-orange-300 hover:bg-orange-50 px-6"
+                    >
+                      <PowerOff className="w-4 h-4 mr-2" />
+                      {actionLoading[selectedVendor.id]
+                        ? "Deactivating..."
+                        : "Deactivate User"}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => {
+                        setIsDetailModalOpen(false);
+                        showToggleConfirmation(selectedVendor, true);
+                      }}
+                      disabled={actionLoading[selectedVendor.id]}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6"
+                    >
+                      <Power className="w-4 h-4 mr-2" />
+                      {actionLoading[selectedVendor.id]
+                        ? "Activating..."
+                        : "Activate User"}
+                    </Button>
+                  )}
+
                   {selectedVendor.status !== "blocked" &&
                   selectedVendor.status !== "BLOCKED" ? (
                     <Button
@@ -941,6 +1216,42 @@ const AdminVendors = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Confirmation Dialog for Activation Toggle */}
+      <ConfirmationDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({
+          isOpen: false,
+          type: null,
+          vendor: null,
+          loading: false,
+        })}
+        onConfirm={(reason) => 
+          handleToggleActivation(
+            confirmDialog.vendor, 
+            confirmDialog.type === 'activate',
+            reason
+          )
+        }
+        title={
+          confirmDialog.type === 'activate' 
+            ? "Activate Vendor Account" 
+            : "Deactivate Vendor Account"
+        }
+        message={
+          confirmDialog.type === 'activate'
+            ? `Are you sure you want to activate ${confirmDialog.vendor?.user?.firstName} ${confirmDialog.vendor?.user?.lastName}'s vendor account? They will be able to access the platform again.`
+            : `Are you sure you want to deactivate ${confirmDialog.vendor?.user?.firstName} ${confirmDialog.vendor?.user?.lastName}'s vendor account? They will not be able to access the platform until reactivated.`
+        }
+        confirmText={
+          confirmDialog.type === 'activate' 
+            ? "Activate Vendor" 
+            : "Deactivate Vendor"
+        }
+        variant={confirmDialog.type === 'activate' ? "info" : "warning"}
+        loading={confirmDialog.loading}
+        reasonRequired={confirmDialog.type === 'deactivate'}
+      />
     </div>
   );
 };

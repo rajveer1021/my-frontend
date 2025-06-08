@@ -11,12 +11,14 @@ import {
   Activity,
   Trash2,
   AlertTriangle,
-  User, // NEW - for personal info sections
-  Shield, // NEW - for security sections
-  Clock, // NEW - for timeline sections
-  MapPin, // NEW - for address sections (if used)
-  CheckCircle, // NEW - for verification status
-  XCircle, // NEW - for verification status
+  User,
+  Shield,
+  Clock,
+  MapPin,
+  CheckCircle,
+  XCircle,
+  Power,
+  PowerOff,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
 import Button from "../ui/Button";
@@ -31,6 +33,97 @@ import {
   DropdownMenuTrigger,
 } from "../ui/DropdownMenu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/Dialog";
+
+// Confirmation Dialog Component
+const ConfirmationDialog = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  title, 
+  message, 
+  confirmText = "Confirm", 
+  cancelText = "Cancel",
+  variant = "danger",
+  loading = false,
+  reasonRequired = false,
+}) => {
+  const [reason, setReason] = useState("");
+  
+  const handleConfirm = () => {
+    if (reasonRequired && !reason.trim()) {
+      return;
+    }
+    onConfirm(reason.trim() || null);
+  };
+
+  const handleClose = () => {
+    setReason("");
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            {variant === "danger" && <AlertTriangle className="w-5 h-5 text-red-600" />}
+            {variant === "warning" && <AlertTriangle className="w-5 h-5 text-yellow-600" />}
+            {variant === "info" && <CheckCircle className="w-5 h-5 text-blue-600" />}
+            <span>{title}</span>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="py-4">
+          <p className="text-gray-600 mb-4">{message}</p>
+          
+          {reasonRequired && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Reason for deactivation <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Please provide a reason for deactivating this user..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                rows={3}
+                required
+              />
+              {reasonRequired && !reason.trim() && (
+                <p className="text-sm text-red-600">Reason is required</p>
+              )}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex justify-end space-x-3 pt-4 border-t">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            disabled={loading}
+          >
+            {cancelText}
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={loading || (reasonRequired && !reason.trim())}
+            className={
+              variant === "danger" 
+                ? "bg-red-600 hover:bg-red-700 text-white" 
+                : variant === "warning"
+                ? "bg-yellow-600 hover:bg-yellow-700 text-white"
+                : "bg-blue-600 hover:bg-blue-700 text-white"
+            }
+          >
+            {loading ? <LoadingSpinner size="sm" /> : confirmText}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 // Debounce hook for search
 const useDebounce = (value, delay) => {
@@ -50,12 +143,14 @@ const useDebounce = (value, delay) => {
 };
 
 const AdminBuyers = () => {
+  // State management
   const [buyers, setBuyers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
     status: "all",
+    isActive: "all",
     registrationDate: "all",
     activity: "all",
     city: "",
@@ -65,7 +160,7 @@ const AdminBuyers = () => {
   });
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 5, // Changed from 25 to 5
+    limit: 5,
     total: 0,
     pages: 1,
     hasNext: false,
@@ -73,6 +168,12 @@ const AdminBuyers = () => {
   });
   const [selectedBuyer, setSelectedBuyer] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    type: null,
+    buyer: null,
+    loading: false,
+  });
   const [stats, setStats] = useState({});
   const { addToast } = useToast();
 
@@ -85,6 +186,7 @@ const AdminBuyers = () => {
   // Define default filter values
   const defaultFilters = {
     status: "all",
+    isActive: "all",
     registrationDate: "all",
     activity: "all",
     city: "",
@@ -98,6 +200,7 @@ const AdminBuyers = () => {
     return (
       debouncedSearchTerm.trim() !== "" ||
       filters.status !== defaultFilters.status ||
+      filters.isActive !== defaultFilters.isActive ||
       filters.registrationDate !== defaultFilters.registrationDate ||
       filters.activity !== defaultFilters.activity ||
       filters.city !== defaultFilters.city ||
@@ -112,6 +215,7 @@ const AdminBuyers = () => {
     let count = 0;
     if (debouncedSearchTerm.trim() !== "") count++;
     if (filters.status !== defaultFilters.status) count++;
+    if (filters.isActive !== defaultFilters.isActive) count++;
     if (filters.registrationDate !== defaultFilters.registrationDate) count++;
     if (filters.activity !== defaultFilters.activity) count++;
     if (filters.city !== defaultFilters.city) count++;
@@ -124,6 +228,7 @@ const AdminBuyers = () => {
     return count;
   }, [debouncedSearchTerm, filters]);
 
+  // Effects
   useEffect(() => {
     // Reset to first page when search or filters change
     setPagination((prev) => ({ ...prev, page: 1 }));
@@ -133,6 +238,7 @@ const AdminBuyers = () => {
     loadBuyers();
   }, [pagination.page, debouncedSearchTerm, filters]);
 
+  // Load buyers function
   const loadBuyers = async () => {
     try {
       setLoading(true);
@@ -179,6 +285,53 @@ const AdminBuyers = () => {
     }
   };
 
+  // Handle user activation toggle
+  const handleToggleActivation = async (buyer, isActive, reason = null) => {
+    try {
+      setActionLoading((prev) => ({ ...prev, [buyer.id]: true }));
+      setConfirmDialog((prev) => ({ ...prev, loading: true }));
+
+      const response = await adminService.toggleUserStatus(buyer.id, isActive, reason);
+
+      if (response.success) {
+        setBuyers((prev) =>
+          prev.map((b) =>
+            b.id === buyer.id
+              ? { ...b, isActive }
+              : b
+          )
+        );
+        
+        const action = isActive ? 'activated' : 'deactivated';
+        addToast(`Buyer ${action} successfully`, "success");
+        
+        // Close confirmation dialog
+        setConfirmDialog({
+          isOpen: false,
+          type: null,
+          buyer: null,
+          loading: false,
+        });
+      }
+    } catch (error) {
+      addToast(error.message || `Failed to toggle buyer activation`, "error");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [buyer.id]: false }));
+      setConfirmDialog((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Show confirmation dialog for activation toggle
+  const showToggleConfirmation = (buyer, isActive) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: isActive ? 'activate' : 'deactivate',
+      buyer,
+      loading: false,
+    });
+  };
+
+  // Handle buyer status update (block/unblock)
   const handleUpdateBuyerStatus = async (buyerId, status) => {
     try {
       setActionLoading((prev) => ({ ...prev, [buyerId]: true }));
@@ -202,6 +355,7 @@ const AdminBuyers = () => {
     }
   };
 
+  // Handle buyer deletion
   const handleDeleteBuyer = async (buyerId) => {
     if (
       !confirm(
@@ -228,15 +382,21 @@ const AdminBuyers = () => {
     }
   };
 
+  // Handle view buyer details
   const handleViewDetails = async (buyer) => {
     try {
       setSelectedBuyer(buyer);
       setIsDetailModalOpen(true);
 
       // Optionally, fetch more detailed buyer information
-      const response = await adminService.getBuyer(buyer.id);
-      if (response.success) {
-        setSelectedBuyer(response.data);
+      try {
+        const response = await adminService.getBuyer(buyer.id);
+        if (response.success) {
+          setSelectedBuyer(response.data);
+        }
+      } catch (detailError) {
+        console.log("Could not fetch additional buyer details:", detailError);
+        // Continue with basic buyer data
       }
     } catch (error) {
       console.error("Failed to fetch buyer details:", error);
@@ -246,12 +406,14 @@ const AdminBuyers = () => {
     }
   };
 
+  // Handle clear filters
   const handleClearFilters = () => {
     setSearchTerm("");
     setFilters(defaultFilters);
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
+  // Badge helper functions
   const getStatusBadge = (status) => {
     const statusLower = (status || "active").toLowerCase();
     switch (statusLower) {
@@ -266,6 +428,21 @@ const AdminBuyers = () => {
           </Badge>
         );
     }
+  };
+
+  // Get activation status badge
+  const getActivationBadge = (isActive) => {
+    return isActive !== false ? (
+      <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
+        <CheckCircle className="w-3 h-3" />
+        Activated
+      </Badge>
+    ) : (
+      <Badge className="bg-red-100 text-red-800 flex items-center gap-1">
+        <XCircle className="w-3 h-3" />
+        Deactivated
+      </Badge>
+    );
   };
 
   const getActivityLevel = (lastLogin) => {
@@ -283,7 +460,6 @@ const AdminBuyers = () => {
   };
 
   const getActivityBadge = (lastLogin) => {
-    const activity = getActivityLevel(lastLogin);
     const daysSinceLogin = lastLogin
       ? Math.floor((new Date() - new Date(lastLogin)) / (1000 * 60 * 60 * 24))
       : null;
@@ -303,6 +479,7 @@ const AdminBuyers = () => {
     }
   };
 
+  // Buyer Row Component
   const BuyerRow = ({ buyer }) => (
     <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200">
       <div className="flex items-center justify-between">
@@ -318,6 +495,7 @@ const AdminBuyers = () => {
                 {buyer.firstName} {buyer.lastName}
               </h4>
               {getStatusBadge(buyer.status)}
+              {getActivationBadge(buyer.isActive)}
             </div>
 
             <div className="flex items-center space-x-4 text-sm text-gray-500 mb-1">
@@ -367,6 +545,25 @@ const AdminBuyers = () => {
                 View Details
               </DropdownMenuItem>
 
+              {/* Activation Toggle Options */}
+              {buyer.isActive !== false ? (
+                <DropdownMenuItem
+                  onClick={() => showToggleConfirmation(buyer, false)}
+                  className="text-orange-600"
+                >
+                  <PowerOff className="mr-2 h-4 w-4" />
+                  Deactivate User
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => showToggleConfirmation(buyer, true)}
+                  className="text-green-600"
+                >
+                  <Power className="mr-2 h-4 w-4" />
+                  Activate User
+                </DropdownMenuItem>
+              )}
+
               {buyer.status !== "blocked" && buyer.status !== "BLOCKED" ? (
                 <DropdownMenuItem
                   onClick={() => handleUpdateBuyerStatus(buyer.id, "blocked")}
@@ -400,6 +597,8 @@ const AdminBuyers = () => {
     const blockedCount = buyers.filter(
       (b) => (b.status || "").toLowerCase() === "blocked"
     ).length;
+    const activatedCount = buyers.filter((b) => b.isActive !== false).length;
+    const deactivatedCount = buyers.filter((b) => b.isActive === false).length;
     const activeThisWeekCount = buyers.filter(
       (b) =>
         b.lastLogin &&
@@ -412,6 +611,8 @@ const AdminBuyers = () => {
       total: totalBuyers,
       active: activeCount,
       blocked: blockedCount,
+      activated: activatedCount,
+      deactivated: deactivatedCount,
       activeThisWeek: activeThisWeekCount,
       ...stats,
     };
@@ -419,9 +620,10 @@ const AdminBuyers = () => {
 
   const currentStats = calculateStats();
 
+  // Main component render
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header Section */}
       <div className="bg-gradient-to-r from-orange-600 via-pink-600 to-red-700 rounded-2xl p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
@@ -435,8 +637,8 @@ const AdminBuyers = () => {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-4 gap-4">
+        {/* Stats Cards */}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-5 gap-4">
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
             <div className="text-2xl font-bold">{currentStats.total}</div>
             <div className="text-orange-100 text-sm">Total Buyers</div>
@@ -449,10 +651,18 @@ const AdminBuyers = () => {
             <div className="text-2xl font-bold">{currentStats.blocked}</div>
             <div className="text-orange-100 text-sm">Blocked</div>
           </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+            <div className="text-2xl font-bold">{currentStats.activated}</div>
+            <div className="text-orange-100 text-sm">Activated</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+            <div className="text-2xl font-bold">{currentStats.deactivated}</div>
+            <div className="text-orange-100 text-sm">Deactivated</div>
+          </div>
         </div>
       </div>
 
-      {/* Search and Filters */}
+      {/* Search and Filters Section */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
@@ -557,7 +767,7 @@ const AdminBuyers = () => {
         </div>
 
         {/* Filter Dropdowns */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
@@ -569,8 +779,8 @@ const AdminBuyers = () => {
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
-              <option value="all">All Status</option>
-              {filterOptions.statuses.map((status) => (
+              <option value="all">All Users</option>
+              {filterOptions.activationStatuses.map((status) => (
                 <option key={status.value} value={status.value}>
                   {status.label}
                 </option>
@@ -600,10 +810,30 @@ const AdminBuyers = () => {
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Activity
+            </label>
+            <select
+              value={filters.activity}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, activity: e.target.value }))
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="all">All Activity</option>
+              {filterOptions.activityLevels.map((level) => (
+                <option key={level.value} value={level.value}>
+                  {level.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Buyers List */}
+      {/* Buyers List Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -724,6 +954,7 @@ const AdminBuyers = () => {
                     </DialogTitle>
                     <div className="flex items-center space-x-3 mt-2">
                       {getStatusBadge(selectedBuyer.status)}
+                      {getActivationBadge(selectedBuyer.isActive)}
                       {getActivityBadge(selectedBuyer.lastLogin)}
                     </div>
                   </div>
@@ -743,7 +974,43 @@ const AdminBuyers = () => {
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-4"></div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                        Full Name
+                      </label>
+                      <p className="text-gray-900 font-medium">
+                        {selectedBuyer.firstName} {selectedBuyer.lastName}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                        Email Address
+                      </label>
+                      <p className="text-gray-900 font-medium break-all">
+                        {selectedBuyer.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                        Account Status
+                      </label>
+                      <div className="flex items-center space-x-2 mt-1">
+                        {getStatusBadge(selectedBuyer.status)}
+                        {getActivationBadge(selectedBuyer.isActive)}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                        Account Type
+                      </label>
+                      <p className="text-gray-900 font-medium">
+                        {selectedBuyer.accountType || "BUYER"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -762,7 +1029,7 @@ const AdminBuyers = () => {
                     <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-3">
                       <Calendar className="w-5 h-5 text-blue-600" />
                     </div>
-                    <div className="text-lg font-semibold text-gray-90 whitespace-nowrap">
+                    <div className="text-lg font-semibold text-gray-900 whitespace-nowrap">
                       {new Date(selectedBuyer.createdAt).toLocaleDateString(
                         "en-US",
                         {
@@ -780,7 +1047,7 @@ const AdminBuyers = () => {
                     <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
                       <Activity className="w-5 h-5 text-green-600" />
                     </div>
-                    <div className="text-lg font-semibold text-gray-900 ">
+                    <div className="text-lg font-semibold text-gray-900">
                       {selectedBuyer.lastLogin
                         ? new Date(selectedBuyer.lastLogin).toLocaleDateString(
                             "en-US",
@@ -793,6 +1060,21 @@ const AdminBuyers = () => {
                         : "Never"}
                     </div>
                     <p className="text-sm text-gray-600">Last Login</p>
+                  </div>
+                  <div className="text-center">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                      selectedBuyer.isActive !== false ? 'bg-green-100' : 'bg-red-100'
+                    }`}>
+                      {selectedBuyer.isActive !== false ? (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-red-600" />
+                      )}
+                    </div>
+                    <div className="text-lg font-semibold text-gray-900">
+                      {selectedBuyer.isActive !== false ? "Active" : "Inactive"}
+                    </div>
+                    <p className="text-sm text-gray-600">Account Status</p>
                   </div>
                 </div>
               </div>
@@ -816,20 +1098,38 @@ const AdminBuyers = () => {
                 </div>
               )}
 
+              {/* Alert Section for Deactivated Users */}
+              {selectedBuyer.isActive === false && (
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+                  <div className="flex items-center">
+                    <PowerOff className="w-6 h-6 text-orange-600 mr-3" />
+                    <div>
+                      <h4 className="font-semibold text-orange-800">
+                        Account Deactivated
+                      </h4>
+                      <p className="text-orange-700 mt-1">
+                        This buyer account has been deactivated by an administrator.
+                        The user cannot access the platform until reactivated.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Warning for Inactive Users */}
               {selectedBuyer.lastLogin &&
                 Math.floor(
                   (new Date() - new Date(selectedBuyer.lastLogin)) /
                     (1000 * 60 * 60 * 24)
                 ) > 90 && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
                     <div className="flex items-center">
-                      <AlertTriangle className="w-6 h-6 text-orange-600 mr-3" />
+                      <AlertTriangle className="w-6 h-6 text-yellow-600 mr-3" />
                       <div>
-                        <h4 className="font-semibold text-orange-800">
+                        <h4 className="font-semibold text-yellow-800">
                           Inactive Account
                         </h4>
-                        <p className="text-orange-700 mt-1">
+                        <p className="text-yellow-700 mt-1">
                           This buyer hasn't logged in for over 90 days. Consider
                           reaching out for re-engagement.
                         </p>
@@ -852,6 +1152,38 @@ const AdminBuyers = () => {
                   </Button>
                 </div>
                 <div className="flex space-x-4">
+                  {/* Activation Toggle Button */}
+                  {selectedBuyer.isActive !== false ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsDetailModalOpen(false);
+                        showToggleConfirmation(selectedBuyer, false);
+                      }}
+                      disabled={actionLoading[selectedBuyer.id]}
+                      className="text-orange-600 border-orange-300 hover:bg-orange-50 px-6"
+                    >
+                      <PowerOff className="w-4 h-4 mr-2" />
+                      {actionLoading[selectedBuyer.id]
+                        ? "Deactivating..."
+                        : "Deactivate User"}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => {
+                        setIsDetailModalOpen(false);
+                        showToggleConfirmation(selectedBuyer, true);
+                      }}
+                      disabled={actionLoading[selectedBuyer.id]}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6"
+                    >
+                      <Power className="w-4 h-4 mr-2" />
+                      {actionLoading[selectedBuyer.id]
+                        ? "Activating..."
+                        : "Activate User"}
+                    </Button>
+                  )}
+
                   {selectedBuyer.status !== "blocked" &&
                   selectedBuyer.status !== "BLOCKED" ? (
                     <Button
@@ -875,7 +1207,7 @@ const AdminBuyers = () => {
                         setIsDetailModalOpen(false);
                       }}
                       disabled={actionLoading[selectedBuyer.id]}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                     >
                       <UserCheck className="w-4 h-4 mr-2" />
                       {actionLoading[selectedBuyer.id]
@@ -889,6 +1221,42 @@ const AdminBuyers = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Confirmation Dialog for Activation Toggle */}
+      <ConfirmationDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({
+          isOpen: false,
+          type: null,
+          buyer: null,
+          loading: false,
+        })}
+        onConfirm={(reason) => 
+          handleToggleActivation(
+            confirmDialog.buyer, 
+            confirmDialog.type === 'activate',
+            reason
+          )
+        }
+        title={
+          confirmDialog.type === 'activate' 
+            ? "Activate User Account" 
+            : "Deactivate User Account"
+        }
+        message={
+          confirmDialog.type === 'activate'
+            ? `Are you sure you want to activate ${confirmDialog.buyer?.firstName} ${confirmDialog.buyer?.lastName}'s account? They will be able to access the platform again.`
+            : `Are you sure you want to deactivate ${confirmDialog.buyer?.firstName} ${confirmDialog.buyer?.lastName}'s account? They will not be able to access the platform until reactivated.`
+        }
+        confirmText={
+          confirmDialog.type === 'activate' 
+            ? "Activate User" 
+            : "Deactivate User"
+        }
+        variant={confirmDialog.type === 'activate' ? "info" : "warning"}
+        loading={confirmDialog.loading}
+        reasonRequired={confirmDialog.type === 'deactivate'}
+      />
     </div>
   );
 };
