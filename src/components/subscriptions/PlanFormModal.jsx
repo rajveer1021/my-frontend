@@ -26,15 +26,11 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
     description: "",
     price: "",
     originalPrice: "",
-    billingPeriod: "month",
     isActive: true,
     isPopular: false,
-    features: [{ name: "", included: true }],
     limits: {
       products: "",
       inquiries: "",
-      analytics: false,
-      support: "Email",
     },
   });
 
@@ -66,30 +62,40 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
         description: editingPlan.description || "",
         price: editingPlan.price?.toString() || "",
         originalPrice: editingPlan.originalPrice?.toString() || "",
-        billingPeriod: editingPlan.billingPeriod || "month",
         isActive: editingPlan.isActive ?? true,
         isPopular: editingPlan.isPopular ?? false,
-        features:
-          editingPlan.features?.length > 0
-            ? editingPlan.features
-            : [{ name: "", included: true }],
         limits: {
           products: editingPlan.limits?.products?.toString() || "",
           inquiries: editingPlan.limits?.inquiries?.toString() || "",
-          analytics: editingPlan.limits?.analytics || false,
-          support: editingPlan.limits?.support || "Email",
+        },
+      });
+    } else {
+      // Reset form for new plan
+      setFormData({
+        name: "",
+        description: "",
+        price: "",
+        originalPrice: "",
+        isActive: true,
+        isPopular: false,
+        limits: {
+          products: "",
+          inquiries: "",
         },
       });
     }
-  }, [editingPlan]);
+    setErrors({});
+  }, [editingPlan, isOpen]);
 
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.name.trim()) {
       newErrors.name = "Plan name is required";
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = "Plan name must be at least 2 characters";
+    } else if (formData.name.trim().length < 1) {
+      newErrors.name = "Plan name must be at least 1 character";
+    } else if (formData.name.trim().length > 100) {
+      newErrors.name = "Plan name must be less than 100 characters";
     }
 
     if (!formData.description.trim()) {
@@ -103,30 +109,27 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
       isNaN(formData.price) ||
       parseFloat(formData.price) <= 0
     ) {
-      newErrors.price = "Valid price is required";
+      newErrors.price = "Valid price is required and must be positive";
     }
 
     if (
       formData.originalPrice &&
       (isNaN(formData.originalPrice) ||
+        parseFloat(formData.originalPrice) <= 0 ||
         parseFloat(formData.originalPrice) <= parseFloat(formData.price))
     ) {
       newErrors.originalPrice =
-        "Original price must be higher than current price";
+        "Original price must be positive and higher than current price";
     }
 
-    if (formData.limits.products && isNaN(formData.limits.products)) {
-      newErrors["limits.products"] = "Products limit must be a number";
+    if (formData.limits.products && 
+        (isNaN(formData.limits.products) || parseInt(formData.limits.products) <= 0)) {
+      newErrors["limits.products"] = "Products limit must be a positive number";
     }
 
-    if (formData.limits.inquiries && isNaN(formData.limits.inquiries)) {
-      newErrors["limits.inquiries"] = "Inquiries limit must be a number";
-    }
-
-    // Validate features
-    const validFeatures = formData.features.filter((f) => f.name.trim());
-    if (validFeatures.length === 0) {
-      newErrors.features = "At least one feature is required";
+    if (formData.limits.inquiries && 
+        (isNaN(formData.limits.inquiries) || parseInt(formData.limits.inquiries) <= 0)) {
+      newErrors["limits.inquiries"] = "Inquiries limit must be a positive number";
     }
 
     setErrors(newErrors);
@@ -153,6 +156,22 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      description: "",
+      price: "",
+      originalPrice: "",
+      isActive: true,
+      isPopular: false,
+      limits: {
+        products: "",
+        inquiries: "",
+      },
+    });
+    setErrors({});
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -164,31 +183,65 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
     setLoading(true);
 
     try {
-      const cleanedData = {
-        ...formData,
+      // Prepare data according to backend schema
+      const apiData = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
         price: parseFloat(formData.price),
-        originalPrice: formData.originalPrice
-          ? parseFloat(formData.originalPrice)
-          : null,
-        features: formData.features.filter((f) => f.name.trim()),
-        limits: {
-          ...formData.limits,
-          products: formData.limits.products
-            ? parseInt(formData.limits.products)
-            : -1,
-          inquiries: formData.limits.inquiries
-            ? parseInt(formData.limits.inquiries)
-            : -1,
-        },
+        isActive: formData.isActive,
+        isPopular: formData.isPopular,
       };
 
-      await onSubmit(cleanedData);
+      // Only include originalPrice if it's provided and valid
+      if (formData.originalPrice && parseFloat(formData.originalPrice) > parseFloat(formData.price)) {
+        apiData.originalPrice = parseFloat(formData.originalPrice);
+      }
+
+      // Only include limits if they have values
+      const limits = {};
+      if (formData.limits.products && parseInt(formData.limits.products) > 0) {
+        limits.products = parseInt(formData.limits.products);
+      }
+      if (formData.limits.inquiries && parseInt(formData.limits.inquiries) > 0) {
+        limits.inquiries = parseInt(formData.limits.inquiries);
+      }
+      
+      // Only add limits if there are any
+      if (Object.keys(limits).length > 0) {
+        apiData.limits = limits;
+      }
+
+      console.log('Submitting plan data:', apiData);
+
+      // Call the parent's onSubmit function
+      await onSubmit(apiData);
+      
+      // If we reach here, submission was successful
+      console.log('Plan submission successful, closing modal...');
+      
+      // Reset form for new plans
+      if (!editingPlan) {
+        resetForm();
+      }
+      
+      // Close the modal
+      onClose();
+      
     } catch (error) {
       console.error("Form submission error:", error);
-      addToast(error.message || "Failed to save plan", "error");
+      // Error handling is done by parent component
+      // Modal should stay open on error so user can fix issues
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClose = () => {
+    // Reset form when closing if it's a new plan
+    if (!editingPlan) {
+      resetForm();
+    }
+    onClose();
   };
 
   const formatCurrency = (amount) => {
@@ -226,43 +279,37 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
     }
   };
 
-  // Get all features including limits
+  // Get all features including limits for preview
   const getAllFeatures = () => {
-    const userFeatures = formData.features.filter((f) => f.name.trim());
-    const limitFeatures = [];
+    const features = [];
 
     // Add product limit if specified
-    if (formData.limits.products) {
-      const productCount = parseInt(formData.limits.products);
-      if (productCount > 0) {
-        limitFeatures.push({
-          name: `Up to ${productCount} products`,
-          included: true,
-        });
-      }
-    } else {
-      limitFeatures.push({
+    if (formData.limits.products && parseInt(formData.limits.products) > 0) {
+      features.push({
+        name: `Up to ${formData.limits.products} products`,
+        included: true,
+      });
+    } else if (!formData.limits.products || formData.limits.products === "") {
+      features.push({
         name: "Unlimited products",
         included: true,
       });
     }
 
     // Add inquiry limit if specified
-    if (formData.limits.inquiries) {
-      const inquiryCount = parseInt(formData.limits.inquiries);
-      if (inquiryCount > 0) {
-        limitFeatures.push({
-          name: `Up to ${inquiryCount} inquiries per month`,
-          included: true,
-        });
-      }
-    } else {
-      limitFeatures.push({
-        name: "Unlimited inquiries",
+    if (formData.limits.inquiries && parseInt(formData.limits.inquiries) > 0) {
+      features.push({
+        name: `Up to ${formData.limits.inquiries} inquiries per month`,
+        included: true,
+      });
+    } else if (!formData.limits.inquiries || formData.limits.inquiries === "") {
+      features.push({
+        name: "Unlimited inquiries per month",
         included: true,
       });
     }
-    return [...userFeatures, ...limitFeatures];
+
+    return features;
   };
 
   const PreviewCard = () => {
@@ -312,13 +359,13 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                     : "₹0"}
                 </span>
                 <span className="text-white/80 ml-2 font-medium">
-                  /{formData.billingPeriod || "month"}
+                  /month
                 </span>
               </div>
 
               {formData.originalPrice &&
                 parseFloat(formData.originalPrice) >
-                  parseFloat(formData.price) && (
+                  parseFloat(formData.price || 0) && (
                   <div className="flex items-center space-x-2">
                     <span className="text-white/60 line-through text-sm">
                       {formatCurrency(parseFloat(formData.originalPrice))}
@@ -327,7 +374,7 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                       Save{" "}
                       {Math.round(
                         ((parseFloat(formData.originalPrice) -
-                          parseFloat(formData.price)) /
+                          parseFloat(formData.price || 0)) /
                           parseFloat(formData.originalPrice)) *
                           100
                       )}
@@ -379,7 +426,11 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
           {/* Status Indicator */}
           <div className="absolute bottom-0 left-0 right-0 h-1">
             <div
-              className={`h-full transition-all duration-300 bg-gradient-to-r ${gradient}`}
+              className={`h-full transition-all duration-300 ${
+                formData.isActive 
+                  ? `bg-gradient-to-r ${gradient}` 
+                  : "bg-gray-300"
+              }`}
             />
           </div>
         </Card>
@@ -394,7 +445,7 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
       {/* Full Screen Backdrop */}
       <div
         className="modal-backdrop"
-        onClick={onClose}
+        onClick={handleClose}
         style={{
           position: "fixed",
           top: "0px",
@@ -440,7 +491,7 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
               </p>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               disabled={loading}
             >
@@ -472,6 +523,7 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                       className={`h-12 text-base ${
                         errors.name ? "border-red-500" : ""
                       }`}
+                      maxLength={100}
                     />
                     {errors.name && (
                       <p className="text-red-500 text-sm mt-1 flex items-center">
@@ -523,7 +575,7 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                           handleInputChange("price", e.target.value)
                         }
                         placeholder="999"
-                        min="0"
+                        min="0.01"
                         step="0.01"
                         className={`h-12 text-base ${
                           errors.price ? "border-red-500" : ""
@@ -551,7 +603,7 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                           handleInputChange("originalPrice", e.target.value)
                         }
                         placeholder="1299"
-                        min="0"
+                        min="0.01"
                         step="0.01"
                         className={`h-12 text-base ${
                           errors.originalPrice ? "border-red-500" : ""
@@ -626,7 +678,7 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                           handleInputChange("limits.products", e.target.value)
                         }
                         placeholder="50"
-                        min="0"
+                        min="1"
                         className={`h-12 text-base ${
                           errors["limits.products"] ? "border-red-500" : ""
                         }`}
@@ -652,7 +704,7 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                           handleInputChange("limits.inquiries", e.target.value)
                         }
                         placeholder="100"
-                        min="0"
+                        min="1"
                         className={`h-12 text-base ${
                           errors["limits.inquiries"] ? "border-red-500" : ""
                         }`}
@@ -671,7 +723,7 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="flex-1 sm:flex-none sm:w-32 h-12"
                     disabled={loading}
                   >
@@ -734,27 +786,46 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                   </h4>
                   <div className="space-y-2 text-xs text-gray-600">
                     <div className="flex justify-between">
-                      <span>Status:</span>
-                      <span
-                        className={
-                          formData.isActive ? "text-green-600" : "text-red-600"
-                        }
-                      >
-                        {formData.isActive ? "Active" : "Inactive"}
-                      </span>
+                      <span>Billing:</span>
+                      <span className="text-gray-600">Monthly</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Popular:</span>
-                      <span
-                        className={
-                          formData.isPopular
-                            ? "text-purple-600"
-                            : "text-gray-600"
-                        }
-                      >
-                        {formData.isPopular ? "Yes" : "No"}
-                      </span>
-                    </div>
+                    {formData.price && (
+                      <div className="flex justify-between">
+                        <span>Price:</span>
+                        <span className="text-gray-900 font-medium">
+                          {formatCurrency(parseFloat(formData.price))}
+                        </span>
+                      </div>
+                    )}
+                    {formData.originalPrice && parseFloat(formData.originalPrice) > parseFloat(formData.price || 0) && (
+                      <div className="flex justify-between">
+                        <span>Discount:</span>
+                        <span className="text-green-600 font-medium">
+                          {Math.round(
+                            ((parseFloat(formData.originalPrice) -
+                              parseFloat(formData.price || 0)) /
+                              parseFloat(formData.originalPrice)) *
+                              100
+                          )}% off
+                        </span>
+                      </div>
+                    )}
+                    {formData.limits.products && (
+                      <div className="flex justify-between">
+                        <span>Products:</span>
+                        <span className="text-gray-600">
+                          {formData.limits.products} max
+                        </span>
+                      </div>
+                    )}
+                    {formData.limits.inquiries && (
+                      <div className="flex justify-between">
+                        <span>Inquiries:</span>
+                        <span className="text-gray-600">
+                          {formData.limits.inquiries}/month
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

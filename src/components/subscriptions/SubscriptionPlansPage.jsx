@@ -17,6 +17,8 @@ import {
   Sparkles,
   Palette,
   DollarSign,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
 import Button from "../ui/Button";
@@ -30,58 +32,89 @@ import {
   DropdownMenuTrigger,
 } from "../ui/DropdownMenu";
 import PlanFormModal from "./PlanFormModal";
+import { subscriptionService } from "../../services/subscriptionService";
 
-// Mock data - replace with actual API calls
-const mockPlans = [
-  {
-    id: "1",
-    name: "Basic",
-    description: "Perfect for small businesses just getting started",
-    price: 999,
-    originalPrice: 1299,
-    billingPeriod: "month",
-    isActive: true,
-    isPopular: false,
-    limits: {
-      products: 50,
-      inquiries: 100,
-    },
-    createdAt: "2024-01-15",
-    updatedAt: "2024-02-01",
-  },
-  {
-    id: "2",
-    name: "Professional",
-    description: "Ideal for growing businesses with advanced needs",
-    price: 2499,
-    originalPrice: 2999,
-    billingPeriod: "month",
-    isActive: true,
-    isPopular: true,
-    limits: {
-      products: 500,
-      inquiries: 1000,
-    },
-    createdAt: "2024-01-15",
-    updatedAt: "2024-02-15",
-  },
-  {
-    id: "3",
-    name: "Enterprise",
-    description: "Complete solution for large organizations",
-    price: 4999,
-    originalPrice: null,
-    billingPeriod: "month",
-    isActive: true,
-    isPopular: false,
-    limits: {
-      products: -1,
-      inquiries: -1,
-    },
-    createdAt: "2024-01-15",
-    updatedAt: "2024-03-01",
-  },
-];
+// Custom Delete Confirmation Dialog
+const DeleteConfirmationDialog = ({ isOpen, onClose, onConfirm, planName, loading }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      />
+      
+      {/* Dialog */}
+      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-xl bg-white/20 backdrop-blur-sm">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold">Delete Subscription Plan</h3>
+              <p className="text-red-100 text-sm mt-1">This action cannot be undone</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          <div className="mb-6">
+            <p className="text-gray-700 mb-4">
+              Are you sure you want to delete the <span className="font-semibold text-gray-900">"{planName}"</span> subscription plan?
+            </p>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-red-700">
+                  <p className="font-medium mb-1">Warning:</p>
+                  <ul className="space-y-1 text-red-600">
+                    <li>• All active subscriptions will be affected</li>
+                    <li>• Subscriber data will be preserved</li>
+                    <li>• This action is permanent and cannot be reversed</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex space-x-3">
+            <Button
+              onClick={onClose}
+              variant="outline"
+              className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={onConfirm}
+              className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Plan
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SubscriptionPlansPage = () => {
   const [plans, setPlans] = useState([]);
@@ -89,23 +122,78 @@ const SubscriptionPlansPage = () => {
   const [actionLoading, setActionLoading] = useState({});
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState({
+    isOpen: false,
+    planId: null,
+    planName: '',
+    loading: false
+  });
+  const [stats, setStats] = useState({
+    totalPlans: 0,
+    activePlans: 0,
+    totalSubscribers: 0,
+    totalRevenue: 0,
+  });
   const { addToast } = useToast();
 
   useEffect(() => {
     loadPlans();
+    loadStats();
   }, []);
 
   const loadPlans = async () => {
     try {
       setLoading(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setPlans(mockPlans);
+
+      const response = await subscriptionService.getPlans();
+
+      if (response.success) {
+        const plansData = response.data.plans || [];
+        setPlans(plansData);
+
+        // Calculate stats from plans data
+        setStats({
+          totalPlans: plansData.length,
+          activePlans: plansData.filter((p) => p.isActive).length,
+          totalSubscribers: plansData.reduce(
+            (sum, plan) => sum + (plan.subscribers || 0),
+            0
+          ),
+          totalRevenue: plansData.reduce(
+            (sum, plan) => sum + (plan.subscribers || 0) * (plan.price || 0),
+            0
+          ),
+        });
+      }
     } catch (error) {
       console.error("Failed to load plans:", error);
-      addToast("Failed to load subscription plans", "error");
+      addToast(error.message || "Failed to load subscription plans", "error");
+
+      // Set empty state on error
+      setPlans([]);
+      setStats({
+        totalPlans: 0,
+        activePlans: 0,
+        totalSubscribers: 0,
+        totalRevenue: 0,
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const response = await subscriptionService.getSubscriptionStats();
+      if (response.success) {
+        setStats((prevStats) => ({
+          ...prevStats,
+          ...response.data,
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to load stats:", error);
+      // Don't show error toast for stats as it's secondary information
     }
   };
 
@@ -113,48 +201,88 @@ const SubscriptionPlansPage = () => {
     try {
       setActionLoading((prev) => ({ ...prev, [planId]: true }));
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setPlans((prev) =>
-        prev.map((plan) =>
-          plan.id === planId ? { ...plan, isActive: !currentStatus } : plan
-        )
+      const response = await subscriptionService.updatePlanStatus(
+        planId,
+        !currentStatus
       );
 
-      addToast(
-        `Plan ${!currentStatus ? "activated" : "deactivated"} successfully`,
-        "success"
-      );
+      if (response.success) {
+        setPlans((prev) =>
+          prev.map((plan) =>
+            plan.id === planId ? { ...plan, isActive: !currentStatus } : plan
+          )
+        );
+
+        addToast(response.message, "success");
+
+        // Update stats
+        setStats((prev) => ({
+          ...prev,
+          activePlans: prev.activePlans + (!currentStatus ? 1 : -1),
+        }));
+      }
     } catch (error) {
-      addToast("Failed to update plan status", "error");
+      console.error("Failed to update plan status:", error);
+      addToast(error.message || "Failed to update plan status", "error");
     } finally {
       setActionLoading((prev) => ({ ...prev, [planId]: false }));
     }
   };
 
   const handleDeletePlan = async (planId) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this plan? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
 
+    setDeleteDialog({
+      isOpen: true,
+      planId: planId,
+      planName: plan.name,
+      loading: false
+    });
+  };
+
+  const confirmDeletePlan = async () => {
+    const { planId } = deleteDialog;
+    
     try {
-      setActionLoading((prev) => ({ ...prev, [planId]: true }));
+      setDeleteDialog(prev => ({ ...prev, loading: true }));
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const response = await subscriptionService.deletePlan(planId);
 
-      setPlans((prev) => prev.filter((plan) => plan.id !== planId));
-      addToast("Plan deleted successfully", "success");
+      if (response.success) {
+        setPlans((prev) => prev.filter((plan) => plan.id !== planId));
+        addToast(response.message, "success");
+
+        // Update stats
+        setStats((prev) => ({
+          ...prev,
+          totalPlans: prev.totalPlans - 1,
+        }));
+
+        // Close dialog
+        setDeleteDialog({
+          isOpen: false,
+          planId: null,
+          planName: '',
+          loading: false
+        });
+      }
     } catch (error) {
-      addToast("Failed to delete plan", "error");
-    } finally {
-      setActionLoading((prev) => ({ ...prev, [planId]: false }));
+      console.error("Failed to delete plan:", error);
+      addToast(error.message || "Failed to delete plan", "error");
+      setDeleteDialog(prev => ({ ...prev, loading: false }));
     }
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleteDialog.loading) return; // Prevent closing while loading
+    
+    setDeleteDialog({
+      isOpen: false,
+      planId: null,
+      planName: '',
+      loading: false
+    });
   };
 
   const handleEditPlan = (plan) => {
@@ -174,45 +302,92 @@ const SubscriptionPlansPage = () => {
 
   const handleFormSubmit = async (planData) => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      let response;
+
+      console.log("Form submission - editingPlan:", editingPlan);
+      console.log("Form submission - planData:", planData);
 
       if (editingPlan) {
         // Update existing plan
-        setPlans((prev) =>
-          prev.map((plan) =>
-            plan.id === editingPlan.id
-              ? { ...plan, ...planData, updatedAt: new Date().toISOString() }
-              : plan
-          )
+        console.log("Updating plan with ID:", editingPlan.id);
+        response = await subscriptionService.updatePlan(
+          editingPlan.id,
+          planData
         );
-        addToast("Plan updated successfully", "success");
+
+        if (response.success) {
+          console.log("Plan updated successfully:", response.data);
+          setPlans((prev) =>
+            prev.map((plan) =>
+              plan.id === editingPlan.id
+                ? {
+                    ...plan,
+                    ...response.data,
+                    id: editingPlan.id, // Ensure ID is preserved
+                    updatedAt: new Date().toISOString(),
+                  }
+                : plan
+            )
+          );
+
+          addToast(response.message || "Plan updated successfully", "success");
+        } else {
+          throw new Error(response.message || "Failed to update plan");
+        }
       } else {
-        // Add new plan
-        const newPlan = {
-          id: Date.now().toString(),
-          ...planData,
-          subscribers: 0,
-          revenue: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        setPlans((prev) => [...prev, newPlan]);
-        addToast("Plan created successfully", "success");
+        // Create new plan
+        console.log("Creating new plan");
+        response = await subscriptionService.createPlan(planData);
+
+        if (response.success) {
+          console.log("Plan created successfully:", response.data);
+
+          // Ensure the new plan has all required fields
+          const newPlan = {
+            ...response.data,
+            id: response.data.id || Date.now().toString(), // Fallback ID if not provided
+            subscribers: response.data.subscribers || 0,
+            createdAt: response.data.createdAt || new Date().toISOString(),
+            updatedAt: response.data.updatedAt || new Date().toISOString(),
+          };
+
+          setPlans((prev) => [...prev, newPlan]);
+
+          // Update stats
+          setStats((prev) => ({
+            ...prev,
+            totalPlans: prev.totalPlans + 1,
+            activePlans: newPlan.isActive
+              ? prev.activePlans + 1
+              : prev.activePlans,
+          }));
+
+          addToast(response.message || "Plan created successfully", "success");
+        } else {
+          throw new Error(response.message || "Failed to create plan");
+        }
       }
 
-      handleFormClose();
+      // If we reach here, the operation was successful
+      console.log("Plan operation completed successfully");
     } catch (error) {
-      addToast("Failed to save plan", "error");
+      console.error("Failed to save plan:", error);
+
+      // Show error message to user
+      addToast(error.message || "Failed to save plan", "error");
+
+      // Re-throw the error to prevent modal from closing
       throw error;
     }
   };
 
+  const handleRefresh = () => {
+    loadPlans();
+    loadStats();
+  };
+
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-    }).format(amount);
+    return subscriptionService.formatCurrency(amount);
   };
 
   const getPlanIcon = (planName) => {
@@ -245,6 +420,12 @@ const SubscriptionPlansPage = () => {
     const IconComponent = getPlanIcon(plan.name);
     const gradient = getPlanGradient(plan.name);
     const isActionLoading = actionLoading[plan.id];
+
+    // Calculate discount if originalPrice exists
+    const hasDiscount = plan.originalPrice && plan.originalPrice > plan.price;
+    const discountPercentage = hasDiscount
+      ? subscriptionService.calculateDiscount(plan.originalPrice, plan.price)
+      : 0;
 
     return (
       <div
@@ -336,23 +517,15 @@ const SubscriptionPlansPage = () => {
                 <span className="text-4xl font-bold">
                   {formatCurrency(plan.price)}
                 </span>
-                <span className="text-white/80 ml-2 font-medium">
-                  /{plan.billingPeriod}
-                </span>
               </div>
 
-              {plan.originalPrice && plan.originalPrice > plan.price && (
+              {hasDiscount && (
                 <div className="flex items-center space-x-2">
                   <span className="text-white/60 line-through text-sm">
                     {formatCurrency(plan.originalPrice)}
                   </span>
                   <Badge className="bg-green-500/20 text-green-100 border-green-300/30 text-xs px-2 py-1">
-                    Save{" "}
-                    {Math.round(
-                      ((plan.originalPrice - plan.price) / plan.originalPrice) *
-                        100
-                    )}
-                    %
+                    Save {discountPercentage}%
                   </Badge>
                 </div>
               )}
@@ -361,44 +534,93 @@ const SubscriptionPlansPage = () => {
 
           {/* Content Section */}
           <div className="p-6">
-            {/* Feature Highlight */}
+            {/* Subscriber Count */}
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 mb-4">
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-blue-600" />
                   </div>
                 </div>
                 <div className="flex-1">
                   <div className="font-semibold text-gray-900 text-sm mb-1">
-                    Key Feature
+                    Subscribers
                   </div>
-                  {/* <div className="text-gray-700 text-sm">
-                    {plan.features[0]?.name || "Feature details"}
-                  </div> */}
+                  <div className="text-gray-700 text-lg font-bold">
+                    {plan.subscribers || 0}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Usage Limits Display */}
-            <div className="pt-4 border-t border-gray-100">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-gray-900">
-                    {plan.limits.products === -1 ? "∞" : plan.limits.products}
-                  </div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-                    Products
-                  </div>
+            {plan.limits && (
+              <div className="pt-4 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4">
+                  {plan.limits.products !== undefined && (
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-gray-900">
+                        {plan.limits.products || "∞"}
+                      </div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+                        Products
+                      </div>
+                    </div>
+                  )}
+                  {plan.limits.inquiries !== undefined && (
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-gray-900">
+                        {plan.limits.inquiries || "∞"}
+                      </div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+                        Inquiries
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-gray-900">
-                    {plan.limits.inquiries === -1 ? "∞" : plan.limits.inquiries}
+              </div>
+            )}
+
+            {/* Basic Features Display */}
+            <div className="pt-4 border-t border-gray-100 mt-4">
+              <div className="text-sm font-semibold text-gray-900 mb-2">
+                Features
+              </div>
+              <div className="space-y-2">
+                {/* Show limits as features */}
+                {plan.limits?.products && (
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-600">
+                      Up to {plan.limits.products} products
+                    </span>
                   </div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-                    Inquiries
+                )}
+                {!plan.limits?.products && (
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-600">
+                      Unlimited products
+                    </span>
                   </div>
-                </div>
+                )}
+
+                {plan.limits?.inquiries && (
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-600">
+                      Up to {plan.limits.inquiries} inquiries
+                    </span>
+                  </div>
+                )}
+                {!plan.limits?.inquiries && (
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-600">
+                      Unlimited inquiries
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -444,6 +666,16 @@ const SubscriptionPlansPage = () => {
 
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
+                onClick={handleRefresh}
+                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105"
+                disabled={loading}
+              >
+                <RefreshCw
+                  className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </Button>
+              <Button
                 onClick={handleAddPlan}
                 className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 hover:scale-105"
               >
@@ -454,29 +686,31 @@ const SubscriptionPlansPage = () => {
           </div>
 
           {/* Quick Stats */}
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="text-2xl font-bold">{plans.length}</div>
+              <div className="text-2xl font-bold">{stats.totalPlans}</div>
               <div className="text-purple-100 text-sm">Total Plans</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="text-2xl font-bold">
-                {plans.filter((p) => p.isActive).length}
-              </div>
+              <div className="text-2xl font-bold">{stats.activePlans}</div>
               <div className="text-purple-100 text-sm">Active Plans</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="text-2xl font-bold">
-                {plans.reduce((sum, plan) => sum + plan.subscribers, 0)}
-              </div>
+              <div className="text-2xl font-bold">{stats.totalSubscribers}</div>
               <div className="text-purple-100 text-sm">Total Subscribers</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="text-2xl font-bold">
+                {formatCurrency(stats.totalRevenue)}
+              </div>
+              <div className="text-purple-100 text-sm">Total Revenue</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Plans Grid */}
-      {plans.length === 0 ? (
+      {/* Error State */}
+      {!loading && plans.length === 0 && (
         <div className="text-center py-12">
           <Crown className="h-16 w-16 mx-auto mb-4 text-gray-400" />
           <h3 className="text-xl font-medium text-gray-900 mb-2">
@@ -493,7 +727,10 @@ const SubscriptionPlansPage = () => {
             Create First Plan
           </Button>
         </div>
-      ) : (
+      )}
+
+      {/* Plans Grid */}
+      {plans.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
           {plans.map((plan) => (
             <PlanCard key={plan.id} plan={plan} />
@@ -510,6 +747,15 @@ const SubscriptionPlansPage = () => {
           editingPlan={editingPlan}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={closeDeleteDialog}
+        onConfirm={confirmDeletePlan}
+        planName={deleteDialog.planName}
+        loading={deleteDialog.loading}
+      />
     </div>
   );
 };

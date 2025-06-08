@@ -454,10 +454,6 @@ const AdminVendors = () => {
             <div className="text-blue-100 text-sm">Total Vendors</div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-            <div className="text-2xl font-bold">{currentStats.verified}</div>
-            <div className="text-blue-100 text-sm">Verified</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
             <div className="text-2xl font-bold">{currentStats.active}</div>
             <div className="text-blue-100 text-sm">Active</div>
           </div>

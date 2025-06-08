@@ -259,10 +259,6 @@ const AdminBuyers = () => {
         return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case "blocked":
         return <Badge className="bg-red-100 text-red-800">Blocked</Badge>;
-      case "suspended":
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800">Suspended</Badge>
-        );
       default:
         return (
           <Badge className="bg-gray-100 text-gray-800">
@@ -453,12 +449,6 @@ const AdminBuyers = () => {
             <div className="text-2xl font-bold">{currentStats.blocked}</div>
             <div className="text-orange-100 text-sm">Blocked</div>
           </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-            <div className="text-2xl font-bold">
-              {currentStats.activeThisWeek}
-            </div>
-            <div className="text-orange-100 text-sm">Active This Week</div>
-          </div>
         </div>
       </div>
 
@@ -606,26 +596,6 @@ const AdminBuyers = () => {
               {filterOptions.registrationPeriods.map((period) => (
                 <option key={period.value} value={period.value}>
                   {period.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Activity Level
-            </label>
-            <select
-              value={filters.activity}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, activity: e.target.value }))
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            >
-              <option value="all">All Activity Level</option>
-              {filterOptions.activityLevels.map((level) => (
-                <option key={level.value} value={level.value}>
-                  {level.label}
                 </option>
               ))}
             </select>
@@ -802,7 +772,9 @@ const AdminBuyers = () => {
                         }
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 whitespace-nowrap">Account Created</p>
+                    <p className="text-sm text-gray-600 whitespace-nowrap">
+                      Account Created
+                    </p>
                   </div>
                   <div className="text-center">
                     <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
