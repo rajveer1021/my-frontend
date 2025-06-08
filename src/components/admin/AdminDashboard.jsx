@@ -22,7 +22,6 @@ import {
   ArrowUp,
   ArrowDown,
   Minus,
-  PieChart,
   Target,
   Zap,
   AlertCircle,
@@ -34,14 +33,11 @@ import {
 import { adminService } from "../../services/adminService";
 
 const AdminDashboard = () => {
-  const [kpis, setKpis] = useState(null);
-  const [alerts, setAlerts] = useState([]);
-  const [activities, setActivities] = useState([]);
-  const [dailyStats, setDailyStats] = useState([]);
+  const [coreKPIs, setCoreKPIs] = useState(null);
+  const [activityMetrics, setActivityMetrics] = useState(null);
+  const [recentActivities, setRecentActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [dismissedAlerts, setDismissedAlerts] = useState(new Set());
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -55,28 +51,24 @@ const AdminDashboard = () => {
 
       console.log("🔄 Loading dashboard data...");
 
-      // Use the real admin service instead of mock data
+      // Use the simplified admin service
       const dashboardData = await adminService.getAllDashboardData();
 
-      if (dashboardData.kpis) {
-        setKpis(dashboardData.kpis);
+      if (dashboardData.coreKPIs) {
+        setCoreKPIs(dashboardData.coreKPIs);
       } else {
-        console.error("No KPIs data received");
-        // Fallback to individual API calls if getAllDashboardData fails
+        console.error("No Core KPIs data received");
+        // Fallback to individual API calls
         await loadIndividualData();
         return;
       }
 
-      if (dashboardData.alerts) {
-        setAlerts(dashboardData.alerts.alerts || []);
+      if (dashboardData.activityMetrics) {
+        setActivityMetrics(dashboardData.activityMetrics);
       }
 
-      if (dashboardData.activities) {
-        setActivities(dashboardData.activities.activities || []);
-      }
-
-      if (dashboardData.dailyStats) {
-        setDailyStats(dashboardData.dailyStats.dailyStats || []);
+      if (dashboardData.recentActivities) {
+        setRecentActivities(dashboardData.recentActivities.activities || []);
       }
 
       console.log("✅ Dashboard data loaded successfully");
@@ -97,28 +89,23 @@ const AdminDashboard = () => {
   // Fallback to individual API calls
   const loadIndividualData = async () => {
     try {
-      const [kpisRes, alertsRes, activitiesRes, dailyRes] =
+      const [coreRes, activityRes, activitiesRes] =
         await Promise.allSettled([
-          adminService.getDashboardKPIs(),
-          adminService.getDashboardAlerts(),
-          adminService.getRecentActivities(),
-          adminService.getDailyStats(30),
+          adminService.getCoreKPIs(),
+          adminService.getActivityMetrics(),
+          adminService.getRecentActivities(10),
         ]);
 
-      if (kpisRes.status === "fulfilled") {
-        setKpis(kpisRes.value);
+      if (coreRes.status === "fulfilled") {
+        setCoreKPIs(coreRes.value);
       }
 
-      if (alertsRes.status === "fulfilled") {
-        setAlerts(alertsRes.value.alerts || []);
+      if (activityRes.status === "fulfilled") {
+        setActivityMetrics(activityRes.value);
       }
 
       if (activitiesRes.status === "fulfilled") {
-        setActivities(activitiesRes.value.activities || []);
-      }
-
-      if (dailyRes.status === "fulfilled") {
-        setDailyStats(dailyRes.value.dailyStats || []);
+        setRecentActivities(activitiesRes.value.activities || []);
       }
     } catch (error) {
       console.error("❌ Individual API calls failed:", error);
@@ -128,122 +115,25 @@ const AdminDashboard = () => {
 
   // Load mock data as fallback for development
   const loadMockData = async () => {
-    const mockKPIs = getMockKPIs();
-    const mockAlertsData = getMockAlerts();
-    const mockActivitiesData = getMockActivities();
-    const mockDailyData = getMockDailyStats();
+    const mockCoreKPIs = {
+      totalUsers: { value: 1247, growth: 12, thisMonth: 134, lastMonth: 119, verificationRate: 78 },
+      totalVendors: { value: 156, growth: 8, thisMonth: 23, lastMonth: 21, verificationRate: 78 },
+      totalProducts: { value: 2340, growth: 15, thisMonth: 287, lastMonth: 249, availabilityRate: 92 },
+      totalInquiries: { value: 892, growth: 22, thisMonth: 178, lastMonth: 146, responseRate: 85 },
+      platformHealth: { status: "Excellent", verificationRate: 78, availabilityRate: 92, responseRate: 85 },
+      generatedAt: new Date().toISOString(),
+    };
 
-    setKpis(mockKPIs);
-    setAlerts(mockAlertsData.alerts);
-    setActivities(mockActivitiesData.activities);
-    setDailyStats(mockDailyData.dailyStats);
-  };
+    const mockActivityMetrics = {
+      pendingVerifications: { value: 34, priority: "high" },
+      openInquiries: { value: 67, priority: "medium" },
+      activeProducts: { value: 2156, outOfStock: 184, total: 2340 },
+      verificationRate: { value: 78, verified: 122, pending: 34, total: 156 },
+      inquiryMetrics: { responseRate: 85, total: 892, open: 67, responded: 456, closed: 369 },
+      generatedAt: new Date().toISOString(),
+    };
 
-  const refreshData = async () => {
-    setRefreshing(true);
-    try {
-      await adminService.refreshDashboardData();
-      await loadDashboardData();
-    } catch (error) {
-      console.error("❌ Failed to refresh data:", error);
-      setError("Failed to refresh data");
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const dismissAlert = (alertId) => {
-    setDismissedAlerts((prev) => new Set([...prev, alertId]));
-  };
-
-  // Mock data functions (fallback for development)
-  const getMockKPIs = () => ({
-    coreStats: {
-      totalUsers: { value: 1247, growth: 12, weeklyGrowth: 23 },
-      totalVendors: {
-        value: 156,
-        growth: 8,
-        weeklyGrowth: 5,
-        verificationRate: 78,
-      },
-      totalBuyers: { value: 1091, percentage: 87 },
-      totalProducts: {
-        value: 2340,
-        growth: 15,
-        weeklyGrowth: 18,
-        availabilityRate: 92,
-      },
-      totalInquiries: {
-        value: 892,
-        growth: 22,
-        weeklyGrowth: 12,
-        responseRate: 85,
-      },
-    },
-    verificationMetrics: {
-      verified: 122,
-      pending: 34,
-      gstVerified: 89,
-      manuallyVerified: 33,
-      verificationRate: 78,
-      pendingRate: 22,
-    },
-    activityMetrics: {
-      activeProducts: 2156,
-      outOfStockProducts: 184,
-      openInquiries: 67,
-      respondedInquiries: 456,
-      closedInquiries: 369,
-    },
-    growthTrends: {
-      users: { thisMonth: 134, lastMonth: 119, growth: 12 },
-      vendors: { thisMonth: 23, lastMonth: 21, growth: 8 },
-      products: { thisMonth: 287, lastMonth: 249, growth: 15 },
-      inquiries: { thisMonth: 178, lastMonth: 146, growth: 22 },
-    },
-    distributions: {
-      vendorTypes: [
-        { type: "MANUFACTURER", count: 89, percentage: 57 },
-        { type: "WHOLESALER", count: 45, percentage: 29 },
-        { type: "RETAILER", count: 22, percentage: 14 },
-      ],
-      productCategories: [
-        { category: "Electronics", count: 567, percentage: 24 },
-        { category: "Fashion", count: 423, percentage: 18 },
-        { category: "Home & Garden", count: 389, percentage: 17 },
-      ],
-    },
-    insights: {
-      platformHealth: {
-        userGrowth: "growing",
-        verificationHealth: "good",
-        activityLevel: "active",
-      },
-    },
-    generatedAt: new Date().toISOString(),
-  });
-
-  const getMockAlerts = () => ({
-    alerts: [
-      {
-        id: "pending_verifications",
-        type: "warning",
-        title: "Pending Vendor Verifications",
-        message: "34 vendors are waiting for verification",
-        priority: "high",
-      },
-      {
-        id: "high_open_inquiries",
-        type: "info",
-        title: "Open Inquiries",
-        message: "67 inquiries need attention",
-        priority: "medium",
-      },
-    ],
-  });
-
-  const getMockActivities = () => ({
-    activities: [
+    const mockActivities = [
       {
         id: "1",
         type: "user_registration",
@@ -262,20 +152,25 @@ const AdminDashboard = () => {
         icon: "package",
         priority: "medium",
       },
-    ],
-  });
+    ];
 
-  const getMockDailyStats = () => ({
-    dailyStats: Array.from({ length: 30 }, (_, i) => ({
-      date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0],
-      users: Math.floor(Math.random() * 20) + 5,
-      vendors: Math.floor(Math.random() * 5) + 1,
-      products: Math.floor(Math.random() * 30) + 10,
-      inquiries: Math.floor(Math.random() * 15) + 5,
-    })),
-  });
+    setCoreKPIs(mockCoreKPIs);
+    setActivityMetrics(mockActivityMetrics);
+    setRecentActivities(mockActivities);
+  };
+
+  const refreshData = async () => {
+    setRefreshing(true);
+    try {
+      await adminService.refreshDashboardData();
+      await loadDashboardData();
+    } catch (error) {
+      console.error("❌ Failed to refresh data:", error);
+      setError("Failed to refresh data");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const StatCard = ({
     title,
@@ -323,55 +218,43 @@ const AdminDashboard = () => {
     </div>
   );
 
-  const AlertCard = ({ alert }) => {
-    if (dismissedAlerts.has(alert.id)) return null;
-
-    const getAlertIcon = (type) => {
-      switch (type) {
-        case "error":
-          return AlertCircle;
-        case "warning":
-          return AlertTriangle;
-        case "info":
-          return Info;
-        default:
-          return Bell;
+  const MetricCard = ({
+    title,
+    value,
+    subtitle,
+    icon: Icon,
+    color = "blue",
+    priority,
+  }) => {
+    const getColorClasses = (color, priority) => {
+      if (priority === "high") {
+        return "bg-red-100 text-red-600 border-red-200";
+      } else if (priority === "medium") {
+        return "bg-yellow-100 text-yellow-600 border-yellow-200";
       }
+      return `bg-${color}-100 text-${color}-600 border-${color}-200`;
     };
-
-    const getAlertColor = (type) => {
-      switch (type) {
-        case "error":
-          return "border-red-200 bg-red-50 text-red-800";
-        case "warning":
-          return "border-yellow-200 bg-yellow-50 text-yellow-800";
-        case "info":
-          return "border-blue-200 bg-blue-50 text-blue-800";
-        default:
-          return "border-gray-200 bg-gray-50 text-gray-800";
-      }
-    };
-
-    const AlertIcon = getAlertIcon(alert.type);
 
     return (
-      <div
-        className={`p-4 rounded-lg border ${getAlertColor(
-          alert.type
-        )} relative`}
-      >
-        <button
-          onClick={() => dismissAlert(alert.id)}
-          className="absolute top-2 right-2 p-1 rounded-full hover:bg-black/10"
-        >
-          <X className="w-4 h-4" />
-        </button>
-        <div className="flex items-start space-x-3">
-          <AlertIcon className="w-5 h-5 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <h4 className="font-medium text-sm">{alert.title}</h4>
-            <p className="text-sm opacity-90 mt-1">{alert.message}</p>
+      <div className="bg-white rounded-xl p-6 border border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <div className={`p-3 rounded-lg ${getColorClasses(color, priority)}`}>
+            <Icon className="w-6 h-6" />
           </div>
+          {priority && (
+            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+              priority === "high" ? "bg-red-100 text-red-600" :
+              priority === "medium" ? "bg-yellow-100 text-yellow-600" :
+              "bg-green-100 text-green-600"
+            }`}>
+              {priority.toUpperCase()}
+            </span>
+          )}
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
+          <p className="text-sm text-gray-600 mb-2">{title}</p>
+          <p className="text-xs text-gray-500">{subtitle}</p>
         </div>
       </div>
     );
@@ -424,27 +307,6 @@ const AdminDashboard = () => {
     );
   };
 
-  const MetricCard = ({
-    title,
-    value,
-    subtitle,
-    icon: Icon,
-    color = "blue",
-  }) => (
-    <div className="bg-white rounded-xl p-6 border border-gray-200">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg bg-${color}-100`}>
-          <Icon className={`w-6 h-6 text-${color}-600`} />
-        </div>
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
-        <p className="text-sm text-gray-600 mb-2">{title}</p>
-        <p className="text-xs text-gray-500">{subtitle}</p>
-      </div>
-    </div>
-  );
-
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -456,7 +318,7 @@ const AdminDashboard = () => {
     );
   }
 
-  if (error && !kpis) {
+  if (error && !coreKPIs) {
     return (
       <div className="flex justify-center items-center py-12">
         <div className="text-center">
@@ -474,7 +336,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-800 rounded-2xl p-6 text-white">
         <div className="flex items-center justify-between">
@@ -483,9 +345,9 @@ const AdminDashboard = () => {
             <p className="text-purple-100">
               Comprehensive marketplace analytics and management
             </p>
-            {kpis?.generatedAt && (
+            {coreKPIs?.generatedAt && (
               <p className="text-purple-200 text-sm mt-1">
-                Last updated: {new Date(kpis.generatedAt).toLocaleString()}
+                Last updated: {new Date(coreKPIs.generatedAt).toLocaleString()}
               </p>
             )}
           </div>
@@ -508,7 +370,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Error banner */}
-      {error && kpis && (
+      {error && coreKPIs && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-center">
             <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2" />
@@ -525,167 +387,99 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Alerts */}
-      {alerts.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-            <Bell className="w-5 h-5 mr-2" />
-            System Alerts (
-            {alerts.filter((a) => !dismissedAlerts.has(a.id)).length})
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {alerts.map((alert) => (
-              <AlertCard key={alert.id} alert={alert} />
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Core KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <StatCard
           title="Total Users"
-          value={kpis?.coreStats?.totalUsers?.value || 0}
-          subtitle={`+${
-            kpis?.coreStats?.totalUsers?.weeklyGrowth || 0
-          } this week`}
+          value={coreKPIs?.totalUsers?.value || 0}
+          subtitle={`+${coreKPIs?.totalUsers?.thisMonth || 0} this month`}
           icon={Users}
           gradient="bg-gradient-to-br from-blue-500 to-blue-600"
-          trend={kpis?.coreStats?.totalUsers?.growth}
         />
         <StatCard
           title="Total Vendors"
-          value={kpis?.coreStats?.totalVendors?.value || 0}
-          subtitle={`${
-            kpis?.coreStats?.totalVendors?.verificationRate || 0
-          }% verified`}
+          value={coreKPIs?.totalVendors?.value || 0}
+          subtitle={`${coreKPIs?.totalVendors?.verificationRate || 0}% verified`}
           icon={Building}
           gradient="bg-gradient-to-br from-green-500 to-green-600"
-          trend={kpis?.coreStats?.totalVendors?.growth}
         />
         <StatCard
           title="Total Products"
-          value={kpis?.coreStats?.totalProducts?.value || 0}
-          subtitle={`${
-            kpis?.coreStats?.totalProducts?.availabilityRate || 0
-          }% in stock`}
+          value={coreKPIs?.totalProducts?.value || 0}
+          subtitle={`${coreKPIs?.totalProducts?.availabilityRate || 0}% in stock`}
           icon={Package}
           gradient="bg-gradient-to-br from-purple-500 to-purple-600"
-          trend={kpis?.coreStats?.totalProducts?.growth}
         />
         <StatCard
           title="Total Inquiries"
-          value={kpis?.coreStats?.totalInquiries?.value || 0}
-          subtitle={`${
-            kpis?.coreStats?.totalInquiries?.responseRate || 0
-          }% response rate`}
+          value={coreKPIs?.totalInquiries?.value || 0}
+          subtitle={`${coreKPIs?.totalInquiries?.responseRate || 0}% response rate`}
           icon={MessageSquare}
           gradient="bg-gradient-to-br from-orange-500 to-orange-600"
-          trend={kpis?.coreStats?.totalInquiries?.growth}
         />
         <StatCard
           title="Platform Health"
-          value={
-            kpis?.insights?.platformHealth?.userGrowth === "growing"
-              ? "Excellent"
-              : "Good"
-          }
+          value={coreKPIs?.platformHealth?.status || "Good"}
           subtitle="All systems operational"
           icon={Zap}
           gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
         />
       </div>
 
-      {/* Secondary Metrics */}
+      {/* Activity Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Pending Verifications"
-          value={kpis?.verificationMetrics?.pending || 0}
+          value={activityMetrics?.pendingVerifications?.value || 0}
           subtitle="Require admin review"
           icon={AlertTriangle}
           color="yellow"
+          priority={activityMetrics?.pendingVerifications?.priority}
         />
         <MetricCard
           title="Open Inquiries"
-          value={kpis?.activityMetrics?.openInquiries || 0}
+          value={activityMetrics?.openInquiries?.value || 0}
           subtitle="Awaiting responses"
           icon={Clock}
           color="blue"
+          priority={activityMetrics?.openInquiries?.priority}
         />
         <MetricCard
           title="Active Products"
-          value={kpis?.activityMetrics?.activeProducts || 0}
-          subtitle="Currently available"
+          value={activityMetrics?.activeProducts?.value || 0}
+          subtitle={`${activityMetrics?.activeProducts?.outOfStock || 0} out of stock`}
           icon={Target}
           color="green"
         />
         <MetricCard
           title="Verification Rate"
-          value={`${kpis?.verificationMetrics?.verificationRate || 0}%`}
-          subtitle="Vendor approval rate"
+          value={`${activityMetrics?.verificationRate?.value || 0}%`}
+          subtitle={`${activityMetrics?.verificationRate?.verified || 0} verified vendors`}
           icon={CheckCircle}
           color="emerald"
         />
       </div>
 
-      {/* Content Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activities */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-              <Activity className="w-5 h-5 mr-2" />
-              Recent Activities
-            </h3>
-          </div>
-          <div className="p-6">
-            <div className="space-y-1 max-h-96 overflow-y-auto">
-              {activities.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No recent activities</p>
-                </div>
-              ) : (
-                activities.map((activity) => (
-                  <ActivityItem key={activity.id} activity={activity} />
-                ))
-              )}
-            </div>
-          </div>
+      {/* Recent Activities */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+            <Activity className="w-5 h-5 mr-2" />
+            Recent Activities
+          </h3>
         </div>
-
-        {/* Distribution Charts */}
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-              <PieChart className="w-5 h-5 mr-2" />
-              Vendor Distribution
-            </h3>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {(kpis?.distributions?.vendorTypes || []).map((type) => (
-                <div
-                  key={type.type}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm font-medium text-gray-700">
-                    {type.type}
-                  </span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-20 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{ width: `${type.percentage}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm text-gray-500 w-8">
-                      {type.percentage}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+        <div className="p-6">
+          <div className="space-y-1 max-h-96 overflow-y-auto">
+            {recentActivities.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No recent activities</p>
+              </div>
+            ) : (
+              recentActivities.map((activity) => (
+                <ActivityItem key={activity.id} activity={activity} />
+              ))
+            )}
           </div>
         </div>
       </div>

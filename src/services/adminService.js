@@ -1,119 +1,99 @@
-// src/services/adminService.js
+// src/services/adminService.js - Simplified with only 3 dashboard APIs
 import { apiService } from "./api";
 
 export const adminService = {
-  // ===== DASHBOARD APIS =====
+  // ===== SIMPLIFIED DASHBOARD APIS =====
 
   /**
-   * Get comprehensive dashboard KPIs
-   * @returns {Promise} Dashboard KPIs and metrics
+   * API 1: Get Core KPIs (Total Users, Vendors, Products, Inquiries, Platform Health)
+   * @returns {Promise} Core KPIs data
    */
-  async getDashboardKPIs() {
+  async getCoreKPIs() {
     try {
-      console.log("📊 Fetching dashboard KPIs...");
-      const response = await apiService.get("/admin/dashboard/kpis");
+      console.log("📊 Fetching core KPIs...");
+      const response = await apiService.get("/admin/dashboard/core-kpis");
       
       if (response.success && response.data) {
-        console.log("✅ Dashboard KPIs fetched successfully");
+        console.log("✅ Core KPIs fetched successfully");
         return response.data;
       } else {
         throw new Error("Invalid response format from server");
       }
     } catch (error) {
-      console.error("❌ Failed to fetch dashboard KPIs:", error);
+      console.error("❌ Failed to fetch core KPIs:", error);
       
       if (error.response?.status === 401) {
         throw new Error("Authentication required. Please login again.");
       } else if (error.response?.status === 403) {
         throw new Error("Access denied. Admin privileges required.");
       } else if (error.response?.status === 404) {
-        throw new Error("Dashboard KPIs endpoint not found.");
+        throw new Error("Core KPIs endpoint not found.");
       } else if (error.response?.status >= 500) {
         throw new Error("Server error. Please try again later.");
       }
       
-      throw new Error(error.message || "Failed to fetch dashboard KPIs");
+      throw new Error(error.message || "Failed to fetch core KPIs");
     }
   },
 
   /**
-   * Get quick dashboard summary
-   * @returns {Promise} Essential dashboard metrics
+   * API 2: Get Activity Metrics (Pending Verifications, Open Inquiries, Active Products, Verification Rate)
+   * @returns {Promise} Activity metrics data
    */
-  async getDashboardSummary() {
+  async getActivityMetrics() {
     try {
-      console.log("📋 Fetching dashboard summary...");
-      const response = await apiService.get("/admin/dashboard/summary");
+      console.log("📈 Fetching activity metrics...");
+      const response = await apiService.get("/admin/dashboard/activity-metrics");
       
       if (response.success && response.data) {
+        console.log("✅ Activity metrics fetched successfully");
         return response.data;
       } else {
         throw new Error("Invalid response format from server");
       }
     } catch (error) {
-      console.error("❌ Failed to fetch dashboard summary:", error);
-      throw new Error(error.message || "Failed to fetch dashboard summary");
+      console.error("❌ Failed to fetch activity metrics:", error);
+      
+      if (error.response?.status === 401) {
+        throw new Error("Authentication required. Please login again.");
+      } else if (error.response?.status === 403) {
+        throw new Error("Access denied. Admin privileges required.");
+      } else if (error.response?.status >= 500) {
+        throw new Error("Server error. Please try again later.");
+      }
+      
+      throw new Error(error.message || "Failed to fetch activity metrics");
     }
   },
 
   /**
-   * Get recent platform activities
-   * @returns {Promise} Recent activities timeline
+   * API 3: Get Recent Activities
+   * @param {number} limit - Number of activities to fetch (default: 10)
+   * @returns {Promise} Recent activities data
    */
-  async getRecentActivities() {
+  async getRecentActivities(limit = 10) {
     try {
-      console.log("🔄 Fetching recent activities...");
-      const response = await apiService.get("/admin/dashboard/activities");
+      console.log(`🔄 Fetching recent activities (limit: ${limit})...`);
+      const response = await apiService.get(`/admin/dashboard/recent-activities?limit=${limit}`);
       
       if (response.success && response.data) {
+        console.log("✅ Recent activities fetched successfully");
         return response.data;
       } else {
         throw new Error("Invalid response format from server");
       }
     } catch (error) {
       console.error("❌ Failed to fetch recent activities:", error);
+      
+      if (error.response?.status === 401) {
+        throw new Error("Authentication required. Please login again.");
+      } else if (error.response?.status === 403) {
+        throw new Error("Access denied. Admin privileges required.");
+      } else if (error.response?.status >= 500) {
+        throw new Error("Server error. Please try again later.");
+      }
+      
       throw new Error(error.message || "Failed to fetch recent activities");
-    }
-  },
-
-  /**
-   * Get daily statistics for charts
-   * @param {number} days - Number of days to fetch (default: 30)
-   * @returns {Promise} Daily statistics data
-   */
-  async getDailyStats(days = 30) {
-    try {
-      console.log(`📈 Fetching daily stats for ${days} days...`);
-      const response = await apiService.get(`/admin/dashboard/daily-stats?days=${days}`);
-      
-      if (response.success && response.data) {
-        return response.data;
-      } else {
-        throw new Error("Invalid response format from server");
-      }
-    } catch (error) {
-      console.error("❌ Failed to fetch daily stats:", error);
-      throw new Error(error.message || "Failed to fetch daily stats");
-    }
-  },
-
-  /**
-   * Get system alerts and notifications
-   * @returns {Promise} System alerts
-   */
-  async getDashboardAlerts() {
-    try {
-      console.log("🚨 Fetching dashboard alerts...");
-      const response = await apiService.get("/admin/dashboard/alerts");
-      
-      if (response.success && response.data) {
-        return response.data;
-      } else {
-        throw new Error("Invalid response format from server");
-      }
-    } catch (error) {
-      console.error("❌ Failed to fetch dashboard alerts:", error);
-      throw new Error(error.message || "Failed to fetch dashboard alerts");
     }
   },
 
@@ -125,23 +105,20 @@ export const adminService = {
     try {
       console.log("🔄 Fetching all dashboard data...");
       
-      const [kpis, alerts, activities, dailyStats] = await Promise.allSettled([
-        this.getDashboardKPIs(),
-        this.getDashboardAlerts(),
-        this.getRecentActivities(),
-        this.getDailyStats(30),
+      const [coreKPIs, activityMetrics, recentActivities] = await Promise.allSettled([
+        this.getCoreKPIs(),
+        this.getActivityMetrics(),
+        this.getRecentActivities(10),
       ]);
 
       const result = {
-        kpis: kpis.status === "fulfilled" ? kpis.value : null,
-        alerts: alerts.status === "fulfilled" ? alerts.value : { alerts: [] },
-        activities: activities.status === "fulfilled" ? activities.value : { activities: [] },
-        dailyStats: dailyStats.status === "fulfilled" ? dailyStats.value : { dailyStats: [] },
+        coreKPIs: coreKPIs.status === "fulfilled" ? coreKPIs.value : null,
+        activityMetrics: activityMetrics.status === "fulfilled" ? activityMetrics.value : null,
+        recentActivities: recentActivities.status === "fulfilled" ? recentActivities.value : { activities: [] },
         errors: {
-          kpis: kpis.status === "rejected" ? kpis.reason : null,
-          alerts: alerts.status === "rejected" ? alerts.reason : null,
-          activities: activities.status === "rejected" ? activities.reason : null,
-          dailyStats: dailyStats.status === "rejected" ? dailyStats.reason : null,
+          coreKPIs: coreKPIs.status === "rejected" ? coreKPIs.reason : null,
+          activityMetrics: activityMetrics.status === "rejected" ? activityMetrics.reason : null,
+          recentActivities: recentActivities.status === "rejected" ? recentActivities.reason : null,
         },
       };
 
@@ -161,16 +138,16 @@ export const adminService = {
     try {
       console.log("🔄 Refreshing dashboard data...");
       const timestamp = Date.now();
-      const [kpis, alerts, activities] = await Promise.allSettled([
-        apiService.get(`/admin/dashboard/kpis?_t=${timestamp}`),
-        apiService.get(`/admin/dashboard/alerts?_t=${timestamp}`),
-        apiService.get(`/admin/dashboard/activities?_t=${timestamp}`),
+      const [coreKPIs, activityMetrics, recentActivities] = await Promise.allSettled([
+        apiService.get(`/admin/dashboard/core-kpis?_t=${timestamp}`),
+        apiService.get(`/admin/dashboard/activity-metrics?_t=${timestamp}`),
+        apiService.get(`/admin/dashboard/recent-activities?_t=${timestamp}&limit=10`),
       ]);
 
       return {
-        kpis: kpis.status === "fulfilled" && kpis.value.success ? kpis.value.data : null,
-        alerts: alerts.status === "fulfilled" && alerts.value.success ? alerts.value.data : { alerts: [] },
-        activities: activities.status === "fulfilled" && activities.value.success ? activities.value.data : { activities: [] },
+        coreKPIs: coreKPIs.status === "fulfilled" && coreKPIs.value.success ? coreKPIs.value.data : null,
+        activityMetrics: activityMetrics.status === "fulfilled" && activityMetrics.value.success ? activityMetrics.value.data : null,
+        recentActivities: recentActivities.status === "fulfilled" && recentActivities.value.success ? recentActivities.value.data : { activities: [] },
       };
     } catch (error) {
       console.error("❌ Failed to refresh dashboard data:", error);
@@ -638,150 +615,6 @@ export const adminService = {
     } catch (error) {
       console.error("Get users error:", error);
       throw new Error(error.message || "Failed to fetch users");
-    }
-  },
-
-  // ===== VERIFICATION APIS =====
-
-  async getVendorSubmissions(params = {}) {
-    try {
-      const queryParams = new URLSearchParams();
-
-      if (params.page) queryParams.append("page", params.page);
-      if (params.limit) queryParams.append("limit", params.limit);
-      if (params.search && params.search.trim()) {
-        queryParams.append("search", params.search.trim());
-      }
-      if (params.status && params.status !== "all") {
-        queryParams.append("status", params.status);
-      }
-      if (params.verificationType && params.verificationType !== "all") {
-        queryParams.append("verificationType", params.verificationType);
-      }
-      if (params.vendorType && params.vendorType !== "all") {
-        queryParams.append("vendorType", params.vendorType);
-      }
-      if (params.sortBy) queryParams.append("sortBy", params.sortBy);
-      if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
-
-      const url = `/admin/vendor-submissions${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-      const response = await apiService.get(url);
-
-      if (response.success && response.data) {
-        return {
-          success: true,
-          data: {
-            submissions: response.data.submissions || [],
-            pagination: response.data.pagination || {
-              page: parseInt(params.page) || 1,
-              limit: parseInt(params.limit) || 20,
-              total: response.data.total || 0,
-              pages: Math.ceil((response.data.total || 0) / (parseInt(params.limit) || 20)),
-              hasNext: false,
-              hasPrev: false,
-            },
-          },
-        };
-      }
-
-      throw new Error("Invalid response format");
-    } catch (error) {
-      console.error("Get vendor submissions error:", error);
-      throw new Error(error.message || "Failed to fetch vendor submissions");
-    }
-  },
-
-  async approveVendorSubmission(submissionId) {
-    try {
-      const response = await apiService.put(`/admin/vendor-submissions/${submissionId}/approve`);
-
-      if (response.success) {
-        return {
-          success: true,
-          data: response.data,
-          message: response.message || "Vendor submission approved successfully",
-        };
-      }
-
-      throw new Error("Failed to approve vendor submission");
-    } catch (error) {
-      console.error("Approve vendor submission error:", error);
-      throw new Error(error.message || "Failed to approve vendor submission");
-    }
-  },
-
-  async rejectVendorSubmission(submissionId, reason = "") {
-    try {
-      const response = await apiService.put(`/admin/vendor-submissions/${submissionId}/reject`, {
-        reason,
-      });
-
-      if (response.success) {
-        return {
-          success: true,
-          data: response.data,
-          message: response.message || "Vendor submission rejected",
-        };
-      }
-
-      throw new Error("Failed to reject vendor submission");
-    } catch (error) {
-      console.error("Reject vendor submission error:", error);
-      throw new Error(error.message || "Failed to reject vendor submission");
-    }
-  },
-
-  // ===== ANALYTICS APIS =====
-
-  async getAnalytics(period = "30d") {
-    try {
-      const response = await apiService.get(`/admin/analytics?period=${period}`);
-
-      if (response.success && response.data) {
-        return {
-          success: true,
-          data: response.data,
-        };
-      }
-
-      throw new Error("Invalid response format");
-    } catch (error) {
-      console.error("Get analytics error:", error);
-      throw new Error(error.message || "Failed to fetch analytics");
-    }
-  },
-
-  // ===== EXPORT APIS =====
-
-  async exportData(type, params = {}) {
-    try {
-      const queryParams = new URLSearchParams();
-
-      queryParams.append("format", params.format || "csv");
-      if (params.dateFrom) queryParams.append("dateFrom", params.dateFrom);
-      if (params.dateTo) queryParams.append("dateTo", params.dateTo);
-
-      if (params.filters) {
-        Object.entries(params.filters).forEach(([key, value]) => {
-          if (value) queryParams.append(key, value);
-        });
-      }
-
-      const url = `/admin/export/${type}${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-      const response = await apiService.get(url);
-
-      if (response.success) {
-        return {
-          success: true,
-          data: response.data,
-          downloadUrl: response.downloadUrl,
-        };
-      }
-
-      throw new Error("Export failed");
-    } catch (error) {
-      console.error("Export data error:", error);
-      throw new Error(error.message || "Failed to export data");
     }
   },
 
