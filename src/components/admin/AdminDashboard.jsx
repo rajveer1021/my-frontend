@@ -31,6 +31,7 @@ import {
 
 // Import the admin service
 import { adminService } from "../../services/adminService";
+import { LoadingSpinner } from "../common/LoadingSpinner";
 
 const AdminDashboard = () => {
   const [coreKPIs, setCoreKPIs] = useState(null);
@@ -49,67 +50,55 @@ const AdminDashboard = () => {
       setLoading(true);
       setError(null);
 
-      console.log("🔄 Loading dashboard data...");
-
-      // Use the simplified admin service
+      // Use the fixed admin service
       const dashboardData = await adminService.getAllDashboardData();
 
+      // Handle partial success scenarios
       if (dashboardData.coreKPIs) {
         setCoreKPIs(dashboardData.coreKPIs);
-      } else {
-        console.error("No Core KPIs data received");
-        // Fallback to individual API calls
-        await loadIndividualData();
-        return;
+      } else if (dashboardData.coreKPIsError) {
+        console.warn("⚠️ Core KPIs failed:", dashboardData.coreKPIsError);
       }
 
       if (dashboardData.activityMetrics) {
         setActivityMetrics(dashboardData.activityMetrics);
+      } else if (dashboardData.activityMetricsError) {
+        console.warn("⚠️ Activity Metrics failed:", dashboardData.activityMetricsError);
       }
 
       if (dashboardData.recentActivities) {
         setRecentActivities(dashboardData.recentActivities.activities || []);
+      } else if (dashboardData.recentActivitiesError) {
+        console.warn("⚠️ Recent Activities failed:", dashboardData.recentActivitiesError);
       }
 
-      console.log("✅ Dashboard data loaded successfully");
+      // If we have at least some data, consider it a success
+      if (dashboardData.coreKPIs || dashboardData.activityMetrics || dashboardData.recentActivities) {
+        
+        // Set any partial errors
+        const errors = [
+          dashboardData.coreKPIsError,
+          dashboardData.activityMetricsError,
+          dashboardData.recentActivitiesError
+        ].filter(Boolean);
+        
+        if (errors.length > 0) {
+          setError(`Some data failed to load: ${errors.join(", ")}`);
+        }
+      } else {
+        throw new Error("No dashboard data could be loaded");
+      }
+
     } catch (error) {
       console.error("❌ Failed to load dashboard data:", error);
       setError(error.message || "Failed to load dashboard data");
 
       // Try to load with fallback mock data for development
       if (process.env.NODE_ENV === "development") {
-        console.log("🔄 Loading fallback mock data...");
         await loadMockData();
       }
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Fallback to individual API calls
-  const loadIndividualData = async () => {
-    try {
-      const [coreRes, activityRes, activitiesRes] =
-        await Promise.allSettled([
-          adminService.getCoreKPIs(),
-          adminService.getActivityMetrics(),
-          adminService.getRecentActivities(10),
-        ]);
-
-      if (coreRes.status === "fulfilled") {
-        setCoreKPIs(coreRes.value);
-      }
-
-      if (activityRes.status === "fulfilled") {
-        setActivityMetrics(activityRes.value);
-      }
-
-      if (activitiesRes.status === "fulfilled") {
-        setRecentActivities(activitiesRes.value.activities || []);
-      }
-    } catch (error) {
-      console.error("❌ Individual API calls failed:", error);
-      throw error;
     }
   };
 
@@ -126,9 +115,10 @@ const AdminDashboard = () => {
 
     const mockActivityMetrics = {
       pendingVerifications: { value: 34, priority: "high" },
+      rejectedVendors: { value: 8, priority: "medium" },
       openInquiries: { value: 67, priority: "medium" },
       activeProducts: { value: 2156, outOfStock: 184, total: 2340 },
-      verificationRate: { value: 78, verified: 122, pending: 34, total: 156 },
+      verificationRate: { value: 78, verified: 122, pending: 34, rejected: 8, total: 156 },
       inquiryMetrics: { responseRate: 85, total: 892, open: 67, responded: 456, closed: 369 },
       generatedAt: new Date().toISOString(),
     };
@@ -151,6 +141,15 @@ const AdminDashboard = () => {
         timestamp: new Date(Date.now() - 3600000).toISOString(),
         icon: "package",
         priority: "medium",
+      },
+      {
+        id: "3",
+        type: "vendor_verified",
+        title: "Vendor Verified",
+        description: "ABC Electronics has been verified",
+        timestamp: new Date(Date.now() - 7200000).toISOString(),
+        icon: "check-circle",
+        priority: "high",
       },
     ];
 
@@ -273,6 +272,8 @@ const AdminDashboard = () => {
           return MessageSquare;
         case "check-circle":
           return CheckCircle;
+        case "x-circle":
+          return X;
         default:
           return Activity;
       }
@@ -310,10 +311,7 @@ const AdminDashboard = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading admin dashboard...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Loading admin dashboard..." />
       </div>
     );
   }
@@ -432,23 +430,21 @@ const AdminDashboard = () => {
           title="Pending Verifications"
           value={activityMetrics?.pendingVerifications?.value || 0}
           subtitle="Require admin review"
-          icon={AlertTriangle}
+          icon={Clock}
           color="yellow"
-          priority={activityMetrics?.pendingVerifications?.priority}
         />
         <MetricCard
           title="Open Inquiries"
           value={activityMetrics?.openInquiries?.value || 0}
           subtitle="Awaiting responses"
-          icon={Clock}
+          icon={MessageSquare}
           color="blue"
-          priority={activityMetrics?.openInquiries?.priority}
         />
         <MetricCard
           title="Active Products"
           value={activityMetrics?.activeProducts?.value || 0}
           subtitle={`${activityMetrics?.activeProducts?.outOfStock || 0} out of stock`}
-          icon={Target}
+          icon={Package}
           color="green"
         />
         <MetricCard
