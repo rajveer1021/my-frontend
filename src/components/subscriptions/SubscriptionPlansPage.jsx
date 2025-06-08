@@ -35,17 +35,23 @@ import PlanFormModal from "./PlanFormModal";
 import { subscriptionService } from "../../services/subscriptionService";
 
 // Custom Delete Confirmation Dialog
-const DeleteConfirmationDialog = ({ isOpen, onClose, onConfirm, planName, loading }) => {
+const DeleteConfirmationDialog = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  planName,
+  loading,
+}) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      
+
       {/* Dialog */}
       <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
         {/* Header with gradient */}
@@ -56,7 +62,9 @@ const DeleteConfirmationDialog = ({ isOpen, onClose, onConfirm, planName, loadin
             </div>
             <div>
               <h3 className="text-xl font-bold">Delete Subscription Plan</h3>
-              <p className="text-red-100 text-sm mt-1">This action cannot be undone</p>
+              <p className="text-red-100 text-sm mt-1">
+                This action cannot be undone
+              </p>
             </div>
           </div>
         </div>
@@ -65,7 +73,9 @@ const DeleteConfirmationDialog = ({ isOpen, onClose, onConfirm, planName, loadin
         <div className="p-6">
           <div className="mb-6">
             <p className="text-gray-700 mb-4">
-              Are you sure you want to delete the <span className="font-semibold text-gray-900">"{planName}"</span> subscription plan?
+              Are you sure you want to delete the{" "}
+              <span className="font-semibold text-gray-900">"{planName}"</span>{" "}
+              subscription plan?
             </p>
             <div className="bg-red-50 border border-red-200 rounded-xl p-4">
               <div className="flex items-start space-x-3">
@@ -73,9 +83,7 @@ const DeleteConfirmationDialog = ({ isOpen, onClose, onConfirm, planName, loadin
                 <div className="text-sm text-red-700">
                   <p className="font-medium mb-1">Warning:</p>
                   <ul className="space-y-1 text-red-600">
-                    <li>• All active subscriptions will be affected</li>
-                    <li>• Subscriber data will be preserved</li>
-                    <li>• This action is permanent and cannot be reversed</li>
+                    <li>This action is permanent and cannot be reversed</li>
                   </ul>
                 </div>
               </div>
@@ -125,8 +133,8 @@ const SubscriptionPlansPage = () => {
   const [deleteDialog, setDeleteDialog] = useState({
     isOpen: false,
     planId: null,
-    planName: '',
-    loading: false
+    planName: "",
+    loading: false,
   });
   const [stats, setStats] = useState({
     totalPlans: 0,
@@ -230,22 +238,22 @@ const SubscriptionPlansPage = () => {
   };
 
   const handleDeletePlan = async (planId) => {
-    const plan = plans.find(p => p.id === planId);
+    const plan = plans.find((p) => p.id === planId);
     if (!plan) return;
 
     setDeleteDialog({
       isOpen: true,
       planId: planId,
       planName: plan.name,
-      loading: false
+      loading: false,
     });
   };
 
   const confirmDeletePlan = async () => {
     const { planId } = deleteDialog;
-    
+
     try {
-      setDeleteDialog(prev => ({ ...prev, loading: true }));
+      setDeleteDialog((prev) => ({ ...prev, loading: true }));
 
       const response = await subscriptionService.deletePlan(planId);
 
@@ -263,25 +271,25 @@ const SubscriptionPlansPage = () => {
         setDeleteDialog({
           isOpen: false,
           planId: null,
-          planName: '',
-          loading: false
+          planName: "",
+          loading: false,
         });
       }
     } catch (error) {
       console.error("Failed to delete plan:", error);
       addToast(error.message || "Failed to delete plan", "error");
-      setDeleteDialog(prev => ({ ...prev, loading: false }));
+      setDeleteDialog((prev) => ({ ...prev, loading: false }));
     }
   };
 
   const closeDeleteDialog = () => {
     if (deleteDialog.loading) return; // Prevent closing while loading
-    
+
     setDeleteDialog({
       isOpen: false,
       planId: null,
-      planName: '',
-      loading: false
+      planName: "",
+      loading: false,
     });
   };
 
@@ -304,19 +312,14 @@ const SubscriptionPlansPage = () => {
     try {
       let response;
 
-      console.log("Form submission - editingPlan:", editingPlan);
-      console.log("Form submission - planData:", planData);
-
       if (editingPlan) {
         // Update existing plan
-        console.log("Updating plan with ID:", editingPlan.id);
         response = await subscriptionService.updatePlan(
           editingPlan.id,
           planData
         );
 
         if (response.success) {
-          console.log("Plan updated successfully:", response.data);
           setPlans((prev) =>
             prev.map((plan) =>
               plan.id === editingPlan.id
@@ -336,12 +339,9 @@ const SubscriptionPlansPage = () => {
         }
       } else {
         // Create new plan
-        console.log("Creating new plan");
         response = await subscriptionService.createPlan(planData);
 
         if (response.success) {
-          console.log("Plan created successfully:", response.data);
-
           // Ensure the new plan has all required fields
           const newPlan = {
             ...response.data,
@@ -367,9 +367,6 @@ const SubscriptionPlansPage = () => {
           throw new Error(response.message || "Failed to create plan");
         }
       }
-
-      // If we reach here, the operation was successful
-      console.log("Plan operation completed successfully");
     } catch (error) {
       console.error("Failed to save plan:", error);
 

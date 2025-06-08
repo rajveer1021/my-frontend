@@ -211,14 +211,9 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
         apiData.limits = limits;
       }
 
-      console.log('Submitting plan data:', apiData);
-
       // Call the parent's onSubmit function
       await onSubmit(apiData);
-      
-      // If we reach here, submission was successful
-      console.log('Plan submission successful, closing modal...');
-      
+            
       // Reset form for new plans
       if (!editingPlan) {
         resetForm();
@@ -357,9 +352,6 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                   {formData.price
                     ? formatCurrency(parseFloat(formData.price))
                     : "₹0"}
-                </span>
-                <span className="text-white/80 ml-2 font-medium">
-                  /month
                 </span>
               </div>
 
@@ -785,10 +777,6 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                     Plan Summary
                   </h4>
                   <div className="space-y-2 text-xs text-gray-600">
-                    <div className="flex justify-between">
-                      <span>Billing:</span>
-                      <span className="text-gray-600">Monthly</span>
-                    </div>
                     {formData.price && (
                       <div className="flex justify-between">
                         <span>Price:</span>
@@ -822,7 +810,7 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, editingPlan = null }) => {
                       <div className="flex justify-between">
                         <span>Inquiries:</span>
                         <span className="text-gray-600">
-                          {formData.limits.inquiries}/month
+                          {formData.limits.inquiries} max
                         </span>
                       </div>
                     )}

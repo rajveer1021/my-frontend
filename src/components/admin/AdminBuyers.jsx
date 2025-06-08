@@ -35,20 +35,20 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/Dialog";
 
 // Confirmation Dialog Component
-const ConfirmationDialog = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  title, 
-  message, 
-  confirmText = "Confirm", 
+const ConfirmationDialog = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = "Confirm",
   cancelText = "Cancel",
   variant = "danger",
   loading = false,
   reasonRequired = false,
 }) => {
   const [reason, setReason] = useState("");
-  
+
   const handleConfirm = () => {
     if (reasonRequired && !reason.trim()) {
       return;
@@ -65,19 +65,25 @@ const ConfirmationDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
-            {variant === "danger" && <AlertTriangle className="w-5 h-5 text-red-600" />}
-            {variant === "warning" && <AlertTriangle className="w-5 h-5 text-yellow-600" />}
-            {variant === "info" && <CheckCircle className="w-5 h-5 text-blue-600" />}
+            {variant === "danger" && (
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            )}
+            {variant === "warning" && (
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            )}
+            {variant === "info" && (
+              <CheckCircle className="w-5 h-5 text-blue-600" />
+            )}
             <span>{title}</span>
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="py-4">
           <p className="text-gray-600 mb-4">{message}</p>
-          
+
           {reasonRequired && (
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
@@ -97,21 +103,17 @@ const ConfirmationDialog = ({
             </div>
           )}
         </div>
-        
+
         <div className="flex justify-end space-x-3 pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={loading}
-          >
+          <Button variant="outline" onClick={handleClose} disabled={loading}>
             {cancelText}
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={loading || (reasonRequired && !reason.trim())}
             className={
-              variant === "danger" 
-                ? "bg-red-600 hover:bg-red-700 text-white" 
+              variant === "danger"
+                ? "bg-red-600 hover:bg-red-700 text-white"
                 : variant === "warning"
                 ? "bg-yellow-600 hover:bg-yellow-700 text-white"
                 : "bg-blue-600 hover:bg-blue-700 text-white"
@@ -261,11 +263,9 @@ const AdminBuyers = () => {
         }
       });
 
-      console.log("Loading buyers with params:", params);
       const response = await adminService.getBuyers(params);
 
       if (response.success) {
-        console.log("Buyers loaded successfully:", response.data);
         setBuyers(response.data.buyers || []);
         setPagination({
           ...response.data.pagination,
@@ -291,20 +291,21 @@ const AdminBuyers = () => {
       setActionLoading((prev) => ({ ...prev, [buyer.id]: true }));
       setConfirmDialog((prev) => ({ ...prev, loading: true }));
 
-      const response = await adminService.toggleUserStatus(buyer.id, isActive, reason);
+      // Use buyer.id directly since buyers are users
+      const response = await adminService.toggleUserStatus(
+        buyer.id,
+        isActive,
+        reason
+      );
 
       if (response.success) {
         setBuyers((prev) =>
-          prev.map((b) =>
-            b.id === buyer.id
-              ? { ...b, isActive }
-              : b
-          )
+          prev.map((b) => (b.id === buyer.id ? { ...b, isActive } : b))
         );
-        
-        const action = isActive ? 'activated' : 'deactivated';
+
+        const action = isActive ? "activated" : "deactivated";
         addToast(`Buyer ${action} successfully`, "success");
-        
+
         // Close confirmation dialog
         setConfirmDialog({
           isOpen: false,
@@ -325,7 +326,7 @@ const AdminBuyers = () => {
   const showToggleConfirmation = (buyer, isActive) => {
     setConfirmDialog({
       isOpen: true,
-      type: isActive ? 'activate' : 'deactivate',
+      type: isActive ? "activate" : "deactivate",
       buyer,
       loading: false,
     });
@@ -395,7 +396,6 @@ const AdminBuyers = () => {
           setSelectedBuyer(response.data);
         }
       } catch (detailError) {
-        console.log("Could not fetch additional buyer details:", detailError);
         // Continue with basic buyer data
       }
     } catch (error) {
@@ -430,7 +430,7 @@ const AdminBuyers = () => {
     }
   };
 
-  // Get activation status badge
+  // Get activation status badge - FIXED
   const getActivationBadge = (isActive) => {
     return isActive !== false ? (
       <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
@@ -479,7 +479,7 @@ const AdminBuyers = () => {
     }
   };
 
-  // Buyer Row Component
+  // Buyer Row Component - FIXED
   const BuyerRow = ({ buyer }) => (
     <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200">
       <div className="flex items-center justify-between">
@@ -494,7 +494,6 @@ const AdminBuyers = () => {
               <h4 className="font-medium text-gray-900 truncate">
                 {buyer.firstName} {buyer.lastName}
               </h4>
-              {getStatusBadge(buyer.status)}
               {getActivationBadge(buyer.isActive)}
             </div>
 
@@ -522,8 +521,6 @@ const AdminBuyers = () => {
         </div>
 
         <div className="flex items-center space-x-3">
-          {getActivityBadge(buyer.lastLogin)}
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -561,24 +558,6 @@ const AdminBuyers = () => {
                 >
                   <Power className="mr-2 h-4 w-4" />
                   Activate User
-                </DropdownMenuItem>
-              )}
-
-              {buyer.status !== "blocked" && buyer.status !== "BLOCKED" ? (
-                <DropdownMenuItem
-                  onClick={() => handleUpdateBuyerStatus(buyer.id, "blocked")}
-                  className="text-red-600"
-                >
-                  <Ban className="mr-2 h-4 w-4" />
-                  Block Buyer
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  onClick={() => handleUpdateBuyerStatus(buyer.id, "active")}
-                  className="text-green-600"
-                >
-                  <UserCheck className="mr-2 h-4 w-4" />
-                  Unblock Buyer
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -646,14 +625,6 @@ const AdminBuyers = () => {
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
             <div className="text-2xl font-bold">{currentStats.active}</div>
             <div className="text-orange-100 text-sm">Active</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-            <div className="text-2xl font-bold">{currentStats.blocked}</div>
-            <div className="text-orange-100 text-sm">Blocked</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-            <div className="text-2xl font-bold">{currentStats.activated}</div>
-            <div className="text-orange-100 text-sm">Activated</div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
             <div className="text-2xl font-bold">{currentStats.deactivated}</div>
@@ -1062,9 +1033,13 @@ const AdminBuyers = () => {
                     <p className="text-sm text-gray-600">Last Login</p>
                   </div>
                   <div className="text-center">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
-                      selectedBuyer.isActive !== false ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
+                    <div
+                      className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                        selectedBuyer.isActive !== false
+                          ? "bg-green-100"
+                          : "bg-red-100"
+                      }`}
+                    >
                       {selectedBuyer.isActive !== false ? (
                         <CheckCircle className="w-5 h-5 text-green-600" />
                       ) : (
@@ -1108,8 +1083,9 @@ const AdminBuyers = () => {
                         Account Deactivated
                       </h4>
                       <p className="text-orange-700 mt-1">
-                        This buyer account has been deactivated by an administrator.
-                        The user cannot access the platform until reactivated.
+                        This buyer account has been deactivated by an
+                        administrator. The user cannot access the platform until
+                        reactivated.
                       </p>
                     </div>
                   </div>
@@ -1183,38 +1159,6 @@ const AdminBuyers = () => {
                         : "Activate User"}
                     </Button>
                   )}
-
-                  {selectedBuyer.status !== "blocked" &&
-                  selectedBuyer.status !== "BLOCKED" ? (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        handleUpdateBuyerStatus(selectedBuyer.id, "blocked");
-                        setIsDetailModalOpen(false);
-                      }}
-                      disabled={actionLoading[selectedBuyer.id]}
-                      className="text-red-600 border-red-300 hover:bg-red-50 px-6"
-                    >
-                      <Ban className="w-4 h-4 mr-2" />
-                      {actionLoading[selectedBuyer.id]
-                        ? "Blocking..."
-                        : "Block Buyer"}
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => {
-                        handleUpdateBuyerStatus(selectedBuyer.id, "active");
-                        setIsDetailModalOpen(false);
-                      }}
-                      disabled={actionLoading[selectedBuyer.id]}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6"
-                    >
-                      <UserCheck className="w-4 h-4 mr-2" />
-                      {actionLoading[selectedBuyer.id]
-                        ? "Unblocking..."
-                        : "Unblock Buyer"}
-                    </Button>
-                  )}
                 </div>
               </div>
             </div>
@@ -1225,37 +1169,39 @@ const AdminBuyers = () => {
       {/* Confirmation Dialog for Activation Toggle */}
       <ConfirmationDialog
         isOpen={confirmDialog.isOpen}
-        onClose={() => setConfirmDialog({
-          isOpen: false,
-          type: null,
-          buyer: null,
-          loading: false,
-        })}
-        onConfirm={(reason) => 
+        onClose={() =>
+          setConfirmDialog({
+            isOpen: false,
+            type: null,
+            buyer: null,
+            loading: false,
+          })
+        }
+        onConfirm={(reason) =>
           handleToggleActivation(
-            confirmDialog.buyer, 
-            confirmDialog.type === 'activate',
+            confirmDialog.buyer,
+            confirmDialog.type === "activate",
             reason
           )
         }
         title={
-          confirmDialog.type === 'activate' 
-            ? "Activate User Account" 
+          confirmDialog.type === "activate"
+            ? "Activate User Account"
             : "Deactivate User Account"
         }
         message={
-          confirmDialog.type === 'activate'
+          confirmDialog.type === "activate"
             ? `Are you sure you want to activate ${confirmDialog.buyer?.firstName} ${confirmDialog.buyer?.lastName}'s account? They will be able to access the platform again.`
             : `Are you sure you want to deactivate ${confirmDialog.buyer?.firstName} ${confirmDialog.buyer?.lastName}'s account? They will not be able to access the platform until reactivated.`
         }
         confirmText={
-          confirmDialog.type === 'activate' 
-            ? "Activate User" 
+          confirmDialog.type === "activate"
+            ? "Activate User"
             : "Deactivate User"
         }
-        variant={confirmDialog.type === 'activate' ? "info" : "warning"}
+        variant={confirmDialog.type === "activate" ? "info" : "warning"}
         loading={confirmDialog.loading}
-        reasonRequired={confirmDialog.type === 'deactivate'}
+        reasonRequired={confirmDialog.type === "deactivate"}
       />
     </div>
   );

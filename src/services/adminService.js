@@ -1,7 +1,84 @@
-// src/services/adminService.js - Complete implementation
+// src/services/adminService.js - Fixed implementation with getAllDashboardData method
 import { apiService } from "./api";
 
 export const adminService = {
+  // ===== COMBINED DASHBOARD DATA METHOD =====
+
+  /**
+   * Get all dashboard data in one call
+   * @returns {Promise} Combined dashboard data
+   */
+  async getAllDashboardData() {
+    try {
+      // Make all three API calls in parallel
+      const [coreKPIsResult, activityMetricsResult, recentActivitiesResult] =
+        await Promise.allSettled([
+          this.getCoreKPIs(),
+          this.getActivityMetrics(),
+          this.getRecentActivities(10),
+        ]);
+
+      const dashboardData = {};
+
+      // Process Core KPIs
+      if (coreKPIsResult.status === "fulfilled") {
+        dashboardData.coreKPIs = coreKPIsResult.value;
+      } else {
+        console.error("❌ Failed to load Core KPIs:", coreKPIsResult.reason);
+        dashboardData.coreKPIsError =
+          coreKPIsResult.reason?.message || "Failed to load Core KPIs";
+      }
+
+      // Process Activity Metrics
+      if (activityMetricsResult.status === "fulfilled") {
+        dashboardData.activityMetrics = activityMetricsResult.value;
+      } else {
+        console.error(
+          "❌ Failed to load Activity Metrics:",
+          activityMetricsResult.reason
+        );
+        dashboardData.activityMetricsError =
+          activityMetricsResult.reason?.message ||
+          "Failed to load Activity Metrics";
+      }
+
+      // Process Recent Activities
+      if (recentActivitiesResult.status === "fulfilled") {
+        dashboardData.recentActivities = recentActivitiesResult.value;
+      } else {
+        console.error(
+          "❌ Failed to load Recent Activities:",
+          recentActivitiesResult.reason
+        );
+        dashboardData.recentActivitiesError =
+          recentActivitiesResult.reason?.message ||
+          "Failed to load Recent Activities";
+      }
+
+      // If all failed, throw an error
+      if (
+        !dashboardData.coreKPIs &&
+        !dashboardData.activityMetrics &&
+        !dashboardData.recentActivities
+      ) {
+        throw new Error("Failed to load any dashboard data");
+      }
+
+      return dashboardData;
+    } catch (error) {
+      console.error("❌ Failed to fetch all dashboard data:", error);
+      throw new Error(error.message || "Failed to load dashboard data");
+    }
+  },
+
+  /**
+   * Refresh dashboard data (alias for getAllDashboardData)
+   * @returns {Promise} Refreshed dashboard data
+   */
+  async refreshDashboardData() {
+    return this.getAllDashboardData();
+  },
+
   // ===== SIMPLIFIED DASHBOARD APIS =====
 
   /**
@@ -10,11 +87,9 @@ export const adminService = {
    */
   async getCoreKPIs() {
     try {
-      console.log("📊 Fetching core KPIs...");
       const response = await apiService.get("/admin/dashboard/core-kpis");
 
       if (response.success && response.data) {
-        console.log("✅ Core KPIs fetched successfully");
         return response.data;
       } else {
         throw new Error("Invalid response format from server");
@@ -42,13 +117,11 @@ export const adminService = {
    */
   async getActivityMetrics() {
     try {
-      console.log("📈 Fetching activity metrics...");
       const response = await apiService.get(
         "/admin/dashboard/activity-metrics"
       );
 
       if (response.success && response.data) {
-        console.log("✅ Activity metrics fetched successfully");
         return response.data;
       } else {
         throw new Error("Invalid response format from server");
@@ -75,13 +148,11 @@ export const adminService = {
    */
   async getRecentActivities(limit = 10) {
     try {
-      console.log(`🔄 Fetching recent activities (limit: ${limit})...`);
       const response = await apiService.get(
         `/admin/dashboard/recent-activities?limit=${limit}`
       );
 
       if (response.success && response.data) {
-        console.log("✅ Recent activities fetched successfully");
         return response.data;
       } else {
         throw new Error("Invalid response format from server");
@@ -104,7 +175,6 @@ export const adminService = {
   // Legacy method for backward compatibility
   async getDashboardStats() {
     try {
-      console.log("📊 Fetching legacy dashboard stats...");
       const response = await apiService.get("/admin/dashboard/stats");
 
       if (response.success && response.data) {
@@ -129,10 +199,6 @@ export const adminService = {
    */
   async toggleUserStatus(userId, isActive, reason = null) {
     try {
-      console.log(
-        `🔄 ${isActive ? "Activating" : "Deactivating"} user ${userId}...`
-      );
-
       const payload = { isActive };
 
       // If deactivating, reason should be provided
@@ -146,9 +212,6 @@ export const adminService = {
       );
 
       if (response.success) {
-        console.log(
-          `✅ User ${isActive ? "activated" : "deactivated"} successfully`
-        );
         return {
           success: true,
           data: response.data,
@@ -171,6 +234,37 @@ export const adminService = {
       }
 
       throw new Error(error.message || "Failed to toggle user status");
+    }
+  },
+
+  /**
+   * Get user activation statistics
+   * @returns {Promise} User activation statistics
+   */
+  async getUserActivationStats() {
+    try {
+      const response = await apiService.get("/admin/users/activation-stats");
+
+      if (response.success) {
+        return {
+          success: true,
+          data: response.data,
+        };
+      }
+
+      throw new Error("Failed to fetch user activation statistics");
+    } catch (error) {
+      console.error("Get user activation stats error:", error);
+
+      if (error.response?.status === 401) {
+        throw new Error("Authentication required. Please login again.");
+      } else if (error.response?.status === 403) {
+        throw new Error("Access denied. Admin privileges required.");
+      }
+
+      throw new Error(
+        error.message || "Failed to fetch user activation statistics"
+      );
     }
   },
 
@@ -212,7 +306,6 @@ export const adminService = {
       const url = `/admin/vendors${
         queryParams.toString() ? `?${queryParams.toString()}` : ""
       }`;
-      console.log("Fetching vendors from:", url);
 
       const response = await apiService.get(url);
 
@@ -307,10 +400,6 @@ export const adminService = {
 
   async updateVendorVerification(vendorId, verified, rejectionReason = null) {
     try {
-      console.log(
-        `🔄 ${verified ? "Verifying" : "Rejecting"} vendor ${vendorId}...`
-      );
-
       const payload = { verified };
 
       if (!verified) {
@@ -328,9 +417,6 @@ export const adminService = {
       );
 
       if (response.success) {
-        console.log(
-          `✅ Vendor ${verified ? "verified" : "rejected"} successfully`
-        );
         return {
           success: true,
           data: response.data,
@@ -411,7 +497,6 @@ export const adminService = {
       const url = `/admin/buyers${
         queryParams.toString() ? `?${queryParams.toString()}` : ""
       }`;
-      console.log("Fetching buyers from:", url);
 
       const response = await apiService.get(url);
 

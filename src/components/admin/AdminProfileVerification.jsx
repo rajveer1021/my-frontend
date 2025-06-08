@@ -75,23 +75,26 @@ const AdminProfileVerification = () => {
     }
   };
 
-  const handleVerifyVendor = async (vendorId, verified, rejectionReason = null) => {
+  const handleVerifyVendor = async (
+    vendorId,
+    verified,
+    rejectionReason = null
+  ) => {
     try {
       setActionLoading((prev) => ({ ...prev, [vendorId]: true }));
 
       const payload = { verified };
-      
+
       // FIXED: When unverifying (setting to false), always require a reason
       if (!verified) {
-        if (!rejectionReason || rejectionReason.trim() === '') {
+        if (!rejectionReason || rejectionReason.trim() === "") {
           // If no rejection reason provided for unverify, use a default message
-          payload.rejectionReason = rejectionReason || "Verification revoked by administrator";
+          payload.rejectionReason =
+            rejectionReason || "Verification revoked by administrator";
         } else {
           payload.rejectionReason = rejectionReason.trim();
         }
       }
-
-      console.log('🔄 Sending verification request:', { vendorId, payload });
 
       const response = await apiService.put(
         `/admin/vendors/${vendorId}/verify`,
@@ -99,17 +102,17 @@ const AdminProfileVerification = () => {
       );
 
       if (response.success) {
-        console.log('✅ Verification update successful:', response);
-        
         setSubmissions((prev) =>
           prev.map((submission) =>
             submission.id === vendorId
-              ? { 
-                  ...submission, 
+              ? {
+                  ...submission,
                   verified,
                   verificationStatus: verified ? "verified" : "rejected",
-                  rejectionReason: !verified ? (rejectionReason || "Verification revoked by administrator") : null,
-                  updatedAt: new Date().toISOString() 
+                  rejectionReason: !verified
+                    ? rejectionReason || "Verification revoked by administrator"
+                    : null,
+                  updatedAt: new Date().toISOString(),
                 }
               : submission
           )
@@ -117,12 +120,14 @@ const AdminProfileVerification = () => {
 
         // Update selected submission if it's the one being modified
         if (selectedSubmission && selectedSubmission.id === vendorId) {
-          setSelectedSubmission(prev => ({
+          setSelectedSubmission((prev) => ({
             ...prev,
             verified,
             verificationStatus: verified ? "verified" : "rejected",
-            rejectionReason: !verified ? (rejectionReason || "Verification revoked by administrator") : null,
-            updatedAt: new Date().toISOString()
+            rejectionReason: !verified
+              ? rejectionReason || "Verification revoked by administrator"
+              : null,
+            updatedAt: new Date().toISOString(),
           }));
         }
 
@@ -137,7 +142,11 @@ const AdminProfileVerification = () => {
       }
     } catch (error) {
       console.error("Failed to update vendor verification:", error);
-      const action = verified ? "verify" : (rejectionType === "unverify" ? "unverify" : "reject");
+      const action = verified
+        ? "verify"
+        : rejectionType === "unverify"
+        ? "unverify"
+        : "reject";
       addToast(`Failed to ${action} vendor: ${error.message}`, "error");
     } finally {
       setActionLoading((prev) => ({ ...prev, [vendorId]: false }));
@@ -165,7 +174,7 @@ const AdminProfileVerification = () => {
       addToast("Please provide a reason for rejection", "error");
       return;
     }
-    
+
     if (rejectionType === "unverify" && !rejectionReason.trim()) {
       setRejectionReason("Verification revoked by administrator");
     }
@@ -186,7 +195,10 @@ const AdminProfileVerification = () => {
           Verified
         </Badge>
       );
-    } else if (submission.verificationStatus === "rejected" || submission.rejectionReason) {
+    } else if (
+      submission.verificationStatus === "rejected" ||
+      submission.rejectionReason
+    ) {
       return (
         <Badge className="bg-red-100 text-red-800 flex items-center gap-1">
           <Ban className="w-3 h-3" />
@@ -223,8 +235,10 @@ const AdminProfileVerification = () => {
   };
 
   const SubmissionRow = ({ submission }) => {
-    const isRejected = submission.verificationStatus === "rejected" || submission.rejectionReason;
-    
+    const isRejected =
+      submission.verificationStatus === "rejected" ||
+      submission.rejectionReason;
+
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200">
         <div className="flex items-center justify-between">
@@ -257,12 +271,14 @@ const AdminProfileVerification = () => {
               <div className="flex items-center space-x-4 text-xs text-gray-400">
                 <span className="flex items-center">
                   <Calendar className="w-3 h-3 mr-1" />
-                  Submitted: {new Date(submission.createdAt).toLocaleDateString()}
+                  Submitted:{" "}
+                  {new Date(submission.createdAt).toLocaleDateString()}
                 </span>
                 {submission.updatedAt && (
                   <span className="flex items-center">
                     <Clock className="w-3 h-3 mr-1" />
-                    Updated: {new Date(submission.updatedAt).toLocaleDateString()}
+                    Updated:{" "}
+                    {new Date(submission.updatedAt).toLocaleDateString()}
                   </span>
                 )}
               </div>
@@ -270,8 +286,12 @@ const AdminProfileVerification = () => {
               {/* Show rejection reason if rejected */}
               {isRejected && submission.rejectionReason && (
                 <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
-                  <span className="font-medium text-red-800">Rejection Reason: </span>
-                  <span className="text-red-700">{submission.rejectionReason}</span>
+                  <span className="font-medium text-red-800">
+                    Rejection Reason:{" "}
+                  </span>
+                  <span className="text-red-700">
+                    {submission.rejectionReason}
+                  </span>
                 </div>
               )}
             </div>
@@ -308,7 +328,7 @@ const AdminProfileVerification = () => {
                       </>
                     )}
                   </Button>
-                  
+
                   <Button
                     size="sm"
                     onClick={() => handleRejectVendor(submission.id)}
@@ -371,10 +391,17 @@ const AdminProfileVerification = () => {
   // Calculate stats from current submissions
   const stats = {
     total: pagination.total,
-    pending: submissions.filter((s) => !s.verified && !(s.verificationStatus === "rejected" || s.rejectionReason)).length,
+    pending: submissions.filter(
+      (s) =>
+        !s.verified &&
+        !(s.verificationStatus === "rejected" || s.rejectionReason)
+    ).length,
     verified: submissions.filter((s) => s.verified).length,
-    rejected: submissions.filter((s) => s.verificationStatus === "rejected" || s.rejectionReason).length,
-    gstVerifications: submissions.filter((s) => s.verificationType === "gst").length,
+    rejected: submissions.filter(
+      (s) => s.verificationStatus === "rejected" || s.rejectionReason
+    ).length,
+    gstVerifications: submissions.filter((s) => s.verificationType === "gst")
+      .length,
   };
 
   return (
@@ -513,23 +540,28 @@ const AdminProfileVerification = () => {
       {/* FIXED: Rejection/Unverify Modal */}
       {showRejectionModal && (
         <Dialog open={showRejectionModal} onOpenChange={setShowRejectionModal}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md p-4">
             <DialogHeader>
               <DialogTitle>
-                {rejectionType === "reject" ? "Reject Vendor Application" : "Unverify Vendor"}
+                {rejectionType === "reject"
+                  ? "Reject Vendor Application"
+                  : "Unverify Vendor"}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                {rejectionType === "reject" 
+                {rejectionType === "reject"
                   ? "Please provide a reason for rejecting this vendor application. This will help the vendor understand what needs to be improved."
-                  : "Please provide a reason for removing verification from this vendor. This action will change their status back to unverified."
-                }
+                  : "Please provide a reason for removing verification from this vendor. This action will change their status back to unverified."}
               </p>
               <textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder={rejectionType === "reject" ? "Enter rejection reason..." : "Enter reason for unverifying..."}
+                placeholder={
+                  rejectionType === "reject"
+                    ? "Enter rejection reason..."
+                    : "Enter reason for unverifying..."
+                }
                 className="w-full p-3 border border-gray-300 rounded-lg resize-none h-24"
                 maxLength={500}
               />
@@ -551,15 +583,17 @@ const AdminProfileVerification = () => {
                 <Button
                   onClick={confirmAction}
                   disabled={
-                    (rejectionType === "reject" && !rejectionReason.trim()) || 
+                    (rejectionType === "reject" && !rejectionReason.trim()) ||
                     actionLoading[rejectionVendorId]
                   }
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   {actionLoading[rejectionVendorId] ? (
                     <LoadingSpinner size="sm" />
+                  ) : rejectionType === "reject" ? (
+                    "Reject Application"
                   ) : (
-                    rejectionType === "reject" ? "Reject Application" : "Unverify Vendor"
+                    "Unverify Vendor"
                   )}
                 </Button>
               </div>
@@ -625,10 +659,16 @@ const AdminProfileVerification = () => {
                 </div>
 
                 {/* Show rejection reason in status section */}
-                {(selectedSubmission.verificationStatus === "rejected" || selectedSubmission.rejectionReason) && (
+                {(selectedSubmission.verificationStatus === "rejected" ||
+                  selectedSubmission.rejectionReason) && (
                   <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <h4 className="font-medium text-red-800 mb-2">Rejection Reason</h4>
-                    <p className="text-red-700">{selectedSubmission.rejectionReason || "No reason provided"}</p>
+                    <h4 className="font-medium text-red-800 mb-2">
+                      Rejection Reason
+                    </h4>
+                    <p className="text-red-700">
+                      {selectedSubmission.rejectionReason ||
+                        "No reason provided"}
+                    </p>
                   </div>
                 )}
               </div>
@@ -913,13 +953,17 @@ const AdminProfileVerification = () => {
 
               {/* Alert Section for Unverified/Rejected */}
               {!selectedSubmission.verified && (
-                <div className={`border rounded-xl p-6 ${
-                  selectedSubmission.verificationStatus === "rejected" || selectedSubmission.rejectionReason
-                    ? "bg-red-50 border-red-200"
-                    : "bg-yellow-50 border-yellow-200"
-                }`}>
+                <div
+                  className={`border rounded-xl p-6 ${
+                    selectedSubmission.verificationStatus === "rejected" ||
+                    selectedSubmission.rejectionReason
+                      ? "bg-red-50 border-red-200"
+                      : "bg-yellow-50 border-yellow-200"
+                  }`}
+                >
                   <div className="flex items-center">
-                    {selectedSubmission.verificationStatus === "rejected" || selectedSubmission.rejectionReason ? (
+                    {selectedSubmission.verificationStatus === "rejected" ||
+                    selectedSubmission.rejectionReason ? (
                       <>
                         <Ban className="w-6 h-6 text-red-600 mr-3" />
                         <div>
@@ -927,7 +971,9 @@ const AdminProfileVerification = () => {
                             Application Rejected
                           </h4>
                           <p className="text-red-700 mt-1">
-                            This vendor application has been rejected. You can re-evaluate and approve if the issues have been resolved.
+                            This vendor application has been rejected. You can
+                            re-evaluate and approve if the issues have been
+                            resolved.
                           </p>
                         </div>
                       </>
@@ -940,7 +986,8 @@ const AdminProfileVerification = () => {
                           </h4>
                           <p className="text-yellow-700 mt-1">
                             This vendor submission is waiting for verification.
-                            Review all documents and information before approving or rejecting.
+                            Review all documents and information before
+                            approving or rejecting.
                           </p>
                         </div>
                       </>
@@ -963,7 +1010,11 @@ const AdminProfileVerification = () => {
                   </Button>
                 </div>
                 <div className="flex space-x-4">
-                  {!selectedSubmission.verified && !(selectedSubmission.verificationStatus === "rejected" || selectedSubmission.rejectionReason) ? (
+                  {!selectedSubmission.verified &&
+                  !(
+                    selectedSubmission.verificationStatus === "rejected" ||
+                    selectedSubmission.rejectionReason
+                  ) ? (
                     <>
                       <Button
                         onClick={() =>
@@ -977,12 +1028,14 @@ const AdminProfileVerification = () => {
                         ) : (
                           <>
                             <CheckCircle className="w-4 h-4 mr-2" />
-                            Verify Vendor
+                            Verify
                           </>
                         )}
                       </Button>
                       <Button
-                        onClick={() => handleRejectVendor(selectedSubmission.id)}
+                        onClick={() =>
+                          handleRejectVendor(selectedSubmission.id)
+                        }
                         disabled={actionLoading[selectedSubmission.id]}
                         className="bg-red-600 hover:bg-red-700 text-white px-8"
                       >
@@ -991,14 +1044,16 @@ const AdminProfileVerification = () => {
                         ) : (
                           <>
                             <Ban className="w-4 h-4 mr-2" />
-                            Reject Application
+                            Reject
                           </>
                         )}
                       </Button>
                     </>
                   ) : selectedSubmission.verified ? (
                     <Button
-                      onClick={() => handleUnverifyVendor(selectedSubmission.id)}
+                      onClick={() =>
+                        handleUnverifyVendor(selectedSubmission.id)
+                      }
                       disabled={actionLoading[selectedSubmission.id]}
                       className="bg-red-600 hover:bg-red-700 text-white px-8"
                     >

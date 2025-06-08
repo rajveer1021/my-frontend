@@ -33,20 +33,20 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/Dialog";
 
 // Confirmation Dialog Component
-const ConfirmationDialog = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  title, 
-  message, 
-  confirmText = "Confirm", 
+const ConfirmationDialog = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = "Confirm",
   cancelText = "Cancel",
   variant = "danger",
   loading = false,
   reasonRequired = false,
 }) => {
   const [reason, setReason] = useState("");
-  
+
   const handleConfirm = () => {
     if (reasonRequired && !reason.trim()) {
       return;
@@ -61,19 +61,25 @@ const ConfirmationDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
-            {variant === "danger" && <AlertTriangle className="w-5 h-5 text-red-600" />}
-            {variant === "warning" && <AlertTriangle className="w-5 h-5 text-yellow-600" />}
-            {variant === "info" && <CheckCircle className="w-5 h-5 text-blue-600" />}
+            {variant === "danger" && (
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            )}
+            {variant === "warning" && (
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            )}
+            {variant === "info" && (
+              <CheckCircle className="w-5 h-5 text-blue-600" />
+            )}
             <span>{title}</span>
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="py-4">
           <p className="text-gray-600 mb-4">{message}</p>
-          
+
           {reasonRequired && (
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
@@ -93,13 +99,9 @@ const ConfirmationDialog = ({
             </div>
           )}
         </div>
-        
+
         <div className="flex justify-end space-x-3 pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={loading}
-          >
+          <Button variant="outline" onClick={handleClose} disabled={loading}>
             {cancelText}
           </Button>
           <Button
@@ -107,8 +109,8 @@ const ConfirmationDialog = ({
             onClick={handleConfirm}
             disabled={loading || (reasonRequired && !reason.trim())}
             className={
-              variant === "danger" 
-                ? "bg-red-600 hover:bg-red-700" 
+              variant === "danger"
+                ? "bg-red-600 hover:bg-red-700"
                 : variant === "warning"
                 ? "bg-yellow-600 hover:bg-yellow-700"
                 : "bg-blue-600 hover:bg-blue-700"
@@ -256,11 +258,9 @@ const AdminVendors = () => {
         }
       });
 
-      console.log("Loading vendors with params:", params);
       const response = await adminService.getVendors(params);
 
       if (response.success) {
-        console.log("Vendors loaded successfully:", response.data);
         setVendors(response.data.vendors || []);
         setPagination({
           ...response.data.pagination,
@@ -286,20 +286,22 @@ const AdminVendors = () => {
       setActionLoading((prev) => ({ ...prev, [vendor.id]: true }));
       setConfirmDialog((prev) => ({ ...prev, loading: true }));
 
-      const response = await adminService.toggleUserStatus(vendor.userId, isActive, reason);
+      const response = await adminService.toggleUserStatus(
+        vendor.userId,
+        isActive,
+        reason
+      );
 
       if (response.success) {
         setVendors((prev) =>
           prev.map((v) =>
-            v.id === vendor.id
-              ? { ...v, user: { ...v.user, isActive } }
-              : v
+            v.id === vendor.id ? { ...v, user: { ...v.user, isActive } } : v
           )
         );
-        
-        const action = isActive ? 'activated' : 'deactivated';
+
+        const action = isActive ? "activated" : "deactivated";
         addToast(`Vendor ${action} successfully`, "success");
-        
+
         // Close confirmation dialog
         setConfirmDialog({
           isOpen: false,
@@ -320,7 +322,7 @@ const AdminVendors = () => {
   const showToggleConfirmation = (vendor, isActive) => {
     setConfirmDialog({
       isOpen: true,
-      type: isActive ? 'activate' : 'deactivate',
+      type: isActive ? "activate" : "deactivate",
       vendor,
       loading: false,
     });
@@ -438,10 +440,6 @@ const AdminVendors = () => {
         return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case "blocked":
         return <Badge className="bg-red-100 text-red-800">Blocked</Badge>;
-      case "suspended":
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800">Suspended</Badge>
-        );
       default:
         return <Badge className="bg-gray-100 text-gray-800">{status}</Badge>;
     }
@@ -526,8 +524,6 @@ const AdminVendors = () => {
         </div>
 
         <div className="flex items-center space-x-3">
-          {getStatusBadge(vendor.status)}
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -567,24 +563,6 @@ const AdminVendors = () => {
                   Activate User
                 </DropdownMenuItem>
               )}
-
-              {vendor.status !== "blocked" && vendor.status !== "BLOCKED" ? (
-                <DropdownMenuItem
-                  onClick={() => handleUpdateVendorStatus(vendor.id, "blocked")}
-                  className="text-red-600"
-                >
-                  <Ban className="mr-2 h-4 w-4" />
-                  Block Vendor
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  onClick={() => handleUpdateVendorStatus(vendor.id, "active")}
-                  className="text-green-600"
-                >
-                  <UserCheck className="mr-2 h-4 w-4" />
-                  Unblock Vendor
-                </DropdownMenuItem>
-              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -592,7 +570,7 @@ const AdminVendors = () => {
     </div>
   );
 
-  // Calculate stats from current vendor data if not provided by API
+  // Calculate stats from current vendor data if not provided by API - FIXED
   const calculateStats = () => {
     const totalVendors = pagination.total || vendors.length;
     const verifiedCount = vendors.filter((v) => v.verified).length;
@@ -602,8 +580,12 @@ const AdminVendors = () => {
     const blockedCount = vendors.filter(
       (v) => (v.status || "").toLowerCase() === "blocked"
     ).length;
-    const activatedCount = vendors.filter((v) => v.user?.isActive !== false).length;
-    const deactivatedCount = vendors.filter((v) => v.user?.isActive === false).length;
+    const activatedCount = vendors.filter(
+      (v) => v.user?.isActive !== false
+    ).length;
+    const deactivatedCount = vendors.filter(
+      (v) => v.user?.isActive === false
+    ).length;
 
     return {
       total: totalVendors,
@@ -643,14 +625,6 @@ const AdminVendors = () => {
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
             <div className="text-2xl font-bold">{currentStats.active}</div>
             <div className="text-blue-100 text-sm">Active</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-            <div className="text-2xl font-bold">{currentStats.blocked}</div>
-            <div className="text-blue-100 text-sm">Blocked</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-            <div className="text-2xl font-bold">{currentStats.activated}</div>
-            <div className="text-blue-100 text-sm">Activated</div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
             <div className="text-2xl font-bold">{currentStats.deactivated}</div>
@@ -765,26 +739,6 @@ const AdminVendors = () => {
 
         {/* Filter Dropdowns */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              value={filters.status}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, status: e.target.value }))
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">All Status</option>
-              {filterOptions.statuses.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Activation
@@ -979,7 +933,9 @@ const AdminVendors = () => {
                     <div className="flex items-center space-x-3 mt-2">
                       {getStatusBadge(selectedVendor.status)}
                       {getVerificationBadge(selectedVendor.verified)}
-                      {getActivationBadge(selectedVendor.user?.isActive !== false)}
+                      {getActivationBadge(
+                        selectedVendor.user?.isActive !== false
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1059,7 +1015,9 @@ const AdminVendors = () => {
                     </label>
                     <div className="flex items-center space-x-2 mt-1">
                       {getStatusBadge(selectedVendor.status)}
-                      {getActivationBadge(selectedVendor.user?.isActive !== false)}
+                      {getActivationBadge(
+                        selectedVendor.user?.isActive !== false
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1115,7 +1073,7 @@ const AdminVendors = () => {
                 </div>
               )}
 
-              {/* Alert Section for Deactivated Users */}
+              {/* Alert Section for Deactivated Users - FIXED */}
               {selectedVendor.user?.isActive === false && (
                 <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
                   <div className="flex items-center">
@@ -1125,8 +1083,9 @@ const AdminVendors = () => {
                         Account Deactivated
                       </h4>
                       <p className="text-orange-700 mt-1">
-                        This vendor account has been deactivated by an administrator.
-                        The vendor cannot access the platform until reactivated.
+                        This vendor account has been deactivated by an
+                        administrator. The vendor cannot access the platform
+                        until reactivated.
                       </p>
                     </div>
                   </div>
@@ -1134,7 +1093,7 @@ const AdminVendors = () => {
               )}
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons - FIXED */}
             <div className="border-t border-gray-200 pt-6">
               <div className="flex justify-between items-center">
                 <div className="flex space-x-3">
@@ -1178,38 +1137,6 @@ const AdminVendors = () => {
                         : "Activate User"}
                     </Button>
                   )}
-
-                  {selectedVendor.status !== "blocked" &&
-                  selectedVendor.status !== "BLOCKED" ? (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        handleUpdateVendorStatus(selectedVendor.id, "blocked");
-                        setIsDetailModalOpen(false);
-                      }}
-                      disabled={actionLoading[selectedVendor.id]}
-                      className="text-red-600 border-red-300 hover:bg-red-50 px-6"
-                    >
-                      <Ban className="w-4 h-4 mr-2" />
-                      {actionLoading[selectedVendor.id]
-                        ? "Blocking..."
-                        : "Block Vendor"}
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => {
-                        handleUpdateVendorStatus(selectedVendor.id, "active");
-                        setIsDetailModalOpen(false);
-                      }}
-                      disabled={actionLoading[selectedVendor.id]}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6"
-                    >
-                      <UserCheck className="w-4 h-4 mr-2" />
-                      {actionLoading[selectedVendor.id]
-                        ? "Unblocking..."
-                        : "Unblock Vendor"}
-                    </Button>
-                  )}
                 </div>
               </div>
             </div>
@@ -1220,37 +1147,39 @@ const AdminVendors = () => {
       {/* Confirmation Dialog for Activation Toggle */}
       <ConfirmationDialog
         isOpen={confirmDialog.isOpen}
-        onClose={() => setConfirmDialog({
-          isOpen: false,
-          type: null,
-          vendor: null,
-          loading: false,
-        })}
-        onConfirm={(reason) => 
+        onClose={() =>
+          setConfirmDialog({
+            isOpen: false,
+            type: null,
+            vendor: null,
+            loading: false,
+          })
+        }
+        onConfirm={(reason) =>
           handleToggleActivation(
-            confirmDialog.vendor, 
-            confirmDialog.type === 'activate',
+            confirmDialog.vendor,
+            confirmDialog.type === "activate",
             reason
           )
         }
         title={
-          confirmDialog.type === 'activate' 
-            ? "Activate Vendor Account" 
+          confirmDialog.type === "activate"
+            ? "Activate Vendor Account"
             : "Deactivate Vendor Account"
         }
         message={
-          confirmDialog.type === 'activate'
+          confirmDialog.type === "activate"
             ? `Are you sure you want to activate ${confirmDialog.vendor?.user?.firstName} ${confirmDialog.vendor?.user?.lastName}'s vendor account? They will be able to access the platform again.`
             : `Are you sure you want to deactivate ${confirmDialog.vendor?.user?.firstName} ${confirmDialog.vendor?.user?.lastName}'s vendor account? They will not be able to access the platform until reactivated.`
         }
         confirmText={
-          confirmDialog.type === 'activate' 
-            ? "Activate Vendor" 
+          confirmDialog.type === "activate"
+            ? "Activate Vendor"
             : "Deactivate Vendor"
         }
-        variant={confirmDialog.type === 'activate' ? "info" : "warning"}
+        variant={confirmDialog.type === "activate" ? "info" : "warning"}
         loading={confirmDialog.loading}
-        reasonRequired={confirmDialog.type === 'deactivate'}
+        reasonRequired={confirmDialog.type === "deactivate"}
       />
     </div>
   );
