@@ -42,7 +42,7 @@ export const Sidebar = ({
     },
     {
       id: "admin-profile-verification",
-      label: "Verifications",
+      label: "Verification Request",
       icon: Shield,
       description: "Profile approvals",
       badge: null,
