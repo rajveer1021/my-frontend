@@ -19,6 +19,7 @@ import {
   DollarSign,
   RefreshCw,
   AlertTriangle,
+  Calendar,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
 import Button from "../ui/Button";
@@ -413,6 +414,226 @@ const SubscriptionPlansPage = () => {
     }
   };
 
+  //   const IconComponent = getPlanIcon(plan.name);
+  //   const gradient = getPlanGradient(plan.name);
+  //   const isActionLoading = actionLoading[plan.id];
+
+  //   // Calculate discount if originalPrice exists
+  //   const hasDiscount = plan.originalPrice && plan.originalPrice > plan.price;
+  //   const discountPercentage = hasDiscount
+  //     ? subscriptionService.calculateDiscount(plan.originalPrice, plan.price)
+  //     : 0;
+
+  //   return (
+  //     <div
+  //       className={`relative rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] ${
+  //         plan.isPopular ? "ring-2 ring-purple-500 ring-offset-4" : ""
+  //       }`}
+  //     >
+  //       {plan.isPopular && (
+  //         <div className="absolute mt-2 left-1/2 transform -translate-x-1/2 z-20">
+  //           <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg flex items-center space-x-1 border-2 border-white">
+  //             <Sparkles className="w-4 h-4" />
+  //             <span>Most Popular</span>
+  //           </div>
+  //         </div>
+  //       )}
+
+  //       <Card className="h-full border-0 shadow-2xl bg-white relative overflow-hidden">
+  //         {/* Header */}
+  //         <div
+  //           className={`bg-gradient-to-r ${gradient} p-6 text-white relative overflow-hidden`}
+  //         >
+  //           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+  //           <div className="relative z-10">
+  //             <div className="flex items-center justify-between mb-4">
+  //               <div className="p-3 rounded-xl bg-white/20 backdrop-blur-sm">
+  //                 <IconComponent className="w-6 h-6" />
+  //               </div>
+  //               <div className="flex items-center space-x-2">
+  //                 {!plan.isActive && (
+  //                   <Badge className="bg-red-500/20 text-red-100 border-red-300/30">
+  //                     Inactive
+  //                   </Badge>
+  //                 )}
+  //                 <DropdownMenu>
+  //                   <DropdownMenuTrigger asChild>
+  //                     <Button
+  //                       variant="ghost"
+  //                       size="icon"
+  //                       className="h-8 w-8 text-white hover:bg-white/20 rounded-lg"
+  //                       disabled={isActionLoading}
+  //                     >
+  //                       {isActionLoading ? (
+  //                         <LoadingSpinner size="sm" />
+  //                       ) : (
+  //                         <MoreVertical className="w-4 h-4" />
+  //                       )}
+  //                     </Button>
+  //                   </DropdownMenuTrigger>
+  //                   <DropdownMenuContent align="end">
+  //                     <DropdownMenuItem onClick={() => handleEditPlan(plan)}>
+  //                       <Edit className="mr-2 h-4 w-4" />
+  //                       Edit Plan
+  //                     </DropdownMenuItem>
+  //                     <DropdownMenuItem
+  //                       onClick={() =>
+  //                         handleToggleStatus(plan.id, plan.isActive)
+  //                       }
+  //                     >
+  //                       {plan.isActive ? (
+  //                         <>
+  //                           <X className="mr-2 h-4 w-4" />
+  //                           Deactivate
+  //                         </>
+  //                       ) : (
+  //                         <>
+  //                           <CheckCircle className="mr-2 h-4 w-4" />
+  //                           Activate
+  //                         </>
+  //                       )}
+  //                     </DropdownMenuItem>
+  //                     <DropdownMenuItem
+  //                       onClick={() => handleDeletePlan(plan.id)}
+  //                       className="text-red-600"
+  //                     >
+  //                       <Trash2 className="mr-2 h-4 w-4" />
+  //                       Delete Plan
+  //                     </DropdownMenuItem>
+  //                   </DropdownMenuContent>
+  //                 </DropdownMenu>
+  //               </div>
+  //             </div>
+
+  //             <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+  //             <p className="text-white/90 text-sm mb-4 leading-relaxed">
+  //               {plan.description}
+  //             </p>
+
+  //             <div className="flex items-baseline mb-2">
+  //               <span className="text-4xl font-bold">
+  //                 {formatCurrency(plan.price)}
+  //               </span>
+  //             </div>
+
+  //             {hasDiscount && (
+  //               <div className="flex items-center space-x-2">
+  //                 <span className="text-white/60 line-through text-sm">
+  //                   {formatCurrency(plan.originalPrice)}
+  //                 </span>
+  //                 <Badge className="bg-green-500/20 text-green-100 border-green-300/30 text-xs px-2 py-1">
+  //                   Save {discountPercentage}%
+  //                 </Badge>
+  //               </div>
+  //             )}
+  //           </div>
+  //         </div>
+
+  //         {/* Content Section */}
+  //         <div className="p-6">
+  //           {/* Subscriber Count */}
+  //           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 mb-4">
+  //             <div className="flex items-center space-x-3">
+  //               <div className="flex-shrink-0">
+  //                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+  //                   <Users className="w-5 h-5 text-blue-600" />
+  //                 </div>
+  //               </div>
+  //               <div className="flex-1">
+  //                 <div className="font-semibold text-gray-900 text-sm mb-1">
+  //                   Subscribers
+  //                 </div>
+  //                 <div className="text-gray-700 text-lg font-bold">
+  //                   {plan.subscribers || 0}
+  //                 </div>
+  //               </div>
+  //             </div>
+  //           </div>
+
+  //           {/* Usage Limits Display */}
+  //           {plan.limits && (
+  //             <div className="pt-4 border-t border-gray-100">
+  //               <div className="grid grid-cols-2 gap-4">
+  //                 {plan.limits.products !== undefined && (
+  //                   <div className="text-center">
+  //                     <div className="text-lg font-bold text-gray-900">
+  //                       {plan.limits.products || "∞"}
+  //                     </div>
+  //                     <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+  //                       Products
+  //                     </div>
+  //                   </div>
+  //                 )}
+  //                 {plan.limits.inquiries !== undefined && (
+  //                   <div className="text-center">
+  //                     <div className="text-lg font-bold text-gray-900">
+  //                       {plan.limits.inquiries || "∞"}
+  //                     </div>
+  //                     <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+  //                       Inquiries
+  //                     </div>
+  //                   </div>
+  //                 )}
+  //               </div>
+  //             </div>
+  //           )}
+
+  //           {/* Basic Features Display */}
+  //           <div className="pt-4 border-t border-gray-100 mt-4">
+  //             <div className="text-sm font-semibold text-gray-900 mb-2">
+  //               Features
+  //             </div>
+  //             <div className="space-y-2">
+  //               {/* Show limits as features */}
+  //               {plan.limits?.products && (
+  //                 <div className="flex items-center space-x-2">
+  //                   <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+  //                   <span className="text-sm text-gray-600">
+  //                     Up to {plan.limits.products} products
+  //                   </span>
+  //                 </div>
+  //               )}
+  //               {!plan.limits?.products && (
+  //                 <div className="flex items-center space-x-2">
+  //                   <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+  //                   <span className="text-sm text-gray-600">
+  //                     Unlimited products
+  //                   </span>
+  //                 </div>
+  //               )}
+
+  //               {plan.limits?.inquiries && (
+  //                 <div className="flex items-center space-x-2">
+  //                   <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+  //                   <span className="text-sm text-gray-600">
+  //                     Up to {plan.limits.inquiries} inquiries
+  //                   </span>
+  //                 </div>
+  //               )}
+  //               {!plan.limits?.inquiries && (
+  //                 <div className="flex items-center space-x-2">
+  //                   <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+  //                   <span className="text-sm text-gray-600">
+  //                     Unlimited inquiries
+  //                   </span>
+  //                 </div>
+  //               )}
+  //             </div>
+  //           </div>
+  //         </div>
+
+  //         {/* Status Indicator */}
+  //         <div className="absolute bottom-0 left-0 right-0 h-1">
+  //           <div
+  //             className={`h-full transition-all duration-300 ${
+  //               plan.isActive ? `bg-gradient-to-r ${gradient}` : "bg-gray-300"
+  //             }`}
+  //           />
+  //         </div>
+  //       </Card>
+  //     </div>
+  //   );
+  // };
   const PlanCard = ({ plan }) => {
     const IconComponent = getPlanIcon(plan.name);
     const gradient = getPlanGradient(plan.name);
@@ -425,212 +646,157 @@ const SubscriptionPlansPage = () => {
       : 0;
 
     return (
-      <div
-        className={`relative rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] ${
-          plan.isPopular ? "ring-2 ring-purple-500 ring-offset-4" : ""
-        }`}
-      >
-        {plan.isPopular && (
-          <div className="absolute mt-2 left-1/2 transform -translate-x-1/2 z-20">
-            <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg flex items-center space-x-1 border-2 border-white">
-              <Sparkles className="w-4 h-4" />
-              <span>Most Popular</span>
-            </div>
-          </div>
-        )}
-
-        <Card className="h-full border-0 shadow-2xl bg-white relative overflow-hidden">
-          {/* Header */}
+      <div className="flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors duration-200 ">
+        {/* Left Section - Avatar + Details */}
+        <div className="flex items-center space-x-3">
+          {/* Plan Avatar */}
           <div
-            className={`bg-gradient-to-r ${gradient} p-6 text-white relative overflow-hidden`}
+            className={`w-12 h-12 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-semibold text-lg`}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 rounded-xl bg-white/20 backdrop-blur-sm">
-                  <IconComponent className="w-6 h-6" />
-                </div>
-                <div className="flex items-center space-x-2">
-                  {!plan.isActive && (
-                    <Badge className="bg-red-500/20 text-red-100 border-red-300/30">
-                      Inactive
-                    </Badge>
-                  )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-white hover:bg-white/20 rounded-lg"
-                        disabled={isActionLoading}
-                      >
-                        {isActionLoading ? (
-                          <LoadingSpinner size="sm" />
-                        ) : (
-                          <MoreVertical className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditPlan(plan)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Plan
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          handleToggleStatus(plan.id, plan.isActive)
-                        }
-                      >
-                        {plan.isActive ? (
-                          <>
-                            <X className="mr-2 h-4 w-4" />
-                            Deactivate
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Activate
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDeletePlan(plan.id)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Plan
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
+            {plan.name.charAt(0).toUpperCase()}
+            {plan.name.split(" ")[1]?.charAt(0)?.toUpperCase() || ""}
+          </div>
 
-              <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-              <p className="text-white/90 text-sm mb-4 leading-relaxed">
-                {plan.description}
-              </p>
+          {/* Plan Details */}
+          <div className="flex flex-col">
+            {/* Plan Name + Badges */}
+            <div className="flex items-center space-x-2">
+              <span className="font-medium text-gray-900">{plan.name}</span>
 
-              <div className="flex items-baseline mb-2">
-                <span className="text-4xl font-bold">
+              {/* Status Badge */}
+              {!plan.isActive ? (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-1"></span>
+                  Inactive
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></span>
+                  Activated
+                </span>
+              )}
+
+              {/* Popular Badge */}
+              {plan.isPopular && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  Most Popular
+                </span>
+              )}
+            </div>
+
+            {/* Plan Info Row */}
+            <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
+              {/* Price */}
+              <span className="flex items-center">
+                <span className="font-semibold text-gray-900">
                   {formatCurrency(plan.price)}
                 </span>
-              </div>
-
-              {hasDiscount && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-white/60 line-through text-sm">
+                {hasDiscount && (
+                  <span className="ml-1 line-through text-gray-400 text-xs">
                     {formatCurrency(plan.originalPrice)}
                   </span>
-                  <Badge className="bg-green-500/20 text-green-100 border-green-300/30 text-xs px-2 py-1">
-                    Save {discountPercentage}%
-                  </Badge>
-                </div>
+                )}
+              </span>
+
+              {/* Plan Type/Category */}
+              {plan.category && (
+                <span className="flex items-center">
+                  <span className="font-medium text-gray-600">
+                    {plan.category}
+                  </span>
+                </span>
+              )}
+
+              {/* Creation Date */}
+              <span className="flex items-center">
+                <Calendar className="w-3 h-3 mr-1" />
+                {new Date(plan.createdAt || Date.now()).toLocaleDateString()}
+              </span>
+            </div>
+
+            {/* Additional Info Row */}
+            <div className="flex items-center space-x-4 text-xs text-gray-400 mt-1">
+              {/* Limits */}
+              {plan.limits && (
+                <>
+                  {plan.limits.products !== undefined && (
+                    <span className="flex items-center">
+                      <Package className="w-3 h-3 mr-1" />
+                      {plan.limits.products || "∞"} PRODUCTS
+                    </span>
+                  )}
+                  {plan.limits.inquiries !== undefined && (
+                    <span className="flex items-center">
+                      {/* <MessageSquare className="w-3 h-3 mr-1" /> */}
+                      {plan.limits.inquiries || "∞"} INQUIRIES
+                    </span>
+                  )}
+                </>
+              )}
+
+              {/* Discount */}
+              {hasDiscount && (
+                <span className="text-green-600 font-medium">
+                  SAVE {discountPercentage}%
+                </span>
               )}
             </div>
           </div>
+        </div>
 
-          {/* Content Section */}
-          <div className="p-6">
-            {/* Subscriber Count */}
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-blue-600" />
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-gray-900 text-sm mb-1">
-                    Subscribers
-                  </div>
-                  <div className="text-gray-700 text-lg font-bold">
-                    {plan.subscribers || 0}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Usage Limits Display */}
-            {plan.limits && (
-              <div className="pt-4 border-t border-gray-100">
-                <div className="grid grid-cols-2 gap-4">
-                  {plan.limits.products !== undefined && (
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900">
-                        {plan.limits.products || "∞"}
-                      </div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-                        Products
-                      </div>
-                    </div>
-                  )}
-                  {plan.limits.inquiries !== undefined && (
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900">
-                        {plan.limits.inquiries || "∞"}
-                      </div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-                        Inquiries
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Basic Features Display */}
-            <div className="pt-4 border-t border-gray-100 mt-4">
-              <div className="text-sm font-semibold text-gray-900 mb-2">
-                Features
-              </div>
-              <div className="space-y-2">
-                {/* Show limits as features */}
-                {plan.limits?.products && (
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span className="text-sm text-gray-600">
-                      Up to {plan.limits.products} products
-                    </span>
-                  </div>
+        {/* Right Section - Actions */}
+        <div className="flex items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                disabled={isActionLoading}
+              >
+                {isActionLoading ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <MoreVertical className="w-4 h-4" />
                 )}
-                {!plan.limits?.products && (
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span className="text-sm text-gray-600">
-                      Unlimited products
-                    </span>
-                  </div>
-                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleEditPlan(plan)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Plan
+              </DropdownMenuItem>
 
-                {plan.limits?.inquiries && (
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span className="text-sm text-gray-600">
-                      Up to {plan.limits.inquiries} inquiries
-                    </span>
-                  </div>
-                )}
-                {!plan.limits?.inquiries && (
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span className="text-sm text-gray-600">
-                      Unlimited inquiries
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+              {/* Activation Toggle */}
+              {plan.isActive ? (
+                <DropdownMenuItem
+                  onClick={() => handleToggleStatus(plan.id, plan.isActive)}
+                  className="text-orange-600"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Deactivate Plan
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => handleToggleStatus(plan.id, plan.isActive)}
+                  className="text-green-600"
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Activate Plan
+                </DropdownMenuItem>
+              )}
 
-          {/* Status Indicator */}
-          <div className="absolute bottom-0 left-0 right-0 h-1">
-            <div
-              className={`h-full transition-all duration-300 ${
-                plan.isActive ? `bg-gradient-to-r ${gradient}` : "bg-gray-300"
-              }`}
-            />
-          </div>
-        </Card>
+              <DropdownMenuItem
+                onClick={() => handleDeletePlan(plan.id)}
+                className="text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Plan
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     );
   };
@@ -648,17 +814,17 @@ const SubscriptionPlansPage = () => {
   return (
     <div className="w-full max-w-none space-y-8">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-6 sm:p-8 lg:p-12 text-white">
+      <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-800 rounded-2xl p-6 text-white">
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
         <div className="relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-            <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
-                Subscription <span className="text-yellow-300">Plans</span>
-              </h1>
-              <p className="text-purple-100 text-lg sm:text-xl lg:text-2xl max-w-3xl">
-                Manage and customize your platform's subscription offerings
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">Subscription Plans</h1>
+                <p className="text-blue-100">
+                  Manage and customize your platform's subscription offerings
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -696,12 +862,6 @@ const SubscriptionPlansPage = () => {
               <div className="text-2xl font-bold">{stats.totalSubscribers}</div>
               <div className="text-purple-100 text-sm">Total Subscribers</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="text-2xl font-bold">
-                {formatCurrency(stats.totalRevenue)}
-              </div>
-              <div className="text-purple-100 text-sm">Total Revenue</div>
-            </div>
           </div>
         </div>
       </div>
@@ -727,13 +887,31 @@ const SubscriptionPlansPage = () => {
       )}
 
       {/* Plans Grid */}
-      {plans.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
-          {plans.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} />
-          ))}
-        </div>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center">Subscription Plans</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <LoadingSpinner size="lg" text="Loading buyers..." />
+            </div>
+          ) : plans.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No plans found</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {plans.map((plan) => (
+                <PlanCard key={plan.id} plan={plan} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Plan Form Modal */}
       {isFormOpen && (
