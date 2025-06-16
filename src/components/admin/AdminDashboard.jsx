@@ -392,28 +392,24 @@ const AdminDashboard = () => {
         <StatCard
           title="Total Users"
           value={coreKPIs?.totalUsers?.value || 0}
-          subtitle={`+${coreKPIs?.totalUsers?.thisMonth || 0} this month`}
           icon={Users}
           gradient="bg-gradient-to-br from-blue-500 to-blue-600"
         />
         <StatCard
           title="Total Vendors"
           value={coreKPIs?.totalVendors?.value || 0}
-          subtitle={`${coreKPIs?.totalVendors?.verificationRate || 0}% verified`}
           icon={Building}
           gradient="bg-gradient-to-br from-green-500 to-green-600"
         />
         <StatCard
           title="Total Inquiries"
           value={coreKPIs?.totalInquiries?.value || 0}
-          subtitle={`${coreKPIs?.totalInquiries?.responseRate || 0}% response rate`}
           icon={MessageSquare}
           gradient="bg-gradient-to-br from-orange-500 to-orange-600"
         />
         <StatCard
           title="Platform Health"
           value={coreKPIs?.platformHealth?.status || "Good"}
-          subtitle="All systems operational"
           icon={Zap}
           gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
         />
