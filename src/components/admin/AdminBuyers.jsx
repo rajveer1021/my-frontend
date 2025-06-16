@@ -603,7 +603,7 @@ const AdminBuyers = () => {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-orange-600 via-pink-600 to-red-700 rounded-2xl p-6 text-white">
+      <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-800 rounded-2xl p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Buyer Management</h1>

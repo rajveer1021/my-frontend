@@ -56,6 +56,8 @@ const AdminDashboard = () => {
       // Handle partial success scenarios
       if (dashboardData.coreKPIs) {
         setCoreKPIs(dashboardData.coreKPIs);
+        console.log("sdfsdghfsdff", setCoreKPIs);
+        
       } else if (dashboardData.coreKPIsError) {
         console.warn("⚠️ Core KPIs failed:", dashboardData.coreKPIsError);
       }
@@ -386,7 +388,7 @@ const AdminDashboard = () => {
       )}
 
       {/* Core KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <StatCard
           title="Total Users"
           value={coreKPIs?.totalUsers?.value || 0}
@@ -400,13 +402,6 @@ const AdminDashboard = () => {
           subtitle={`${coreKPIs?.totalVendors?.verificationRate || 0}% verified`}
           icon={Building}
           gradient="bg-gradient-to-br from-green-500 to-green-600"
-        />
-        <StatCard
-          title="Total Products"
-          value={coreKPIs?.totalProducts?.value || 0}
-          subtitle={`${coreKPIs?.totalProducts?.availabilityRate || 0}% in stock`}
-          icon={Package}
-          gradient="bg-gradient-to-br from-purple-500 to-purple-600"
         />
         <StatCard
           title="Total Inquiries"
@@ -425,7 +420,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Activity Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <MetricCard
           title="Pending Verifications"
           value={activityMetrics?.pendingVerifications?.value || 0}
@@ -439,13 +434,6 @@ const AdminDashboard = () => {
           subtitle="Awaiting responses"
           icon={MessageSquare}
           color="blue"
-        />
-        <MetricCard
-          title="Active Products"
-          value={activityMetrics?.activeProducts?.value || 0}
-          subtitle={`${activityMetrics?.activeProducts?.outOfStock || 0} out of stock`}
-          icon={Package}
-          color="green"
         />
         <MetricCard
           title="Verification Rate"
