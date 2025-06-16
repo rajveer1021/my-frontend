@@ -646,7 +646,7 @@ const SubscriptionPlansPage = () => {
       : 0;
 
     return (
-      <div className="flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors duration-200 ">
+      <div className="flex items-center border border-gray-200 rounded-lg justify-between p-4 bg-white hover:bg-gray-50 transition-colors duration-200 ">
         {/* Left Section - Avatar + Details */}
         <div className="flex items-center space-x-3">
           {/* Plan Avatar */}
